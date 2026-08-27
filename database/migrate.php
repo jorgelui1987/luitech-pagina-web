@@ -83,5 +83,68 @@ foreach ($semillas as $s) {
     $ordenStmt->execute($s);
 }
 
+// --- Tabla de inventario ----------------------------------------------
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS productos (
+        id              INT UNSIGNED     AUTO_INCREMENT PRIMARY KEY,
+        codigo          VARCHAR(30)      NOT NULL UNIQUE,
+        nombre          VARCHAR(120)     NOT NULL,
+        categoria       VARCHAR(60)      NOT NULL DEFAULT 'Repuesto',
+        precio_costo    INT UNSIGNED     NOT NULL DEFAULT 0,
+        precio_venta    INT UNSIGNED     NOT NULL DEFAULT 0,
+        stock           INT              NOT NULL DEFAULT 0,
+        stock_minimo    INT UNSIGNED     NOT NULL DEFAULT 3,
+        controlar_stock TINYINT(1)       NOT NULL DEFAULT 1,
+        activo          TINYINT(1)       NOT NULL DEFAULT 1,
+        creado_en       TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+");
+
+// --- Ventas (cabecera) -------------------------------------------------
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS ventas (
+        id           INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+        numero       VARCHAR(15)   NOT NULL UNIQUE,
+        vendedor     VARCHAR(80)   NOT NULL DEFAULT 'Mostrador',
+        cliente      VARCHAR(120)  NOT NULL DEFAULT 'Publico General',
+        total        INT UNSIGNED  NOT NULL DEFAULT 0,
+        medio_pago   ENUM('Efectivo','Debito','Credito','Transferencia') NOT NULL DEFAULT 'Efectivo',
+        orden_codigo VARCHAR(12)   NULL,
+        creado_en    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+");
+
+// --- Detalle de cada venta ---------------------------------------------
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS venta_items (
+        id             INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+        venta_id       INT UNSIGNED  NOT NULL,
+        producto_id    INT UNSIGNED  NULL,
+        descripcion    VARCHAR(150)  NOT NULL,
+        cantidad       INT UNSIGNED  NOT NULL DEFAULT 1,
+        precio_unitario INT UNSIGNED NOT NULL DEFAULT 0,
+        FOREIGN KEY (venta_id) REFERENCES ventas(id) ON DELETE CASCADE,
+        INDEX idx_vi_venta (venta_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+");
+
+// Semillas de productos demo (INSERT IGNORE: no duplica ni pisa datos reales)
+$prodStmt = $pdo->prepare(
+    'INSERT IGNORE INTO productos (codigo, nombre, categoria, precio_costo, precio_venta, stock, stock_minimo, controlar_stock)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+);
+$productosSemilla = [
+    ['CT-GNRL',  'Cristal templado genérico',            'Accesorios', 1200, 3000, 25, 5, 1],
+    ['FUN-SIL',  'Funda silicona variada',               'Accesorios', 2500, 5000, 20, 4, 1],
+    ['CAR-USBC', 'Cargador USB-C 20W',                   'Accesorios', 4500, 9000, 10, 2, 1],
+    ['CAB-LGTN', 'Cable Lightning 1m',                   'Accesorios', 3800, 7000, 12, 3, 1],
+    ['MIC-HIDRO','Mica hidrogel (instalada)',            'Servicios',  1000, 6000,  0, 0, 0],
+    ['MAN-EXPR', 'Mantención express celular',           'Servicios',     0,12000,  0, 0, 0],
+];
+foreach ($productosSemilla as $p) {
+    $prodStmt->execute($p);
+}
+
 $ordenes = (int)$pdo->query('SELECT COUNT(*) FROM ordenes')->fetchColumn();
 echo "[migrate] Esquema verificado. Órdenes en BD: {$ordenes}\n";
+

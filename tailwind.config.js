@@ -3,6 +3,8 @@ module.exports = {
   content: [
     './index.html',
     './admin.html',
+    './pos.html',
+    './inventario.html',
     './tv.html',
     './assets/js/**/*.js',
   ],
