@@ -7,14 +7,25 @@
 declare(strict_types=1);
 
 // --- Credenciales MySQL ------------------------------------------------
-// Valores por defecto: instalación estándar de Laragon (root sin clave).
-// En producción/hosting NO edites este archivo ni subas credenciales a Git;
-// define estas variables de entorno en el panel del hosting (cPanel):
-//   LUITECH_DB_HOST · LUITECH_DB_NAME · LUITECH_DB_USER · LUITECH_DB_PASS
-define('DB_HOST', getenv('LUITECH_DB_HOST') ?: '127.0.0.1');
-define('DB_NAME', getenv('LUITECH_DB_NAME') ?: 'luitech');
-define('DB_USER', getenv('LUITECH_DB_USER') ?: 'root');
-define('DB_PASS', getenv('LUITECH_DB_PASS') !== false ? getenv('LUITECH_DB_PASS') : '');
+// Resolución de credenciales: 1º variables LUITECH_*, 2º variables genéricas
+// DB_* (estilo cPanel/Laravel del hosting), 3º valores por defecto de Laragon.
+// NUNCA escribas contraseñas aquí: se definen como variables de entorno en
+// el panel del hosting o quedan los valores locales de desarrollo.
+function env_var(string ...$nombres): ?string
+{
+    foreach ($nombres as $n) {
+        $v = getenv($n);
+        if ($v !== false && $v !== '') {
+            return $v;
+        }
+    }
+    return null;
+}
+
+define('DB_HOST', env_var('LUITECH_DB_HOST', 'DB_HOST') ?? '127.0.0.1');
+define('DB_NAME', env_var('LUITECH_DB_NAME', 'DB_DATABASE', 'DB_NAME') ?? 'luitech');
+define('DB_USER', env_var('LUITECH_DB_USER', 'DB_USERNAME', 'DB_USER') ?? 'root');
+define('DB_PASS', env_var('LUITECH_DB_PASS', 'DB_PASSWORD', 'DB_PASS') ?? '');
 
 const ADMIN_USER_MIN_LEN = 3;
 
