@@ -23,6 +23,7 @@ function env_var(string ...$nombres): ?string
 }
 
 define('DB_HOST', env_var('LUITECH_DB_HOST', 'DB_HOST') ?? '127.0.0.1');
+define('DB_PORT', env_var('LUITECH_DB_PORT', 'DB_PORT') ?? '3306');
 define('DB_NAME', env_var('LUITECH_DB_NAME', 'DB_DATABASE', 'DB_NAME') ?? 'luitech');
 define('DB_USER', env_var('LUITECH_DB_USER', 'DB_USERNAME', 'DB_USER') ?? 'root');
 define('DB_PASS', env_var('LUITECH_DB_PASS', 'DB_PASSWORD', 'DB_PASS') ?? '');
@@ -42,7 +43,7 @@ function db(): PDO
 {
     static $pdo = null;
     if ($pdo === null) {
-        $dsn = sprintf('mysql:host=%s;dbname=%s;charset=utf8mb4', DB_HOST, DB_NAME);
+        $dsn = sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4', DB_HOST, DB_PORT, DB_NAME);
         try {
             $pdo = new PDO($dsn, DB_USER, DB_PASS, [
                 PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
