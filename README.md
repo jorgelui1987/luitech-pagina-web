@@ -6,11 +6,10 @@ seguimiento real de órdenes, panel administrativo protegido y pantalla de sala 
 ## 🗂️ Estructura del proyecto
 
 ```
-pagina web/
+luitech-pagina-web-main/
 ├── index.html                  → Portal público (clientes)
 ├── admin.html                  → Panel de control del taller (requiere login)
 ├── tv.html                     → Pantalla de sala de espera (Modo TV)
-├── index-respaldo-antiguo.html → Copia de la versión anterior (elimínala cuando quieras)
 │
 ├── api/                        → Backend PHP
 │   ├── config.php              → Conexión PDO a MySQL y utilidades
@@ -37,7 +36,7 @@ pagina web/
    - Abre phpMyAdmin (`http://localhost/phpmyadmin`) o HeidiSQL.
    - Importa `database/luitech.sql` (crea la BD `luitech`, tablas y datos demo).
 
-2. **Credenciales del panel** (`http://localhost/pagina%20web/admin.html`)
+2. **Credenciales del panel** (`http://localhost/luitech-pagina-web-main/admin.html`)
    - Usuario: `admin`
    - Contraseña: `luitech2026`
    - ⚠️ **Cámbiala**: genera un nuevo hash con `php -r "echo password_hash('TU_NUEVA_CLAVE', PASSWORD_BCRYPT);"`
