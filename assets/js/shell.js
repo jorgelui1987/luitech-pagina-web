@@ -15,27 +15,24 @@ window.Lui = (function () {
     ]],
     ['VENTAS', [
       ['Punto de Venta', 'pos.html', 'fa-cash-register'],
-      ['Devoluciones', 'devoluciones.html', 'fa-rotate-left'],
-      ['Garantías', 'garantias.html', 'fa-shield-halved']
+      ['Devoluciones', 'erp.html#devoluciones', 'fa-rotate-left'],
+      ['Garantías', 'erp.html#garantias', 'fa-shield-halved']
     ]],
     ['GESTIÓN', [
       ['Inventario', 'inventario.html', 'fa-boxes-stacked'],
-      ['Mov. de Stock', 'movimientos.html', 'fa-arrows-split-up-and-left'],
-      ['Clientes', 'clientes.html', 'fa-users'],
-      ['Proveedores', 'proveedores.html', 'fa-truck-field'],
-      ['O. de Compra', 'compras.html', 'fa-file-invoice-dollar']
+      ['Mov. de Stock', 'erp.html#stock', 'fa-arrows-split-up-and-left'],
+      ['Clientes', 'erp.html#clientes', 'fa-users'],
+      ['Proveedores', 'erp.html#proveedores', 'fa-truck-field'],
+      ['O. de Compra', 'erp.html#compras', 'fa-file-invoice-dollar']
     ]],
     ['REPARACIONES', [
       ['Tablero Kanban', 'kanban.html', 'fa-table-columns']
     ]],
     ['FINANZAS', [
-      ['Caja & Gastos', 'finanzas.html', 'fa-cash-register'],
-      ['Estado Financiero', 'estado.html', 'fa-chart-line'],
-      ['Comisiones', 'comisiones.html', 'fa-hand-holding-dollar']
+      ['Caja & Gastos', 'finanzas.html', 'fa-cash-register']
     ]],
     ['SISTEMA', [
-      ['Config & Usuarios', 'sistema.html', 'fa-gear'],
-      ['Manual de Ayuda', 'ayuda.html', 'fa-circle-question']
+      ['Config & Usuarios', 'sistema.html', 'fa-gear']
     ]]
   ];
   var SOLO_ADMIN = {
@@ -134,5 +131,5 @@ window.Lui = (function () {
   }
 
   return { $: $, fmt: function (n) { return Number(n).toLocaleString('es-CL'); },
-           h: crearEl, guard: guard, tabla: tabla };
+           h: crearEl, guard: guard, tabla: tabla, rol: function () { return ROL; } };
 })();
