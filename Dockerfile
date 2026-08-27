@@ -21,4 +21,5 @@ RUN printf '<Directory /var/www/html>\n    AllowOverride All\n</Directory>\n' \
 COPY --chown=www-data:www-data . /var/www/html/
 
 EXPOSE 80
-CMD ["apache2-foreground"]
+# Crea/verifica tablas en cada arranque (idempotente) y luego sirve la web
+CMD ["sh", "-c", "php /var/www/html/database/migrate.php; exec apache2-foreground"]
