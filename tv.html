@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modo Sala de Espera | Luitech</title>
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#020617">
+    <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-4 sm:p-6 select-none">
+
+    <main class="flex flex-col gap-6 max-w-7xl mx-auto">
+
+        <!-- Cabecera: Marca + Reloj -->
+        <header class="flex justify-between items-center bg-slate-900 border border-slate-800 rounded-2xl px-6 py-4">
+            <div class="flex items-center gap-3">
+                <img src="assets/img/logo-luitech.png" alt="Logo Luitech" width="44" height="44" class="h-11 w-11 rounded-xl object-cover shadow-lg shadow-cyan-500/20">
+                <span class="text-2xl font-black tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500">LUITECH</span>
+            </div>
+            <div class="text-right">
+                <p id="tv-clock" class="text-2xl sm:text-3xl font-black text-white tracking-widest">--:--:--</p>
+                <p id="tv-date" class="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">— • LA SERENA</p>
+            </div>
+        </header>
+
+        <!-- Contenido -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- Turnos -->
+            <section class="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-gradient-to-tr from-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-5 shadow-lg">
+                    <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+                        <h2 class="text-sm font-bold text-emerald-400 flex items-center gap-2 uppercase tracking-wider">
+                            <i class="fa-solid fa-bell"></i> Listos para Retiro
+                        </h2>
+                        <span id="tv-count-ready" class="bg-emerald-950 text-emerald-400 text-xs font-bold px-2.5 py-0.5 rounded-full border border-emerald-800/50">0</span>
+                    </div>
+                    <div id="tv-ready-list" class="space-y-3"></div>
+                </div>
+
+                <div class="bg-gradient-to-tr from-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-5 shadow-lg">
+                    <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+                        <h2 class="text-sm font-bold text-cyan-400 flex items-center gap-2 uppercase tracking-wider">
+                            <i class="fa-solid fa-gears"></i> En Proceso
+                        </h2>
+                        <span id="tv-count-process" class="bg-cyan-950 text-cyan-400 text-xs font-bold px-2.5 py-0.5 rounded-full border border-cyan-800/50">0</span>
+                    </div>
+                    <div id="tv-process-list" class="space-y-3"></div>
+                </div>
+            </section>
+
+            <!-- Consejo rotativo + info de sala -->
+            <aside class="lg:col-span-4 flex flex-col gap-6">
+                <div class="bg-gradient-to-tr from-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-6 flex-grow flex flex-col justify-between shadow-lg relative overflow-hidden">
+                    <div class="absolute -top-12 -right-12 w-40 h-40 bg-cyan-500/10 rounded-full blur-2xl" aria-hidden="true"></div>
+                    <div>
+                        <span class="text-[10px] bg-slate-800 text-cyan-400 font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-4 inline-block">Consejo Luitech</span>
+                        <h3 id="tv-advice-title" class="text-xl font-bold text-white mb-3 leading-snug transition-opacity duration-300">Cuidado de Baterías</h3>
+                        <p id="tv-advice-desc" class="text-slate-400 text-sm leading-relaxed transition-opacity duration-300"></p>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs text-slate-500 border-t border-slate-800/80 pt-4">
+                        <i class="fa-solid fa-lightbulb text-cyan-500"></i>
+                        <span>Consejo educativo rotativo cada 15 segundos</span>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/80 border border-slate-800 p-4 rounded-xl text-xs space-y-2">
+                    <p><i class="fa-solid fa-location-dot text-cyan-400 mr-1.5"></i> Bernardo O'Higgins 564, Local 13 (Persa Las Cenizas)</p>
+                    <p><i class="fa-brands fa-whatsapp text-emerald-400 mr-1.5"></i> Soporte: <strong class="text-slate-200">+56 9 8220 9690</strong></p>
+                    <p><i class="fa-solid fa-clock text-cyan-400 mr-1.5"></i> Lun a Vie: 09:30 - 18:00 hrs</p>
+                </div>
+            </aside>
+        </div>
+
+        <!-- Pie del Modo TV -->
+        <footer class="flex justify-between items-center bg-slate-900/40 border border-slate-800 px-6 py-3 rounded-xl text-xs text-slate-400 gap-2">
+            <span>Pantalla de espera automática — se actualiza cada 15 segundos</span>
+            <a href="index.html" title="Volver al sitio"
+               class="bg-slate-800 hover:bg-slate-700 hover:text-white px-3 py-1 rounded border border-slate-700 transition-all font-bold text-[11px] text-cyan-300">
+                <i class="fa-solid fa-arrow-left mr-1"></i> Salir Modo TV
+            </a>
+        </footer>
+
+    </main>
+
+    <script src="assets/js/common.js" defer></script>
+    <script src="assets/js/tv.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+# ===== NO publicar en el repositorio =====
+
+# Respaldos con datos sensibles (contraseña Wi-Fi, códigos demo)
+index-respaldo-antiguo.html
+paginaweb.txt
+
+# Paquete de deployment (artefacto generado)
+deploy/
+
+# Logo duplicado sin uso (el oficial está en assets/img/logo-luitech.png)
+logo logo.png
+
+# Dependencias y artefactos Node (si algún día se añade build local)
+node_modules/
+package-lock.json
+
+# Archivos del sistema operativo
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Configuración de editores
+.vscode/
+.idea/

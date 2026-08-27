@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   LUITECH — estilos personalizados
+   Compilar con:
+     npx tailwindcss -c tailwind.config.js -i ./assets/css/input.css -o ./assets/css/styles.css --minify
+   ========================================================================== */
+
+body {
+  background-color: #080d18;
+  background-image:
+    radial-gradient(circle at 10% 0%, rgba(14, 165, 233, 0.12), transparent 28rem),
+    radial-gradient(circle at 90% 18%, rgba(16, 185, 129, 0.08), transparent 24rem);
+}
+
+h1, h2, h3, h4, button, .font-black, .font-extrabold {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+::selection {
+  background: #22d3ee;
+  color: #082f49;
+}
+
+:focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: 3px;
+}
+
+.section-rule {
+  background-image: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.35), transparent);
+  height: 1px;
+}
+
+.hero-grid {
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.045) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, black, transparent 85%);
+  -webkit-mask-image: linear-gradient(to bottom, black, transparent 85%);
+}
+
+.reveal {
+  animation: reveal-up 0.7s ease-out both;
+}
+
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Efecto de resplandor para botones e interacciones */
+.glow-effect:hover {
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.4);
+}
+
+/* --------------------------------------------------------------------------
+   Mapa Leaflet — modo oscuro
+   -------------------------------------------------------------------------- */
+#map {
+  height: 100%;
+  width: 100%;
+  z-index: 10;
+}
+
+.dark-map .leaflet-tile-container {
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(85%);
+}
+
+.leaflet-container {
+  background: #0b0f19 !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: #0f172a !important;
+  color: #f8fafc !important;
+  border: 1px solid #334155;
+  border-radius: 12px;
+}
+
+.leaflet-popup-tip {
+  background: #0f172a !important;
+}
+
+.leaflet-bar a {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+  border-bottom: 1px solid #334155 !important;
+}
+
+.leaflet-bar a:hover,
+.leaflet-bar a:focus-visible {
+  background-color: #334155 !important;
+  color: #22d3ee !important;
+}
