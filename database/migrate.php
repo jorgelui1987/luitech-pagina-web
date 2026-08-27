@@ -187,6 +187,100 @@ $pdo->exec("
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 ");
 
+// --- GRUPO: módulos ERP (Fase 3) — helpers y columnas nuevas ------------
+$tieneCol = function ($tabla, $col) use ($pdo) {
+    $st = $pdo->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS
+                         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?");
+    $st->execute([$tabla, $col]);
+    return ((int)$st->fetchColumn()) > 0;
+};
+if (!$tieneCol('ventas', 'cliente_id')) { $pdo->exec("ALTER TABLE ventas ADD COLUMN cliente_id INT UNSIGNED NULL"); }
+if (!$tieneCol('ordenes', 'cliente_id')) { $pdo->exec("ALTER TABLE ordenes ADD COLUMN cliente_id INT UNSIGNED NULL"); }
+if (!$tieneCol('usuarios_admin', 'rol')) {
+    $pdo->exec("ALTER TABLE usuarios_admin ADD COLUMN rol ENUM('admin','vendedor','tecnico') NOT NULL DEFAULT 'admin'");
+}
+
+$pdo->exec("CREATE TABLE IF NOT EXISTS clientes (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    rut VARCHAR(15) NOT NULL UNIQUE, nombre VARCHAR(120) NOT NULL,
+    telefono VARCHAR(25) DEFAULT '', email VARCHAR(120) DEFAULT '', direccion VARCHAR(160) DEFAULT '',
+    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+$pdo->prepare('INSERT IGNORE INTO clientes (rut, nombre, telefono) VALUES (?, ?, ?)')
+    ->execute(['11111111-1', 'Cliente Demo', '+56912345678']);
+
+$pdo->exec("CREATE TABLE IF NOT EXISTS proveedores (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, nombre VARCHAR(120) NOT NULL,
+    contacto VARCHAR(120) DEFAULT '', telefono VARCHAR(25) DEFAULT '',
+    email VARCHAR(120) DEFAULT '', notas VARCHAR(255) DEFAULT ''
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+$pdo->exec("CREATE TABLE IF NOT EXISTS compras (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, numero VARCHAR(15) NOT NULL UNIQUE,
+    proveedor_id INT UNSIGNED NOT NULL, total INT UNSIGNED NOT NULL DEFAULT 0,
+    estado ENUM('Pendiente','Recibida') NOT NULL DEFAULT 'Pendiente',
+    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_compra_prov (proveedor_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+$pdo->exec("CREATE TABLE IF NOT EXISTS compra_items (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, compra_id INT UNSIGNED NOT NULL,
+    producto_id INT UNSIGNED NULL, descripcion VARCHAR(150) NOT NULL,
+    cantidad INT UNSIGNED NOT NULL DEFAULT 1, costo_unitario INT UNSIGNED NOT NULL DEFAULT 0,
+    FOREIGN KEY (compra_id) REFERENCES compras(id) ON DELETE CASCADE,
+    INDEX idx_ci_compra (compra_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+$pdo->exec("CREATE TABLE IF NOT EXISTS movimientos_stock (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, producto_id INT UNSIGNED NOT NULL,
+    tipo ENUM('Entrada','Salida','Ajuste') NOT NULL, cantidad INT UNSIGNED NOT NULL DEFAULT 1,
+    motivo VARCHAR(200) DEFAULT '', ref_tipo VARCHAR(30) DEFAULT 'manual', ref_id INT UNSIGNED NULL,
+    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, INDEX idx_ms_prod (producto_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+$pdo->exec("CREATE TABLE IF NOT EXISTS devoluciones (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, venta_num VARCHAR(15) NOT NULL,
+    descripcion VARCHAR(150) NOT NULL, cantidad INT UNSIGNED NOT NULL DEFAULT 1,
+    monto INT UNSIGNED NOT NULL DEFAULT 0, motivo VARCHAR(200) DEFAULT '',
+    producto_id INT UNSIGNED NULL, creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+$pdo->exec("CREATE TABLE IF NOT EXISTS garantias (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    ref_tipo ENUM('Venta','Orden') NOT NULL, ref_codigo VARCHAR(15) NOT NULL,
+    cliente VARCHAR(120) NOT NULL, producto VARCHAR(150) NOT NULL,
+    meses INT UNSIGNED NOT NULL DEFAULT 3, inicio DATE NOT NULL, fin DATE NOT NULL,
+    usada TINYINT(1) NOT NULL DEFAULT 0, creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_gar_fin (fin)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+$pdo->exec("CREATE TABLE IF NOT EXISTS gastos_fijos (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, concepto VARCHAR(150) NOT NULL,
+    categoria VARCHAR(60) NOT NULL DEFAULT 'General', monto INT UNSIGNED NOT NULL,
+    dia_pago TINYINT UNSIGNED NOT NULL DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+$pdo->exec("CREATE TABLE IF NOT EXISTS configuracion (
+    k VARCHAR(60) PRIMARY KEY, v TEXT NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+$cfgSeed = $pdo->prepare('INSERT IGNORE INTO configuracion (k, v) VALUES (?, ?)');
+foreach ([['negocio_nombre','Luitech Servicio Técnico'],['negocio_rut','22484469-7'],
+          ['negocio_direccion',"B.O'Higgins 564, Local 13, La Serena"],
+          ['negocio_whatsapp','+56 9 8220 9690'],
+          ['boleta_pie','Garantía por escrito. ¡Gracias por tu compra!'],
+          ['comision_pct','5']] as $kv) { $cfgSeed->execute($kv); }
+
+$pdo->exec("CREATE TABLE IF NOT EXISTS auditoria (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, usuario VARCHAR(80) NOT NULL DEFAULT '',
+    accion VARCHAR(60) NOT NULL, detalle VARCHAR(400) DEFAULT '',
+    creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, INDEX idx_aud_fecha (creado_en)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+// Usuarios demo con roles (clave luitech2026 hasheada igual)
+$hashBase = '$2y$10$dexr0Src7HyB4oAmWadqw.SH3DfipUA9iVmFXtYgkUY/TcHk5U8Qm';
+$usrStmt = $pdo->prepare("INSERT IGNORE INTO usuarios_admin (usuario, password_hash, nombre, rol) VALUES (?, ?, ?, ?)");
+$usrStmt->execute(['mostrador', $hashBase, 'Usuario Mostrador', 'vendedor']);
+$usrStmt->execute(['tecnico1', $hashBase, 'Técnico Uno', 'tecnico']);
+
 // Semillas de gastos demo (usando fechas reales para el reporte mensual)
 $pdo->prepare("INSERT IGNORE INTO gastos (concepto, categoria, monto, fecha) VALUES (?, ?, ?, CURDATE())")
     ->execute(['Gastos comunes taller', 'General', 5000]);

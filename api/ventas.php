@@ -69,9 +69,10 @@ switch ($action) {
             $numero = correlativo_venta($pdo);
 
             $pdo->prepare(
-                'INSERT INTO ventas (numero, vendedor, cliente, total, medio_pago, orden_codigo)
-                 VALUES (?, ?, ?, ?, ?, ?)'
-            )->execute([$numero, $vendedor, $cliente, $total, $medioPago, $ordenFinal]);
+                'INSERT INTO ventas (numero, vendedor, cliente, total, medio_pago, orden_codigo, cliente_id)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)'
+            )->execute([$numero, $vendedor, $cliente, $total, $medioPago, $ordenFinal,
+                        ($d['cliente_id'] ?? 0) > 0 ? (int)$d['cliente_id'] : null]);
             $ventaId = (int)$pdo->lastInsertId();
 
             $itemStmt = $pdo->prepare(
@@ -91,6 +92,10 @@ switch ($action) {
                     if ($stockStmt->rowCount() === 0) {
                         throw new RuntimeException('Sin stock suficiente: ' . $it['descripcion']);
                     }
+                    // Bitácora: salida de stock por esta venta
+                    $pdo->prepare('INSERT INTO movimientos_stock (producto_id, tipo, cantidad, motivo, ref_tipo, ref_id)
+                                   VALUES (?, "Salida", ?, "Venta", "venta", ?)')
+                         ->execute([$prodId, $cant, $ventaId]);
                 }
                 $itemStmt->execute([
                     $ventaId,

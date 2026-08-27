@@ -45,7 +45,7 @@ switch ($action) {
             responder(['ok' => false, 'error' => 'Usuario o contraseña inválidos'], 400);
         }
 
-        $stmt = db()->prepare('SELECT id, usuario, password_hash, nombre FROM usuarios_admin WHERE usuario = ? LIMIT 1');
+        $stmt = db()->prepare('SELECT id, usuario, password_hash, nombre, rol FROM usuarios_admin WHERE usuario = ? LIMIT 1');
         $stmt->execute([$usuario]);
         $admin = $stmt->fetch();
 
@@ -65,6 +65,7 @@ switch ($action) {
         $_SESSION['admin_id']   = (int)$admin['id'];
         $_SESSION['admin_user'] = $admin['usuario'];
         $_SESSION['admin_name'] = $admin['nombre'] !== '' ? $admin['nombre'] : $admin['usuario'];
+        $_SESSION['admin_rol']  = $admin['rol'] ?? 'admin';
 
         responder(['ok' => true, 'nombre' => $_SESSION['admin_name']]);
         break;
@@ -72,7 +73,7 @@ switch ($action) {
     // ---------------------------------------------------------------- ME
     case 'me':
         if (es_admin()) {
-            responder(['ok' => true, 'logueado' => true, 'nombre' => $_SESSION['admin_name']]);
+            responder(['ok' => true, 'logueado' => true, 'nombre' => $_SESSION['admin_name'], 'rol' => ($_SESSION['admin_rol'] ?? 'admin')]);
         }
         responder(['ok' => true, 'logueado' => false]);
         break;

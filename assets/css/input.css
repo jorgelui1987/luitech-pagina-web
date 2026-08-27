@@ -52,6 +52,26 @@ h1, h2, h3, h4, button, .font-black, .font-extrabold {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* --------------------------------------------------------------------------
+   Sidebar ERP (páginas de módulos internos)
+   -------------------------------------------------------------------------- */
+#sidebar a {
+  display: flex;
+  align-items: center;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 10px;
+  border-radius: 10px;
+}
+#sidebar a:hover { background: #0f172a; color: #e2e8f0; }
+#sidebar a.activo { background: #164e63; color: #67e8f9; }
+
+/* Barra de métricas del dashboard */
+.barra-h { height: 8px; border-radius: 9999px; background: #0f172a; overflow: hidden; }
+.barra-h > div { height: 100%; border-radius: 9999px;
+                 background: linear-gradient(90deg,#22d3ee,#2563eb); }
+
 /* Efecto de resplandor para botones e interacciones */
 .glow-effect:hover {
   box-shadow: 0 0 20px rgba(6, 182, 212, 0.4);

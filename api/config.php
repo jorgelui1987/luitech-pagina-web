@@ -84,6 +84,28 @@ function exigir_admin(): void
 }
 
 // --- Utilidades JSON --------------------------------------------------
+/** Auditoría central: registra quién hizo qué (nunca rompe la operación). */
+function log_audit(string $accion, string $detalle = ''): void
+{
+    try {
+        iniciar_sesion();
+        $usuario = $_SESSION['admin_user'] ?? 'sistema';
+        db()->prepare('INSERT INTO auditoria (usuario, accion, detalle) VALUES (?, ?, ?)')
+             ->execute([$usuario, $accion, mb_substr($detalle, 0, 400)]);
+    } catch (Throwable $t) { /* silencioso */ }
+}
+
+/** Exige sesión y rol dentro de los permitidos. */
+function exigir_rol(array $rolesPermitidos): void
+{
+    exigir_admin();
+    iniciar_sesion();
+    $rol = $_SESSION['admin_rol'] ?? 'admin';
+    if (!in_array($rol, $rolesPermitidos, true)) {
+        responder(['ok' => false, 'error' => 'Tu rol no permite esta acción'], 403);
+    }
+}
+
 function responder(array $datos, int $codigo_http = 200): never
 {
     http_response_code($codigo_http);

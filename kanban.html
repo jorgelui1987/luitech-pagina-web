@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanban Reparaciones | Luitech</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen overflow-x-hidden">
+    <div id="toast-container" class="fixed top-4 right-4 z-[9999] flex flex-col gap-3 px-4 w-full sm:w-auto items-end pointer-events-none"></div>
+    <div class="flex min-h-screen">
+        <aside id="sidebar" class="w-56 flex-shrink-0 bg-slate-950 border-r border-slate-800 p-4 hidden md:flex md:flex-col sticky top-0 self-start h-screen"></aside>
+        <main id="contenedor" class="flex-grow px-3 py-5 space-y-4 overflow-x-hidden">
+            <h1 class="text-xl font-black text-white"><i class="fa-solid fa-table-columns text-cyan-400 mr-2"></i>Tablero Kanban — flujo de reparaciones</h1>
+            <p class="text-xs text-slate-400">Arrastra las tarjetas entre columnas o usa las flechas para cambiar de estado.</p>
+            <div id="kanban" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3"></div>
+        </main>
+    </div>
+    <script src="assets/js/common.js" defer></script>
+    <script src="assets/js/shell.js" defer></script>
+    <script src="assets/js/kanban.js" defer></script>
+</body>
+</html>
