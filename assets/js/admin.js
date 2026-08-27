@@ -261,6 +261,187 @@
       .map(function (b) { return b.getAttribute('data-acc'); });
   }
 
+  /* --------------------------------- PIN NUMÉRICO / PATRÓN DIBUJABLE 3×3 */
+  var tipoPin = 'PIN';            // 'PIN' | 'Patron'
+  var patronSecuencia = [];       // ej. [1, 4, 7, 8, 9]
+  var lienzoPatron = null;
+  var patronTrazando = false;
+
+  /** Fecha de hoy en formato YYYY-MM-DD según el huso horario local (no UTC). */
+  function fechaLocalHoy() {
+    var h = new Date();
+    var mes = String(h.getMonth() + 1).padStart(2, '0');
+    var dia = String(h.getDate()).padStart(2, '0');
+    return h.getFullYear() + '-' + mes + '-' + dia;
+  }
+
+  /** Centros de los 9 puntos (numerados 1..9) dentro de un canvas 3×3. */
+  function puntosPatronDe(canvas) {
+    var lado = Math.min(canvas.width, canvas.height);
+    var margen = lado * 0.2;
+    var paso = (lado - 2 * margen) / 2;
+    var puntos = [];
+    for (var fila = 0; fila < 3; fila++) {
+      for (var col = 0; col < 3; col++) {
+        puntos.push({ n: fila * 3 + col + 1, x: margen + col * paso, y: margen + fila * paso });
+      }
+    }
+    return puntos;
+  }
+
+  /** Dibuja puntos 1..9 + la línea de la secuencia (y el trazo en curso). */
+  function dibujarPatronEn(canvas, secuencia, puntoActual) {
+    var ctx = canvas.getContext('2d');
+    var puntos = puntosPatronDe(canvas);
+    var lado = Math.min(canvas.width, canvas.height);
+    var radio = lado * 0.09;
+    var sel = {};
+    secuencia.forEach(function (n) { sel[n] = puntos[n - 1]; });
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (secuencia.length) {
+      ctx.strokeStyle = '#22d3ee';
+      ctx.lineWidth = Math.max(3, lado * 0.025);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(sel[secuencia[0]].x, sel[secuencia[0]].y);
+      for (var i = 1; i < secuencia.length; i++) {
+        ctx.lineTo(sel[secuencia[i]].x, sel[secuencia[i]].y);
+      }
+      if (puntoActual) ctx.lineTo(puntoActual.x, puntoActual.y);
+      ctx.stroke();
+    }
+    puntos.forEach(function (p) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, radio, 0, Math.PI * 2);
+      if (sel[p.n]) {
+        ctx.fillStyle = '#22d3ee';
+        ctx.fill();
+      } else {
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      ctx.fillStyle = sel[p.n] ? '#0f172a' : '#94a3b8';
+      ctx.font = 'bold ' + Math.max(9, Math.round(radio)) + 'px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(p.n), p.x, p.y);
+    });
+  }
+
+  /** Recalcula el tamaño del lienzo del patrón (tras mostrarlo o redimensionar). */
+  function calcularPatron() {
+    if (!lienzoPatron || lienzoPatron.classList.contains('hidden')) return;
+    var r = lienzoPatron.getBoundingClientRect();
+    if (r.width < 10) return;
+    lienzoPatron.width = Math.round(r.width);
+    lienzoPatron.height = Math.round(r.width); // cuadrado
+    patronSecuencia = [];
+    dibujarPatronEn(lienzoPatron, patronSecuencia);
+  }
+
+  function seguirPatron(e) {
+    var r = lienzoPatron.getBoundingClientRect();
+    var px = e.clientX - r.left;
+    var py = e.clientY - r.top;
+    var tolerancia = Math.min(lienzoPatron.width, lienzoPatron.height) * 0.09 * 1.8;
+    puntosPatronDe(lienzoPatron).forEach(function (p) {
+      if (patronSecuencia.indexOf(p.n) === -1 && Math.hypot(px - p.x, py - p.y) <= tolerancia) {
+        patronSecuencia.push(p.n);
+      }
+    });
+    dibujarPatronEn(lienzoPatron, patronSecuencia, { x: px, y: py });
+  }
+
+  function iniciarPatron() {
+    lienzoPatron = $('new-patron');
+    if (!lienzoPatron) return;
+    lienzoPatron.addEventListener('pointerdown', function (e) {
+      e.preventDefault();
+      lienzoPatron.setPointerCapture(e.pointerId);
+      patronTrazando = true;
+      patronSecuencia = [];
+      seguirPatron(e);
+    });
+    lienzoPatron.addEventListener('pointermove', function (e) {
+      if (patronTrazando) seguirPatron(e);
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) {
+      lienzoPatron.addEventListener(ev, function () { patronTrazando = false; });
+    });
+    $('btn-patron-limpiar').addEventListener('click', function () {
+      patronSecuencia = [];
+      dibujarPatronEn(lienzoPatron, patronSecuencia);
+    });
+    window.addEventListener('resize', calcularPatron);
+  }
+
+  /** Alterna el formulario entre PIN numérico y patrón dibujable. */
+  function fijarTipoPin(tipo) {
+    tipoPin = tipo;
+    var esPin = tipo === 'PIN';
+    $('btn-tipo-pin').classList.toggle('activo', esPin);
+    $('btn-tipo-patron').classList.toggle('activo', !esPin);
+    $('new-pin').classList.toggle('hidden', !esPin);
+    $('new-patron').classList.toggle('hidden', esPin);
+    $('btn-patron-limpiar').classList.toggle('hidden', esPin);
+    if (esPin) {
+      patronSecuencia = [];
+    } else {
+      calcularPatron();
+    }
+  }
+
+  /** Serializa lo ingresado: 'PIN: 1234' | 'Patrón: 1-4-7' | null. */
+  function valorPinPatron() {
+    if (tipoPin === 'Patron') {
+      return patronSecuencia.length >= 2 ? 'Patrón: ' + patronSecuencia.join('-') : null;
+    }
+    var pin = $('new-pin').value.replace(/\D/g, '');
+    return pin !== '' ? 'PIN: ' + pin : null;
+  }
+
+  /** Deja el control de PIN/Patrón listo para una nueva orden. */
+  function limpiarPinPatron() {
+    $('new-pin').value = '';
+    patronSecuencia = [];
+    if (lienzoPatron && !lienzoPatron.classList.contains('hidden')) {
+      dibujarPatronEn(lienzoPatron, patronSecuencia);
+    }
+  }
+
+  /** Fila del modal: si es patrón lo redibuja visualmente; si no, texto. */
+  function filaPinPatron(valor) {
+    if (!valor || !/^Patr[oó]n:/i.test(valor)) {
+      return parDato('PIN / Patrón', valor);
+    }
+    var seq = valor.replace(/^Patr[oó]n:\s*/i, '').split('-')
+      .map(function (n) { return parseInt(n, 10); })
+      .filter(function (n) { return n >= 1 && n <= 9; });
+
+    var wrap = document.createElement('div');
+    var dt = document.createElement('dt');
+    dt.className = 'text-[10px] uppercase tracking-wider text-slate-500 font-bold';
+    dt.textContent = 'PIN / Patrón';
+    var dd = document.createElement('dd');
+    dd.className = 'text-slate-200 font-semibold';
+    var cv = document.createElement('canvas');
+    cv.width = 96;
+    cv.height = 96;
+    cv.className = 'block bg-slate-950 border border-slate-800 rounded-lg';
+    dibujarPatronEn(cv, seq);
+    var nota = document.createElement('span');
+    nota.className = 'block text-[10px] text-slate-500 mt-0.5';
+    nota.textContent = 'Secuencia: ' + seq.join(' → ');
+    dd.appendChild(cv);
+    dd.appendChild(nota);
+    wrap.appendChild(dt);
+    wrap.appendChild(dd);
+    return wrap;
+  }
+
   function renderizarTablaAdmin() {
     var tbody = $('admin-table-body');
     tbody.replaceChildren();
@@ -358,9 +539,10 @@
       falla:   $('new-falla').value.trim(),
       tecnico: $('new-tecnico').value.trim(),
       fecha:   $('new-fecha').value,
-      pin_patron: $('new-pin').value.trim(),
       obs_recepcion: $('new-obs').value.trim()
     };
+    var pinFinal = valorPinPatron();
+    if (pinFinal) cuerpo.pin_patron = pinFinal;
     var codigo = $('new-codigo').value.trim();
     if (/^\d{3,8}$/.test(codigo)) codigo = 'LUH-' + codigo;
     cuerpo.codigo = codigo; // vacío → la API genera el correlativo
@@ -371,7 +553,6 @@
 
     if (cuerpo.tecnico === '') delete cuerpo.tecnico;
     if (!cuerpo.fecha) delete cuerpo.fecha;
-    if (!cuerpo.pin_patron) delete cuerpo.pin_patron;
     if (!cuerpo.obs_recepcion) delete cuerpo.obs_recepcion;
 
     var fotosASubir = fotosNueva.slice();
@@ -391,6 +572,7 @@
         renderFotosNueva();
         limpiarFirmaNueva();
         desmarcarChips();
+        limpiarPinPatron();
         renderizarTablaAdmin();
 
         if (!fotosASubir.length) return;
@@ -495,7 +677,7 @@
     dl.appendChild(parDato('Avance', String(o.avance) + '%'));
     dl.appendChild(parDato('Técnico', o.tecnico));
     dl.appendChild(parDato('Ingreso', o.fecha_ingreso));
-    dl.appendChild(parDato('PIN / Patrón', o.pin_patron));
+    dl.appendChild(filaPinPatron(o.pin_patron));
     dl.appendChild(parDato('Accesorios', o.accesorios));
     dl.appendChild(parDato('Falla declarada', o.falla, true));
     dl.appendChild(parDato('Observaciones', o.obs_recepcion, true));
@@ -639,6 +821,17 @@
 
     // Acta de recepción: firma táctil, fotos y accesorios
     iniciarFirma();
+    iniciarPatron();
+
+    // Fecha de ingreso: pre-cargada con hoy (sigue siendo editable)
+    $('new-fecha').value = fechaLocalHoy();
+
+    // Selector PIN numérico / patrón dibujable
+    $('btn-tipo-pin').addEventListener('click', function () { fijarTipoPin('PIN'); });
+    $('btn-tipo-patron').addEventListener('click', function () { fijarTipoPin('Patron'); });
+    $('new-pin').addEventListener('input', function () {
+      this.value = this.value.replace(/\D/g, '');
+    });
     $('new-fotos').addEventListener('change', function (e) {
       var archivos = Array.prototype.slice.call(e.target.files);
       e.target.value = '';

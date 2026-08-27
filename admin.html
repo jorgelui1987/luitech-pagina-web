@@ -20,6 +20,10 @@
         #new-fotos-galeria{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
         @media (min-width:768px){ #new-fotos-galeria{ grid-template-columns:repeat(6,1fr); } }
         #mo-fotos{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+        .lienzo-patron{ touch-action:none; cursor:pointer; width:100%; max-width:160px; aspect-ratio:1/1;
+                        background:#0f172a; border:1px solid #1e293b; border-radius:0.5rem; display:block; }
+        #btn-tipo-pin.activo{ background:#06b6d4 !important; color:#0f172a !important; }
+        #btn-tipo-patron.activo{ background:#06b6d4 !important; color:#0f172a !important; border-color:#06b6d4; }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -154,9 +158,17 @@
                         <input type="date" id="new-fecha" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
                     </div>
                     <div>
-                        <label for="new-pin" class="block text-slate-400 mb-1 font-semibold"><i class="fa-solid fa-lock text-cyan-400 mr-1"></i>PIN / Patrón</label>
-                        <input type="text" id="new-pin" maxlength="50" placeholder="Ej. 1234 o patrón en L"
+                        <label class="block text-slate-400 mb-1 font-semibold"><i class="fa-solid fa-lock text-cyan-400 mr-1"></i>PIN / Patrón</label>
+                        <div class="flex gap-1 mb-1">
+                            <button type="button" id="btn-tipo-pin" class="activo flex-1 text-[10px] font-bold py-1 rounded-md transition-all bg-slate-800 border border-slate-700 text-slate-300">PIN</button>
+                            <button type="button" id="btn-tipo-patron" class="flex-1 text-[10px] font-bold py-1 rounded-md transition-all bg-slate-800 border border-slate-700 text-slate-300">Patrón</button>
+                        </div>
+                        <input type="text" id="new-pin" inputmode="numeric" maxlength="6" placeholder="Ej. 1234"
                                class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                        <canvas id="new-patron" class="lienzo-patron hidden" width="160" height="160"></canvas>
+                        <button type="button" id="btn-patron-limpiar" class="hidden mt-1 text-[10px] font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2 py-1 rounded-md transition-all">
+                            <i class="fa-solid fa-eraser mr-1"></i> Limpiar patrón
+                        </button>
                     </div>
                     <div class="md:col-span-3">
                         <label for="new-obs" class="block text-slate-400 mb-1 font-semibold">Observaciones de recepción (estado físico)</label>
