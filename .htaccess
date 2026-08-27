@@ -1,0 +1,14 @@
+# Seguridad básica para el sitio de Luitech (Apache - Laragon)
+Options -Indexes
+
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header set Permissions-Policy "geolocation=(self), microphone=(), camera=()"
+</IfModule>
+
+# Nunca exponer respaldos ni archivos sensibles
+<FilesMatch "\.(sql|log|md|lock)$">
+    Require all denied
+</FilesMatch>

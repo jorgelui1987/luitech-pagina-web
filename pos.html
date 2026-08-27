@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Punto de Venta | Luitech</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+
+    <div id="toast-container" class="fixed top-4 right-4 z-[9999] flex flex-col gap-3 px-4 w-full sm:w-auto items-end pointer-events-none"></div>
+
+    <!-- Vista sin sesión -->
+    <div id="view-nologin" class="hidden min-h-screen flex items-center justify-center p-6 text-center">
+        <div class="bg-slate-950 border border-slate-800 rounded-2xl p-8 max-w-sm">
+            <i class="fa-solid fa-lock text-amber-400 text-3xl mb-4"></i>
+            <h1 class="font-extrabold text-white text-lg">Sesión requerida</h1>
+            <p class="text-slate-400 text-xs mt-2">Inicia sesión en el panel del taller para usar el punto de venta.</p>
+            <a href="admin.html" class="inline-block mt-5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-sm">Ir al Login</a>
+        </div>
+    </div>
+
+    <!-- App POS -->
+    <main id="view-pos" class="hidden max-w-7xl mx-auto px-4 py-6 space-y-5">
+
+        <header class="flex flex-wrap justify-between items-center gap-3 bg-slate-950 border border-slate-800 rounded-2xl px-5 py-4">
+            <div class="flex items-center gap-3">
+                <img src="assets/img/logo-luitech.png" alt="" width="36" height="36" class="h-9 w-9 rounded-lg object-cover">
+                <span class="text-xl font-black bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500">PUNTO DE VENTA</span>
+            </div>
+            <div class="flex items-center gap-3 text-xs font-semibold">
+                <span class="bg-emerald-950 border border-emerald-800 text-emerald-400 px-3 py-1.5 rounded-lg">Hoy: $<span id="total-dia">0</span></span>
+                <a href="inventario.html" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-3 py-1.5 rounded-lg"><i class="fa-solid fa-boxes-stacked mr-1"></i>Inventario</a>
+                <a href="admin.html" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-lg">Panel</a>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+            <!-- Catálogo -->
+            <section class="lg:col-span-7 bg-slate-950 border border-slate-800 rounded-2xl p-5">
+                <label for="buscar" class="sr-only">Buscar producto</label>
+                <div class="relative mb-4">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                    <input type="text" id="buscar" placeholder="Buscar por código o nombre… (ej: CT-GNRL)"
+                           class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-11 pr-4 py-3 text-white text-sm focus:outline-none focus:border-cyan-500">
+                </div>
+                <div id="catalogo" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[430px] overflow-y-auto pr-1"></div>
+            </section>
+
+            <!-- Carrito -->
+            <section class="lg:col-span-5 bg-slate-950 border border-slate-800 rounded-2xl p-5 flex flex-col">
+                <h2 class="font-extrabold text-white mb-3"><i class="fa-solid fa-cart-shopping text-cyan-400 mr-2"></i>Venta actual</h2>
+
+                <div id="carrito-lista" class="space-y-2 overflow-y-auto min-h-[140px] max-h-[260px] pr-1">
+                    <p id="carrito-vacio" class="text-slate-500 text-sm italic py-6 text-center">Sin items. Toca un producto para agregarlo.</p>
+                </div>
+
+                <div class="mt-auto pt-4 space-y-3 border-t border-slate-800 mt-3">
+                    <div class="flex justify-between items-end">
+                        <span class="text-xs uppercase tracking-wider text-slate-400 font-bold">Total</span>
+                        <span id="carrito-total" class="text-4xl font-black text-white">$0</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" id="venta-cliente" maxlength="80" placeholder="Cliente (opcional)" class="col-span-2 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500">
+                        <select id="venta-pago" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500">
+                            <option value="Efectivo">Efectivo</option>
+                            <option value="Debito">Débito</option>
+                            <option value="Credito">Crédito</option>
+                            <option value="Transferencia">Transferencia</option>
+                        </select>
+                        <input type="text" id="venta-orden" maxlength="10" placeholder="Orden LUH (opcional)" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500">
+                    </div>
+                    <button type="button" id="btn-cobrar" disabled class="w-full bg-cyan-500 hover:bg-cyan-400 disabled:opacity-40 text-slate-950 font-black py-3.5 rounded-xl transition-all shadow-lg shadow-cyan-500/20 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-cash-register mr-2"></i>COBRAR
+                    </button>
+                    <button type="button" id="btn-limpiar" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold py-2 rounded-lg">Vaciar venta</button>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="assets/js/common.js" defer></script>
+    <script src="assets/js/pos.js" defer></script>
+</body>
+</html>
+

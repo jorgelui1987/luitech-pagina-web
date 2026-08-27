@@ -1,0 +1,12 @@
+# Nada de esto debe entrar a la imagen de producción
+.git/
+.gitignore
+deploy/
+paginaweb.txt
+index-respaldo-antiguo.html
+logo logo.png
+README.md
+tailwind.config.js
+.vscode/
+.idea/
+Thumbs.db
