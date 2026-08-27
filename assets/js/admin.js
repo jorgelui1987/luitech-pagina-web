@@ -256,13 +256,53 @@
     });
   }
 
-  /* ----------------------------------------------------------- ARRANQUE */
+  /* ------------------------------------------------------ CAMBIAR CLAVE */
+  function abrirModalClave() {
+    ['clave-actual','clave-nueva','clave-repetida'].forEach(function (i) { $(i).value = ''; });
+    $('modal-clave').classList.remove('hidden');
+    $('clave-actual').focus();
+  }
+  function cerrarModalClave() { $('modal-clave').classList.add('hidden'); }
+
+  function guardarNuevaClave(ev) {
+    ev.preventDefault();
+    var actual = $('clave-actual').value;
+    var nueva  = $('clave-nueva').value;
+    var repite = $('clave-repetida').value;
+
+    if (nueva !== repite) { window.mostrarToast('La nueva contraseña y su repetición no coinciden', 'error'); return; }
+    if (nueva.length < 8) { window.mostrarToast('La nueva contraseña debe tener al menos 8 caracteres', 'error'); return; }
+
+    var boton = $('btn-clave-guardar');
+    boton.disabled = true;
+
+    api('api/auth.php?action=cambiar_clave', {
+      method: 'POST',
+      body: { clave_actual: actual, nueva: nueva, repetida: repite }
+    }).then(function (res) {
+      if (!res.ok) { window.mostrarToast(res.error || 'No se pudo cambiar', 'error'); return; }
+      cerrarModalClave();
+      window.mostrarToast('Contraseña actualizada ✓', 'success');
+    }).catch(function () {
+      window.mostrarToast('Error de conexión con el servidor', 'error');
+    }).finally(function () { boton.disabled = false; });
+  }
+
+  /* ------------------------------------------------------------ ARRANQUE */
   document.addEventListener('DOMContentLoaded', function () {
     $('form-login').addEventListener('submit', iniciarSesion);
     $('form-nueva-orden').addEventListener('submit', agregarOrden);
     $('btn-logout').addEventListener('click', cerrarSesion);
     $('btn-recargar').addEventListener('click', renderizarTablaAdmin);
     $('btn-simular').addEventListener('click', simularAvanceOrden);
+    $('btn-clave').addEventListener('click', abrirModalClave);
+    $('btn-clave-cerrar').addEventListener('click', cerrarModalClave);
+    $('form-clave').addEventListener('submit', guardarNuevaClave);
+
+    // Cerrar el modal con Escape
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape') cerrarModalClave();
+    });
 
     // Verificar sesión existente al cargar
     api('api/auth.php?action=me').then(function (res) {
@@ -278,4 +318,5 @@
     });
   });
 })();
+
 

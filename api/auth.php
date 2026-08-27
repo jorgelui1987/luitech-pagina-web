@@ -87,6 +87,38 @@ switch ($action) {
         responder(['ok' => true]);
         break;
 
+    /* --------------------------------------------- CAMBIAR CLAVE PROPIA */
+    case 'cambiar_clave': {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            responder(['ok' => false, 'error' => 'Método no permitido'], 405);
+        }
+        if (!es_admin()) {
+            responder(['ok' => false, 'error' => 'No autorizado'], 401);
+        }
+        $d          = leer_cuerpo();
+        $actual     = (string)($d['clave_actual'] ?? '');
+        $nueva      = (string)($d['nueva'] ?? '');
+        $repetida   = (string)($d['repetida'] ?? '');
+
+        if ($nueva !== $repetida) {
+            responder(['ok' => false, 'error' => 'La contraseña nueva y su repetición no coinciden'], 400);
+        }
+        if (strlen($nueva) < 8 || strlen($nueva) > 72) {
+            responder(['ok' => false, 'error' => 'La nueva contraseña debe tener entre 8 y 72 caracteres'], 400);
+        }
+
+        $st = db()->prepare('SELECT id, password_hash FROM usuarios_admin WHERE id = ? LIMIT 1');
+        $st->execute([(int)$_SESSION['admin_id']]);
+        $fila = $st->fetch();
+        if (!$fila || !password_verify($actual, $fila['password_hash'])) {
+            usleep(300000);
+            responder(['ok' => false, 'error' => 'La contraseña actual es incorrecta'], 401);
+        }
+        db()->prepare('UPDATE usuarios_admin SET password_hash = ? WHERE id = ?')
+             ->execute([password_hash($nueva, PASSWORD_BCRYPT), (int)$fila['id']]);
+        responder(['ok' => true]);
+    }
+
     default:
         responder(['ok' => false, 'error' => 'Acción desconocida'], 400);
 }
