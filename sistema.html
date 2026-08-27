@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema | Luitech</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+    <div id="toast-container" class="fixed top-4 right-4 z-[9999] flex flex-col gap-3 px-4 w-full sm:w-auto items-end pointer-events-none"></div>
+
+    <main id="view-sys" class="hidden max-w-5xl mx-auto px-4 py-6 space-y-5">
+        <header class="flex flex-wrap justify-between items-center gap-3 bg-slate-950 border border-slate-800 rounded-2xl px-5 py-4">
+            <div class="flex items-center gap-3">
+                <img src="assets/img/logo-luitech.png" alt="" width="36" height="36" class="h-9 w-9 rounded-lg object-cover">
+                <span class="text-xl font-black bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500">SISTEMA</span>
+            </div>
+            <a href="admin.html" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-lg text-xs font-semibold">← Panel</a>
+        </header>
+
+        <!-- CONFIGURACIÓN -->
+        <section class="bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-3">
+            <h2 class="text-sm font-bold text-cyan-400"><i class="fa-solid fa-store mr-1"></i>Datos del negocio</h2>
+            <div id="cfg-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+            <button type="button" id="btn-cfg-save" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-5 py-2 rounded-lg text-sm">Guardar configuración</button>
+        </section>
+
+        <!-- USUARIOS -->
+        <section class="bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-3">
+            <h2 class="text-sm font-bold text-cyan-400"><i class="fa-solid fa-users-gear mr-1"></i>Usuarios del sistema</h2>
+            <form id="form-usuario" class="grid grid-cols-1 sm:grid-cols-5 gap-2 items-end text-xs">
+                <input type="text" id="u-usuario" placeholder="Usuario*" maxlength="50" required class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                <input type="password" id="u-pass" placeholder="Contraseña (8+)*" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                <input type="text" id="u-nombre" placeholder="Nombre" maxlength="80" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                <select id="u-rol" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                    <option value="admin">Admin</option><option value="vendedor">Vendedor</option><option value="tecnico">Técnico</option>
+                </select>
+                <button type="submit" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg py-2">Crear</button>
+            </form>
+            <div id="usuarios-tabla" class="overflow-x-auto"></div>
+        </section>
+
+        <!-- AUDITORÍA -->
+        <section class="bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-2">
+            <h2 class="text-sm font-bold text-cyan-400"><i class="fa-solid fa-history mr-1"></i>Auditoría (últimos eventos)</h2>
+            <div id="auditoria-lista" class="text-xs space-y-1 max-h-64 overflow-y-auto"></div>
+        </section>
+
+        <!-- BACKUP -->
+        <section class="bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-3">
+            <h2 class="text-sm font-bold text-cyan-400"><i class="fa-solid fa-database mr-1"></i>Backup & Restore</h2>
+            <div class="flex flex-wrap gap-3">
+                <a href="api/sistema.php?action=backup" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-2.5 rounded-lg text-sm inline-block"><i class="fa-solid fa-download mr-1"></i>Descargar backup</a>
+                <label for="file-restore" class="bg-slate-700 hover:bg-slate-600 text-white font-bold px-5 py-2.5 rounded-lg text-sm cursor-pointer inline-block"><i class="fa-solid fa-upload mr-1"></i>Restaurar</label>
+                <input type="file" id="file-restore" accept=".json" class="hidden">
+            </div>
+            <p class="text-[10px] text-slate-500">⚠ Restaurar reemplaza TODOS los datos actuales. Haz backup antes.</p>
+        </section>
+    </main>
+
+    <script src="assets/js/common.js" defer></script>
+    <script src="assets/js/sistema.js" defer></script>
+</body>
+</html>
+
