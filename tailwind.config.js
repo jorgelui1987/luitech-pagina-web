@@ -5,6 +5,7 @@ module.exports = {
     './admin.html',
     './pos.html',
     './inventario.html',
+    './finanzas.html',
     './tv.html',
     './assets/js/**/*.js',
   ],

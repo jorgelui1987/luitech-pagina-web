@@ -145,6 +145,55 @@ foreach ($productosSemilla as $p) {
     $prodStmt->execute($p);
 }
 
+// --- Caja diaria --------------------------------------------------------
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS caja_sesiones (
+        id             INT UNSIGNED     AUTO_INCREMENT PRIMARY KEY,
+        abierta_por    VARCHAR(80)      NOT NULL DEFAULT 'Mostrador',
+        monto_apertura INT UNSIGNED     NOT NULL DEFAULT 0,
+        apertura_ts    TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        cierre_ts      DATETIME         NULL,
+        monto_cierre   INT UNSIGNED     NULL,
+        diferencia     INT              NULL,
+        estado         ENUM('Abierta','Cerrada') NOT NULL DEFAULT 'Abierta'
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+");
+
+// --- Movimientos de caja (ventas efectivo + manuales) -------------------
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS movimientos_caja (
+        id        INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+        sesion_id INT UNSIGNED  NOT NULL,
+        tipo      ENUM('Ingreso','Egreso') NOT NULL,
+        concepto  VARCHAR(200)  NOT NULL,
+        monto     INT UNSIGNED  NOT NULL,
+        venta_id  INT UNSIGNED  NULL,
+        creado_en TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (sesion_id) REFERENCES caja_sesiones(id) ON DELETE CASCADE,
+        INDEX idx_mc_sesion (sesion_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+");
+
+// --- Gastos del negocio ---------------------------------------------------
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS gastos (
+        id        INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+        concepto  VARCHAR(200)  NOT NULL,
+        categoria VARCHAR(60)   NOT NULL DEFAULT 'General',
+        monto     INT UNSIGNED  NOT NULL,
+        fecha     DATE          NOT NULL,
+        creado_en TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_gastos_fecha (fecha)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+");
+
+// Semillas de gastos demo (usando fechas reales para el reporte mensual)
+$pdo->prepare("INSERT IGNORE INTO gastos (concepto, categoria, monto, fecha) VALUES (?, ?, ?, CURDATE())")
+    ->execute(['Gastos comunes taller', 'General', 5000]);
+$pdo->prepare("INSERT IGNORE INTO gastos (concepto, categoria, monto, fecha) VALUES (?, ?, ?, CURDATE())")
+    ->execute(['Repuestos comprados al proveedor', 'Mercaderia', 30000]);
+
+
 $ordenes = (int)$pdo->query('SELECT COUNT(*) FROM ordenes')->fetchColumn();
 echo "[migrate] Esquema verificado. Órdenes en BD: {$ordenes}\n";
 

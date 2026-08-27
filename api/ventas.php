@@ -102,6 +102,21 @@ switch ($action) {
             }
 
             $pdo->commit();
+
+            // Venta en EFECTIVO -> entrada automática a la caja abierta (si la hay)
+            if ($medioPago === 'Efectivo') {
+                try {
+                    $sesion = $pdo->query(
+                        "SELECT id FROM caja_sesiones WHERE estado = 'Abierta' ORDER BY id DESC LIMIT 1"
+                    )->fetch();
+                    if ($sesion) {
+                        $pdo->prepare('INSERT INTO movimientos_caja (sesion_id, tipo, concepto, monto, venta_id)
+                                       VALUES (?, ?, ?, ?, ?)')
+                             ->execute([(int)$sesion['id'], 'Ingreso', 'Venta ' . $numero, $total, $ventaId]);
+                    }
+                } catch (Exception $e) { /* no interrumpe la venta */ }
+            }
+
             responder(['ok' => true, 'numero' => $numero, 'total' => $total]);
         } catch (RuntimeException $e) {
             $pdo->rollBack();
