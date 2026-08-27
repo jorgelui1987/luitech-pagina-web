@@ -6,11 +6,15 @@
 
 declare(strict_types=1);
 
-// --- Credenciales MySQL (por defecto en Laragon) ----------------------
-const DB_HOST = '127.0.0.1';
-const DB_NAME = 'luitech';
-const DB_USER = 'root';
-const DB_PASS = '';          // Laragon: root sin contraseña
+// --- Credenciales MySQL ------------------------------------------------
+// Valores por defecto: instalación estándar de Laragon (root sin clave).
+// En producción/hosting NO edites este archivo ni subas credenciales a Git;
+// define estas variables de entorno en el panel del hosting (cPanel):
+//   LUITECH_DB_HOST · LUITECH_DB_NAME · LUITECH_DB_USER · LUITECH_DB_PASS
+define('DB_HOST', getenv('LUITECH_DB_HOST') ?: '127.0.0.1');
+define('DB_NAME', getenv('LUITECH_DB_NAME') ?: 'luitech');
+define('DB_USER', getenv('LUITECH_DB_USER') ?: 'root');
+define('DB_PASS', getenv('LUITECH_DB_PASS') !== false ? getenv('LUITECH_DB_PASS') : '');
 
 const ADMIN_USER_MIN_LEN = 3;
 
