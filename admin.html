@@ -8,6 +8,19 @@
     <meta name="theme-color" content="#020617">
     <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
     <link rel="stylesheet" href="assets/css/styles.css">
+    <style>
+        /* Acta de recepción: firma táctil, chips de accesorios y miniaturas */
+        .lienzo-firma{ touch-action:none; cursor:crosshair; background:#ffffff; display:block; width:100%; height:140px; border-radius:0.5rem; }
+        .chip{ cursor:pointer; user-select:none; }
+        .chip-on{ background:#06b6d4 !important; color:#0f172a !important; border-color:#06b6d4 !important; }
+        .foto-thumb{ position:relative; border:1px solid #1e293b; border-radius:0.5rem; overflow:hidden; aspect-ratio:1/1; }
+        .foto-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+        .foto-borrar{ position:absolute; top:3px; right:3px; background:rgba(15,23,42,.85); color:#f87171;
+                      border:1px solid #7f1d1d; border-radius:0.375rem; width:22px; height:22px; font-size:10px; }
+        #new-fotos-galeria{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+        @media (min-width:768px){ #new-fotos-galeria{ grid-template-columns:repeat(6,1fr); } }
+        #mo-fotos{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+    </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
@@ -140,9 +153,49 @@
                         <label for="new-fecha" class="block text-slate-400 mb-1 font-semibold">Fecha Ingreso</label>
                         <input type="date" id="new-fecha" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
                     </div>
-                    <button type="submit" class="md:col-span-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 rounded-lg transition-all">
-                        Crear Orden
-                    </button>
+                    <div>
+                        <label for="new-pin" class="block text-slate-400 mb-1 font-semibold"><i class="fa-solid fa-lock text-cyan-400 mr-1"></i>PIN / Patrón</label>
+                        <input type="text" id="new-pin" maxlength="50" placeholder="Ej. 1234 o patrón en L"
+                               class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                    </div>
+                    <div class="md:col-span-3">
+                        <label for="new-obs" class="block text-slate-400 mb-1 font-semibold">Observaciones de recepción (estado físico)</label>
+                        <input type="text" id="new-obs" maxlength="250" placeholder="Ej. Rayón en esquina inferior derecha, carcasa sin golpes"
+                               class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                    </div>
+                    <div class="md:col-span-4">
+                        <label class="block text-slate-400 mb-1 font-semibold"><i class="fa-solid fa-plug text-cyan-400 mr-1"></i>Accesorios entregados por el cliente</label>
+                        <div id="new-accesorios" class="flex flex-wrap gap-2">
+                            <button type="button" class="chip bg-slate-900 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-full text-xs font-semibold transition-all" data-acc="Cargador">Cargador</button>
+                            <button type="button" class="chip bg-slate-900 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-full text-xs font-semibold transition-all" data-acc="Cable">Cable</button>
+                            <button type="button" class="chip bg-slate-900 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-full text-xs font-semibold transition-all" data-acc="Funda">Funda</button>
+                            <button type="button" class="chip bg-slate-900 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-full text-xs font-semibold transition-all" data-acc="Chip / SIM">Chip / SIM</button>
+                            <button type="button" class="chip bg-slate-900 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-full text-xs font-semibold transition-all" data-acc="Memoria SD">Memoria SD</button>
+                            <button type="button" class="chip bg-slate-900 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-full text-xs font-semibold transition-all" data-acc="Caja original">Caja original</button>
+                        </div>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-slate-400 mb-1 font-semibold"><i class="fa-solid fa-camera text-cyan-400 mr-1"></i>Fotos de respaldo del equipo (máx. 6)</label>
+                        <label class="inline-block bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-3 py-2 rounded-lg font-semibold cursor-pointer transition-all">
+                            <i class="fa-solid fa-camera-retro mr-1"></i> Tomar / elegir fotos
+                            <input type="file" id="new-fotos" accept="image/*" capture="environment" multiple class="hidden">
+                        </label>
+                        <div id="new-fotos-galeria" class="mt-2"></div>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-slate-400 mb-1 font-semibold"><i class="fa-solid fa-pen-nib text-cyan-400 mr-1"></i>Firma del cliente (dedo o mouse)</label>
+                        <div class="border border-slate-700 rounded-lg p-1 bg-slate-900">
+                            <canvas id="new-firma" class="lienzo-firma"></canvas>
+                        </div>
+                        <div class="flex items-center justify-between gap-2 mt-2">
+                            <button type="button" id="btn-firma-limpiar" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-[11px] py-1.5 px-3 rounded-lg font-semibold transition-all">
+                                <i class="fa-solid fa-eraser mr-1"></i> Limpiar firma
+                            </button>
+                            <button type="submit" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 px-4 rounded-lg transition-all">
+                                <i class="fa-solid fa-plus mr-1"></i> Crear Orden
+                            </button>
+                        </div>
+                    </div>
                 </form>
             </section>
 
@@ -208,6 +261,40 @@
                 Guardar nueva contraseña
             </button>
         </form>
+    </div>
+
+    <!-- Modal: detalle de orden (acta de recepción) -->
+    <div id="modal-orden" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[9998] flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center">
+                <h2 class="font-extrabold text-white text-sm">
+                    <i class="fa-solid fa-clipboard-check text-cyan-400 mr-1"></i>Orden <span id="mo-codigo" class="font-mono text-cyan-400"></span>
+                </h2>
+                <button type="button" id="btn-orden-cerrar" aria-label="Cerrar"
+                        class="text-slate-400 hover:text-white w-8 h-8 rounded-lg hover:bg-slate-800 transition-all">
+                    <i class="fa-solid fa-xmark pointer-events-none"></i>
+                </button>
+            </div>
+
+            <dl id="mo-datos" class="text-xs grid grid-cols-2 gap-x-3 gap-y-2"></dl>
+
+            <div>
+                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1"><i class="fa-solid fa-pen-nib text-cyan-400 mr-1"></i>Firma de recepción</p>
+                <div class="bg-white rounded-lg p-2 min-h-[70px] flex items-center justify-center">
+                    <img id="mo-firma" alt="Firma del cliente" class="max-h-16 hidden">
+                    <span id="mo-firma-vacia" class="text-[11px] text-slate-400 italic">Sin firma registrada</span>
+                </div>
+            </div>
+
+            <div>
+                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1"><i class="fa-solid fa-camera text-cyan-400 mr-1"></i>Fotos de respaldo</p>
+                <div id="mo-fotos"></div>
+                <label class="inline-block mt-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs px-3 py-2 rounded-lg font-semibold cursor-pointer transition-all">
+                    <i class="fa-solid fa-camera-retro mr-1"></i> Añadir fotos
+                    <input type="file" id="mo-input-fotos" accept="image/*" capture="environment" multiple class="hidden">
+                </label>
+            </div>
+        </div>
     </div>
 
     <script src="assets/js/common.js" defer></script>

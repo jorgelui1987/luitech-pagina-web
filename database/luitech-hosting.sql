@@ -40,11 +40,28 @@ CREATE TABLE IF NOT EXISTS ordenes (
                                      NOT NULL DEFAULT 'Ingresado',
     avance         TINYINT UNSIGNED  NOT NULL DEFAULT 10,
     tecnico        VARCHAR(80)       NOT NULL DEFAULT 'Por Asignar',
+    pin_patron     VARCHAR(50)       NULL,
+    accesorios     VARCHAR(255)      NULL,
+    obs_recepcion  VARCHAR(250)      NULL,
+    firma_ingreso  VARCHAR(255)      NULL,
     fecha_ingreso  DATE              NOT NULL,
     creado_en      TIMESTAMP         NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP         NOT NULL DEFAULT CURRENT_TIMESTAMP
                                      ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_estado (estado)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- Fotos de respaldo del equipo al ingreso (evidencia por orden)
+-- El archivo se guarda en uploads/ordenes/{codigo}/ y aquí solo su ruta.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS orden_fotos (
+    id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    orden_codigo VARCHAR(12)  NOT NULL,
+    archivo      VARCHAR(255) NOT NULL,
+    creado_en    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (orden_codigo) REFERENCES ordenes(codigo) ON DELETE CASCADE,
+    INDEX idx_of_orden (orden_codigo)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT IGNORE INTO ordenes (codigo, cliente, equipo, tipo, falla, estado, avance, tecnico, fecha_ingreso) VALUES

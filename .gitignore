@@ -7,6 +7,11 @@ paginaweb.txt
 # Paquete de deployment (artefacto generado)
 deploy/
 
+# Archivos subidos por el panel (fotos y firmas del acta de recepción).
+# La protección uploads/.htaccess SÍ se versiona; el contenido, no.
+uploads/ordenes/
+uploads/firmas/
+
 # Logo duplicado sin uso (el oficial está en assets/img/logo-luitech.png)
 logo logo.png
 

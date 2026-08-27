@@ -72,6 +72,34 @@ $ordenStmt = $pdo->prepare(
     'INSERT IGNORE INTO ordenes (codigo, cliente, equipo, tipo, falla, estado, avance, tecnico, fecha_ingreso)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
 );
+
+// --- Acta de recepción: columnas nuevas en ordenes (idempotente) --------
+// PIN/patrón, accesorios, observaciones y firma del cliente al ingreso.
+$columnasExistentes = $pdo->query('SHOW COLUMNS FROM ordenes')->fetchAll(PDO::FETCH_COLUMN);
+$migracionColumnas = [
+    'pin_patron'    => 'ALTER TABLE ordenes ADD COLUMN pin_patron VARCHAR(50) NULL AFTER tecnico',
+    'accesorios'    => 'ALTER TABLE ordenes ADD COLUMN accesorios VARCHAR(255) NULL AFTER pin_patron',
+    'obs_recepcion' => 'ALTER TABLE ordenes ADD COLUMN obs_recepcion VARCHAR(250) NULL AFTER accesorios',
+    'firma_ingreso' => 'ALTER TABLE ordenes ADD COLUMN firma_ingreso VARCHAR(255) NULL AFTER obs_recepcion',
+];
+foreach ($migracionColumnas as $columna => $sql) {
+    if (!in_array($columna, $columnasExistentes, true)) {
+        $pdo->exec($sql);
+        echo "[migrate] Columna agregada: ordenes.{$columna}\n";
+    }
+}
+
+// --- Fotos de respaldo por orden (evidencia del estado al ingreso) ------
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS orden_fotos (
+        id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        orden_codigo VARCHAR(12)  NOT NULL,
+        archivo      VARCHAR(255) NOT NULL,
+        creado_en    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (orden_codigo) REFERENCES ordenes(codigo) ON DELETE CASCADE,
+        INDEX idx_of_orden (orden_codigo)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+");
 $semillas = [
     ['LUH-1024', 'Carlos Mendoza',    'iPhone 13 Pro',          'Celular',     'Cambio de Pantalla OLED',          'Listo para Retiro', 100, 'Sebastián R.', '2026-07-16'],
     ['LUH-1025', 'María Paz Rojas',   'Notebook Asus ROG',      'PC/Notebook', 'Mantenimiento térmico y limpieza', 'En Reparación',      60, 'Alexis M.',    '2026-07-16'],
