@@ -262,7 +262,6 @@
   }
 
   /* --------------------------------- PIN NUMÉRICO / PATRÓN DIBUJABLE 3×3 */
-  var tipoPin = 'PIN';            // 'PIN' | 'Patron'
   var patronSecuencia = [];       // ej. [1, 4, 7, 8, 9]
   var lienzoPatron = null;
   var patronTrazando = false;
@@ -338,8 +337,7 @@
     if (r.width < 10) return;
     lienzoPatron.width = Math.round(r.width);
     lienzoPatron.height = Math.round(r.width); // cuadrado
-    patronSecuencia = [];
-    dibujarPatronEn(lienzoPatron, patronSecuencia);
+    dibujarPatronEn(lienzoPatron, patronSecuencia); // conserva lo ya trazado
   }
 
   function seguirPatron(e) {
@@ -374,52 +372,73 @@
     $('btn-patron-limpiar').addEventListener('click', function () {
       patronSecuencia = [];
       dibujarPatronEn(lienzoPatron, patronSecuencia);
+      actualizarBotonPatron();
     });
     window.addEventListener('resize', calcularPatron);
   }
 
-  /** Alterna el formulario entre PIN numérico y patrón dibujable. */
-  function fijarTipoPin(tipo) {
-    tipoPin = tipo;
-    var esPin = tipo === 'PIN';
-    $('btn-tipo-pin').classList.toggle('activo', esPin);
-    $('btn-tipo-patron').classList.toggle('activo', !esPin);
-    $('new-pin').classList.toggle('hidden', !esPin);
-    $('new-patron').classList.toggle('hidden', esPin);
-    $('btn-patron-limpiar').classList.toggle('hidden', esPin);
-    if (esPin) {
-      patronSecuencia = [];
+  /** Despliega o guarda (colapsa) el cuadro del patrón 3×3. */
+  function alternarPatron() {
+    if (!lienzoPatron) return;
+    if (lienzoPatron.classList.contains('hidden')) {
+      lienzoPatron.classList.remove('hidden');
+      $('btn-patron-limpiar').classList.remove('hidden');
+      calcularPatron(); // mide el espacio real y dibuja conservando lo trazado
     } else {
-      calcularPatron();
+      lienzoPatron.classList.add('hidden');
+      $('btn-patron-limpiar').classList.add('hidden');
+    }
+    actualizarBotonPatron();
+  }
+
+  /** Texto del botón: cerrado / abierto / con patrón ya dibujado. */
+  function actualizarBotonPatron() {
+    var btn = $('btn-patron-toggle');
+    if (!btn) return;
+    var abierto = lienzoPatron && !lienzoPatron.classList.contains('hidden');
+    var dibujado = patronSecuencia.length >= 2;
+    if (abierto) {
+      btn.innerHTML = '<i class="fa-solid fa-xmark mr-1"></i> Ocultar patrón';
+      btn.classList.toggle('text-cyan-400', dibujado);
+    } else if (dibujado) {
+      btn.innerHTML = '<i class="fa-solid fa-check mr-1"></i> Patrón dibujado: ' + patronSecuencia.join('-');
+      btn.classList.add('text-cyan-400');
+    } else {
+      btn.innerHTML = '<i class="fa-solid fa-plus mr-1"></i> Dibujar patrón';
+      btn.classList.remove('text-cyan-400');
     }
   }
 
-  /** Serializa lo ingresado: 'PIN: 1234' | 'Patrón: 1-4-7' | null. */
+  /** Serializa PIN y/o patrón: 'PIN: 1234', 'Patrón: 1-4-7' o ambos juntos. */
   function valorPinPatron() {
-    if (tipoPin === 'Patron') {
-      return patronSecuencia.length >= 2 ? 'Patrón: ' + patronSecuencia.join('-') : null;
-    }
     var pin = $('new-pin').value.replace(/\D/g, '');
-    return pin !== '' ? 'PIN: ' + pin : null;
+    var patron = patronSecuencia.length >= 2 ? 'Patrón: ' + patronSecuencia.join('-') : null;
+    var pinParte = pin !== '' ? 'PIN: ' + pin : null;
+    if (pinParte && patron) return pinParte + ' · ' + patron;
+    return patron || pinParte; // null si no hay ninguno
   }
 
-  /** Deja el control de PIN/Patrón listo para una nueva orden. */
+  /** Deja PIN y patrón listos para una nueva orden (cuadro colapsado). */
   function limpiarPinPatron() {
     $('new-pin').value = '';
     patronSecuencia = [];
     if (lienzoPatron && !lienzoPatron.classList.contains('hidden')) {
-      dibujarPatronEn(lienzoPatron, patronSecuencia);
+      lienzoPatron.classList.add('hidden');
+      $('btn-patron-limpiar').classList.add('hidden');
     }
+    actualizarBotonPatron();
   }
 
-  /** Fila del modal: si es patrón lo redibuja visualmente; si no, texto. */
+  /** Fila del modal: muestra PIN y/o el patrón redibujado visualmente. */
   function filaPinPatron(valor) {
-    if (!valor || !/^Patr[oó]n:/i.test(valor)) {
+    if (!valor) {
       return parDato('PIN / Patrón', valor);
     }
-    var seq = valor.replace(/^Patr[oó]n:\s*/i, '').split('-')
-      .map(function (n) { return parseInt(n, 10); })
-      .filter(function (n) { return n >= 1 && n <= 9; });
+    var matchPatron = String(valor).match(/Patr[oó]n:\s*([\d-]+)/i);
+    var matchPin = String(valor).match(/PIN:\s*(\d+)/i);
+    if (!matchPatron && !matchPin) {
+      return parDato('PIN / Patrón', valor); // texto libre de órdenes antiguas
+    }
 
     var wrap = document.createElement('div');
     var dt = document.createElement('dt');
@@ -427,16 +446,28 @@
     dt.textContent = 'PIN / Patrón';
     var dd = document.createElement('dd');
     dd.className = 'text-slate-200 font-semibold';
-    var cv = document.createElement('canvas');
-    cv.width = 96;
-    cv.height = 96;
-    cv.className = 'block bg-slate-950 border border-slate-800 rounded-lg';
-    dibujarPatronEn(cv, seq);
-    var nota = document.createElement('span');
-    nota.className = 'block text-[10px] text-slate-500 mt-0.5';
-    nota.textContent = 'Secuencia: ' + seq.join(' → ');
-    dd.appendChild(cv);
-    dd.appendChild(nota);
+
+    if (matchPin) {
+      var lineaPin = document.createElement('span');
+      lineaPin.className = 'block';
+      lineaPin.textContent = 'PIN: ' + matchPin[1];
+      dd.appendChild(lineaPin);
+    }
+    if (matchPatron) {
+      var seq = matchPatron[1].split('-')
+        .map(function (n) { return parseInt(n, 10); })
+        .filter(function (n) { return n >= 1 && n <= 9; });
+      var cv = document.createElement('canvas');
+      cv.width = 96;
+      cv.height = 96;
+      cv.className = 'block bg-slate-950 border border-slate-800 rounded-lg mt-1';
+      dibujarPatronEn(cv, seq);
+      var nota = document.createElement('span');
+      nota.className = 'block text-[10px] text-slate-500 mt-0.5';
+      nota.textContent = 'Secuencia: ' + seq.join(' → ');
+      dd.appendChild(cv);
+      dd.appendChild(nota);
+    }
     wrap.appendChild(dt);
     wrap.appendChild(dd);
     return wrap;
@@ -826,9 +857,8 @@
     // Fecha de ingreso: pre-cargada con hoy (sigue siendo editable)
     $('new-fecha').value = fechaLocalHoy();
 
-    // Selector PIN numérico / patrón dibujable
-    $('btn-tipo-pin').addEventListener('click', function () { fijarTipoPin('PIN'); });
-    $('btn-tipo-patron').addEventListener('click', function () { fijarTipoPin('Patron'); });
+    // Botón que despliega / guarda el cuadro del patrón
+    $('btn-patron-toggle').addEventListener('click', alternarPatron);
     $('new-pin').addEventListener('input', function () {
       this.value = this.value.replace(/\D/g, '');
     });
