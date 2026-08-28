@@ -12,6 +12,10 @@ deploy/
 uploads/ordenes/
 uploads/firmas/
 
+# Artefactos de la plantilla reutilizable (backend de ejemplo con SQLite)
+plantilla/orders.db
+plantilla/uploads/
+
 # Logo duplicado sin uso (el oficial está en assets/img/logo-luitech.png)
 logo logo.png
 

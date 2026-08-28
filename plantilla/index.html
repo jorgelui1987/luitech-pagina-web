@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plantilla · Nueva Orden de Trabajo</title>
+<style>
+  *{ box-sizing:border-box; }
+  body{ font-family:system-ui,sans-serif; margin:0; background:#f1f5f9; color:#0f172a; }
+  .contenedor{ max-width:900px; margin:0 auto; padding:24px 16px 48px; }
+  h1{ font-size:20px; margin:0 0 4px; }
+  .sub{ color:#64748b; font-size:13px; margin:0 0 20px; }
+  section{ background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-bottom:16px; }
+  h2{ font-size:13px; color:#0369a1; margin:0 0 12px; }
+  .grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; font-size:13px; }
+  @media (max-width:640px){ .grid{ grid-template-columns:1fr; } }
+  .col2{ grid-column:span 2; } .col3{ grid-column:span 3; } .col4{ grid-column:span 4; }
+  label{ display:block; font-weight:600; color:#475569; margin-bottom:4px; }
+  input, select{ width:100%; padding:8px 10px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px; }
+  input:focus, select:focus{ outline:2px solid #38bdf8; border-color:#38bdf8; }
+  button{ cursor:pointer; font-family:inherit; }
+  .btn{ background:#0ea5e9; color:#fff; border:0; padding:10px 16px; border-radius:8px; font-weight:700; font-size:13px; }
+  .btn:hover{ background:#0284c7; }
+  .btn-sec{ background:#f1f5f9; color:#334155; border:1px solid #cbd5e1; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:600; }
+  .btn-sec:hover{ background:#e2e8f0; }
+  .chip{ background:#f8fafc; border:1px solid #cbd5e1; color:#475569; padding:6px 12px; border-radius:99px; font-size:12px; font-weight:600; }
+  .chip-on{ background:#0ea5e9 !important; color:#fff !important; border-color:#0ea5e9 !important; }
+  .lienzo-firma{ touch-action:none; cursor:crosshair; background:#fff; display:block; width:100%; height:150px; border:1px solid #cbd5e1; border-radius:8px; }
+  .lienzo-patron{ touch-action:none; cursor:pointer; width:100%; max-width:160px; aspect-ratio:1/1; background:#0f172a; border:1px solid #cbd5e1; border-radius:8px; display:block; margin-top:8px; }
+  .galeria{ display:grid; grid-template-columns:repeat(6,1fr); gap:8px; margin-top:8px; }
+  @media (max-width:640px){ .galeria{ grid-template-columns:repeat(3,1fr); } }
+  .foto-thumb{ position:relative; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; aspect-ratio:1/1; }
+  .foto-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .foto-borrar{ position:absolute; top:3px; right:3px; background:rgba(15,23,42,.85); color:#fecaca; border:0; border-radius:6px; width:22px; height:22px; font-size:11px; }
+  .oculto{ display:none !important; }
+  pre{ background:#0f172a; color:#7dd3fc; padding:12px; border-radius:8px; font-size:11px; overflow:auto; max-height:260px; }
+  table{ width:100%; border-collapse:collapse; font-size:12px; }
+  th,td{ text-align:left; padding:6px 8px; border-bottom:1px solid #e2e8f0; }
+</style>
+</head>
+<body>
+<div class="contenedor">
+  <h1>Nueva Orden de Trabajo</h1>
+  <p class="sub">Plantilla reutilizable con acta de recepción · fecha automática · PIN/patrón · fotos comprimidas · firma</p>
+
+  <section>
+    <h2>1. Datos del equipo</h2>
+    <form id="form-orden" class="grid" novalidate>
+      <div>
+        <label for="n-codigo">Código (opcional)</label>
+        <input type="text" id="n-codigo" placeholder="Automático" maxlength="12">
+      </div>
+      <div>
+        <label for="n-cliente">Cliente *</label>
+        <input type="text" id="n-cliente" required maxlength="80" placeholder="Nombre">
+      </div>
+      <div>
+        <label for="n-equipo">Equipo / Modelo *</label>
+        <input type="text" id="n-equipo" required maxlength="60" placeholder="Ej. Galaxy A54">
+      </div>
+      <div>
+        <label for="n-tipo">Tipo</label>
+        <select id="n-tipo"><option>Celular</option><option>PC/Notebook</option><option>Otro</option></select>
+      </div>
+      <div class="col2">
+        <label for="n-falla">Falla declarada *</label>
+        <input type="text" id="n-falla" required maxlength="200" placeholder="Qué le pasa al equipo">
+      </div>
+      <div>
+        <label for="n-tecnico">Técnico</label>
+        <input type="text" id="n-tecnico" maxlength="40" placeholder="Por asignar">
+      </div>
+      <div>
+        <label for="n-fecha">Fecha de ingreso</label>
+        <input type="date" id="n-fecha">
+      </div>
+<div>
+        <label for="n-pin">PIN numérico</label>
+        <input type="text" id="n-pin" inputmode="numeric" maxlength="6" placeholder="Ej. 1234">
+      </div>
+      <div>
+        <label>&nbsp;</label>
+        <button type="button" id="btn-patron-toggle" class="btn-sec">＋ Dibujar patrón</button>
+        <canvas id="n-patron" class="lienzo-patron oculto" width="160" height="160"></canvas>
+        <button type="button" id="btn-patron-limpiar" class="btn-sec oculto" style="margin-top:6px;">🧽 Limpiar patrón</button>
+      </div>
+      <div class="col2">
+        <label for="n-notas">Observaciones de recepción</label>
+        <input type="text" id="n-notas" maxlength="250" placeholder="Rayones, golpes, estado físico">
+      </div>
+      <div class="col2">
+        <label>&nbsp;</label>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <button type="button" id="btn-limpiar" class="btn-sec">Limpiar todo</button>
+          <button type="submit" class="btn">Crear orden</button>
+        </div>
+      </div>
+    </form>
+  </section>
+
+  <section>
+    <h2>2. Accesorios entregados</h2>
+    <div id="n-accesorios" style="display:flex; flex-wrap:wrap; gap:8px;">
+      <button type="button" class="chip" data-acc="Cargador">Cargador</button>
+      <button type="button" class="chip" data-acc="Cable">Cable</button>
+      <button type="button" class="chip" data-acc="Funda">Funda</button>
+      <button type="button" class="chip" data-acc="Chip / SIM">Chip / SIM</button>
+      <button type="button" class="chip" data-acc="Memoria SD">Memoria SD</button>
+      <button type="button" class="chip" data-acc="Caja original">Caja original</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>3. Evidencia</h2>
+    <div class="grid">
+      <div class="col4">
+        <label>Fotos de respaldo (máx. 6)</label>
+        <label class="btn-sec" style="display:inline-block; cursor:pointer;">
+          📷 Tomar / elegir fotos
+          <input type="file" id="n-fotos" accept="image/*" capture="environment" multiple class="oculto">
+        </label>
+        <div id="n-galeria" class="galeria"></div>
+      </div>
+      <div class="col2">
+        <label>Firma del cliente</label>
+        <canvas id="n-firma" class="lienzo-firma"></canvas>
+        <button type="button" id="btn-firma-limpiar" class="btn-sec" style="margin-top:6px;">🧽 Limpiar firma</button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>4. JSON que enviarías a tu backend (action=create)</h2>
+    <pre id="payload">{ "completa el formulario…" }</pre>
+  </section>
+
+  <section>
+    <h2>5. Órdenes creadas en esta sesión (memoria)</h2>
+    <table id="tabla"><thead><tr><th>Código</th><th>Cliente</th><th>Equipo</th><th>Fecha</th><th>PIN/Patrón</th><th>Fotos</th><th>Firma</th></tr></thead><tbody></tbody></table>
+  </section>
+</div>
+<script>
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var MAX_FOTOS = 6;
+  var fotos = [];        // dataURLs comprimidos
+  var firmaHecha = false;
+  var patronSecuencia = [];
+  var lienzoPatron = null;
+  var patronTrazando = false;
+  var lienzoFirma = null;
+
+  /* ---------- Fecha local de hoy (no UTC) ---------- */
+  function fechaLocalHoy() {
+    var h = new Date();
+    var m = String(h.getMonth() + 1).padStart(2, '0');
+    var d = String(h.getDate()).padStart(2, '0');
+    return h.getFullYear() + '-' + m + '-' + d;
+  }
+
+  /* ---------- Firma (canvas) ---------- */
+  var ctxFirma = null;
+  function prepararFirma(preservar) {
+    var previa = preservar ? lienzoFirma.toDataURL() : null;
+    var r = lienzoFirma.getBoundingClientRect();
+    if (r.width < 10) return;
+    lienzoFirma.width = Math.round(r.width);
+    lienzoFirma.height = Math.round(r.height);
+    ctxFirma.fillStyle = '#ffffff';
+    ctxFirma.fillRect(0, 0, lienzoFirma.width, lienzoFirma.height);
+    ctxFirma.lineWidth = 2.5; ctxFirma.lineCap = 'round';
+    ctxFirma.lineJoin = 'round'; ctxFirma.strokeStyle = '#0f172a';
+    if (previa) { var im = new Image(); im.onload = function () { ctxFirma.drawImage(im, 0, 0); }; im.src = previa; }
+  }
+  function iniciarFirma() {
+    lienzoFirma = $('n-firma');
+    ctxFirma = lienzoFirma.getContext('2d');
+    var dibujando = false;
+    function pos(e) { var r = lienzoFirma.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+    lienzoFirma.addEventListener('pointerdown', function (e) {
+      e.preventDefault(); lienzoFirma.setPointerCapture(e.pointerId);
+      dibujando = true; firmaHecha = true;
+      var p = pos(e); ctxFirma.beginPath(); ctxFirma.moveTo(p.x, p.y);
+      ctxFirma.lineTo(p.x + 0.1, p.y + 0.1); ctxFirma.stroke();
+    });
+    lienzoFirma.addEventListener('pointermove', function (e) {
+      if (!dibujando) return; var p = pos(e); ctxFirma.lineTo(p.x, p.y); ctxFirma.stroke();
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) {
+      lienzoFirma.addEventListener(ev, function () { dibujando = false; });
+    });
+    $('btn-firma-limpiar').addEventListener('click', function () { firmaHecha = false; prepararFirma(false); });
+    window.addEventListener('resize', function () { prepararFirma(true); });
+    prepararFirma(false);
+  }
+/* ---------- Patrón 3×3 ---------- */
+  function puntosPatronDe(canvas) {
+    var lado = Math.min(canvas.width, canvas.height);
+    var margen = lado * 0.2;
+    var paso = (lado - 2 * margen) / 2;
+    var puntos = [];
+    for (var f = 0; f < 3; f++) for (var c = 0; c < 3; c++) {
+      puntos.push({ n: f * 3 + c + 1, x: margen + c * paso, y: margen + f * paso });
+    }
+    return puntos;
+  }
+  function dibujarPatronEn(canvas, secuencia, puntoActual) {
+    var ctx = canvas.getContext('2d');
+    var puntos = puntosPatronDe(canvas);
+    var lado = Math.min(canvas.width, canvas.height);
+    var radio = lado * 0.09;
+    var sel = {};
+    secuencia.forEach(function (n) { sel[n] = puntos[n - 1]; });
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (secuencia.length) {
+      ctx.strokeStyle = '#0ea5e9'; ctx.lineWidth = Math.max(3, lado * 0.025);
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.beginPath(); ctx.moveTo(sel[secuencia[0]].x, sel[secuencia[0]].y);
+      for (var i = 1; i < secuencia.length; i++) ctx.lineTo(sel[secuencia[i]].x, sel[secuencia[i]].y);
+      if (puntoActual) ctx.lineTo(puntoActual.x, puntoActual.y);
+      ctx.stroke();
+    }
+    puntos.forEach(function (p) {
+      ctx.beginPath(); ctx.arc(p.x, p.y, radio, 0, Math.PI * 2);
+      if (sel[p.n]) { ctx.fillStyle = '#0ea5e9'; ctx.fill(); }
+      else { ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2; ctx.stroke(); }
+      ctx.fillStyle = sel[p.n] ? '#0f172a' : '#94a3b8';
+      ctx.font = 'bold ' + Math.max(9, Math.round(radio)) + 'px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(String(p.n), p.x, p.y);
+    });
+  }
+  function calcularPatron() {
+    if (lienzoPatron.classList.contains('oculto')) return;
+    var r = lienzoPatron.getBoundingClientRect();
+    if (r.width < 10) return;
+    lienzoPatron.width = Math.round(r.width);
+    lienzoPatron.height = Math.round(r.width);
+    dibujarPatronEn(lienzoPatron, patronSecuencia);
+  }
+  function seguirPatron(e) {
+    var r = lienzoPatron.getBoundingClientRect();
+    var px = e.clientX - r.left, py = e.clientY - r.top;
+    var tol = Math.min(lienzoPatron.width, lienzoPatron.height) * 0.09 * 1.8;
+    puntosPatronDe(lienzoPatron).forEach(function (p) {
+      if (patronSecuencia.indexOf(p.n) === -1 && Math.hypot(px - p.x, py - p.y) <= tol) {
+        patronSecuencia.push(p.n);
+      }
+    });
+    dibujarPatronEn(lienzoPatron, patronSecuencia, { x: px, y: py });
+  }
+  function actualizarBotonPatron() {
+    var btn = $('btn-patron-toggle');
+    var abierto = !lienzoPatron.classList.contains('oculto');
+    var dibujado = patronSecuencia.length >= 2;
+    if (abierto) btn.textContent = '✕ Ocultar patrón';
+    else if (dibujado) btn.textContent = '✔ Patrón dibujado: ' + patronSecuencia.join('-');
+    else btn.textContent = '＋ Dibujar patrón';
+  }
+  function iniciarPatron() {
+    lienzoPatron = $('n-patron');
+    lienzoPatron.addEventListener('pointerdown', function (e) {
+      e.preventDefault(); lienzoPatron.setPointerCapture(e.pointerId);
+      patronTrazando = true; patronSecuencia = []; seguirPatron(e);
+    });
+    lienzoPatron.addEventListener('pointermove', function (e) { if (patronTrazando) seguirPatron(e); });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) {
+      lienzoPatron.addEventListener(ev, function () { patronTrazando = false; });
+    });
+    $('btn-patron-toggle').addEventListener('click', function () {
+      var abierto = !lienzoPatron.classList.contains('oculto');
+      lienzoPatron.classList.toggle('oculto', abierto);
+      $('btn-patron-limpiar').classList.toggle('oculto', abierto);
+      if (!abierto) calcularPatron();
+      actualizarBotonPatron();
+    });
+    $('btn-patron-limpiar').addEventListener('click', function () {
+      patronSecuencia = []; dibujarPatronEn(lienzoPatron, patronSecuencia); actualizarBotonPatron();
+    });
+    window.addEventListener('resize', calcularPatron);
+  }
+/* ---------- Fotos: compresión + miniaturas ---------- */
+  function comprimirFoto(file) {
+    return new Promise(function (resolve) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        var MAX = 1200;
+        var w = img.naturalWidth, h = img.naturalHeight;
+        var esc = Math.min(1, MAX / Math.max(w, h));
+        var c = document.createElement('canvas');
+        c.width = Math.round(w * esc); c.height = Math.round(h * esc);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL('image/jpeg', 0.72));
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
+    });
+  }
+  function dataUrlABlob(dataUrl) {
+    var partes = dataUrl.split(',');
+    var mime = (partes[0].match(/data:(.*?);/) || [])[1] || 'image/jpeg';
+    var bin = atob(partes[1]);
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new Blob([bytes], { type: mime });
+  }
+  function renderFotos() {
+    var g = $('n-galeria');
+    g.innerHTML = '';
+    fotos.forEach(function (data, i) {
+      var d = document.createElement('div');
+      d.className = 'foto-thumb';
+      var img = document.createElement('img');
+      img.src = data; img.alt = 'Foto ' + (i + 1);
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'foto-borrar'; b.textContent = '✕';
+      b.addEventListener('click', function () { fotos.splice(i, 1); renderFotos(); });
+      d.appendChild(img); d.appendChild(b);
+      g.appendChild(d);
+    });
+  }
+
+  /* ---------- Chips + serialización ---------- */
+  function accesoriosElegidos() {
+    return Array.prototype.slice.call(document.querySelectorAll('#n-accesorios .chip-on'))
+      .map(function (b) { return b.getAttribute('data-acc'); });
+  }
+  function valorPinPatron() {
+    var pin = $('n-pin').value.replace(/\D/g, '');
+    var patron = patronSecuencia.length >= 2 ? 'Patrón: ' + patronSecuencia.join('-') : null;
+    var pinParte = pin !== '' ? 'PIN: ' + pin : null;
+    if (pinParte && patron) return pinParte + ' · ' + patron;
+    return patron || pinParte;
+  }
+
+  /* ---------- Crear orden ---------- */
+  var sesion = [];
+  $('form-orden').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var pinFinal = valorPinPatron();
+    var accs = accesoriosElegidos();
+    var cuerpo = {
+      code: $('n-codigo').value.trim() || 'ORD-' + (1000 + Math.floor(Math.random() * 9000)),
+      client: $('n-cliente').value.trim(),
+      device: $('n-equipo').value.trim(),
+      type: $('n-tipo').value,
+      issue: $('n-falla').value.trim(),
+      technician: $('n-tecnico').value.trim() || 'Por asignar',
+      intake_date: $('n-fecha').value || fechaLocalHoy(),
+      pin_pattern: pinFinal,
+      accessories: accs.length ? accs.join(', ') : null,
+      intake_notes: $('n-notas').value.trim() || null,
+      // CONECTAR AL BACKEND: la firma va dentro del JSON…
+      signature: firmaHecha ? $('n-firma').toDataURL('image/png') : null
+      // …y las fotos (fotos[]) se suben después con FormData a action=upload_photo.
+      // Ejemplo con api-ejemplo.php (token de demo):
+      // fetch('api-ejemplo.php?action=create', { method:'POST',
+      //   headers:{ 'Content-Type':'application/json', 'X-Api-Token':'CAMBIA-ESTE-TOKEN' },
+      //   body: JSON.stringify(cuerpo) })
+    };
+    if (!cuerpo.client || !cuerpo.device || !cuerpo.issue) {
+      $('payload').textContent = '{ "error": "Faltan cliente, equipo o falla" }';
+      return;
+    }
+    sesion.push(cuerpo);
+    var tb = $('tabla').querySelector('tbody');
+    var tr = document.createElement('tr');
+    [cuerpo.code, cuerpo.client, cuerpo.device, cuerpo.intake_date,
+     cuerpo.pin_pattern || '—', String(fotos.length), firmaHecha ? '✔' : '—']
+      .forEach(function (v) {
+        var td = document.createElement('td'); td.textContent = v; tr.appendChild(td);
+      });
+    tb.appendChild(tr);
+    $('payload').textContent = JSON.stringify(cuerpo, null, 2);
+    limpiarTodo(false);
+  });
+
+  /* ---------- Reset ---------- */
+  function limpiarTodo(aviso) {
+    $('form-orden').reset();
+    fotos = []; renderFotos();
+    firmaHecha = false; prepararFirma(false);
+    patronSecuencia = [];
+    if (lienzoPatron && !lienzoPatron.classList.contains('oculto')) {
+      dibujarPatronEn(lienzoPatron, patronSecuencia);
+    }
+    document.querySelectorAll('.chip-on').forEach(function (b) { b.classList.remove('chip-on'); });
+    actualizarBotonPatron();
+    if (aviso) $('payload').textContent = '{ "formulario reiniciado" }';
+  }
+
+  /* ---------- Arranque ---------- */
+  $('n-fecha').value = fechaLocalHoy();
+  iniciarFirma();
+  iniciarPatron();
+  $('n-pin').addEventListener('input', function () { this.value = this.value.replace(/\D/g, ''); });
+  document.querySelectorAll('#n-accesorios .chip').forEach(function (b) {
+    b.addEventListener('click', function () { b.classList.toggle('chip-on'); });
+  });
+  $('n-fotos').addEventListener('change', function (e) {
+    var archivos = Array.prototype.slice.call(e.target.files);
+    e.target.value = '';
+    var cupo = MAX_FOTOS - fotos.length;
+    archivos.slice(0, Math.max(0, cupo)).forEach(function (file) {
+      if (!file.type || file.type.indexOf('image/') !== 0) return;
+      comprimirFoto(file).then(function (data) { if (data) { fotos.push(data); renderFotos(); } });
+    });
+  });
+  $('btn-limpiar').addEventListener('click', function () { limpiarTodo(true); });
+</script>
