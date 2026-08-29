@@ -238,6 +238,34 @@ $pdo->exec("
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 ");
 
+// --- Configuraciones globales (ej: tasa de IVA editable) ------------------
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS configuraciones (
+        clave          VARCHAR(50)  PRIMARY KEY,
+        valor          VARCHAR(100) NOT NULL,
+        actualizado_en TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
+                       ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+");
+$pdo->prepare("INSERT IGNORE INTO configuraciones (clave, valor) VALUES ('iva_porcentaje', '19')")
+    ->execute();
+
+// --- IVA por venta (desglose fiscal congelado al momento de cobrar) -------
+// En Chile el precio al público incluye el IVA: neto = total / (1 + tasa).
+// Cada venta guarda la tasa usada, así el historial no cambia si la ley cambia.
+$columnasVentas = $pdo->query('SHOW COLUMNS FROM ventas')->fetchAll(PDO::FETCH_COLUMN);
+$migracionVentasIva = [
+    'iva_tasa'  => 'ALTER TABLE ventas ADD COLUMN iva_tasa SMALLINT UNSIGNED NULL AFTER total',
+    'neto'      => 'ALTER TABLE ventas ADD COLUMN neto INT UNSIGNED NULL AFTER iva_tasa',
+    'iva_monto' => 'ALTER TABLE ventas ADD COLUMN iva_monto INT UNSIGNED NULL AFTER neto',
+];
+foreach ($migracionVentasIva as $columna => $sql) {
+    if (!in_array($columna, $columnasVentas, true)) {
+        $pdo->exec($sql);
+        echo "[migrate] Columna agregada: ventas.{$columna}\n";
+    }
+}
+
 // --- Gastos del negocio ---------------------------------------------------
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS gastos (

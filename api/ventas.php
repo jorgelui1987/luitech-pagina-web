@@ -68,10 +68,21 @@ switch ($action) {
         try {
             $numero = correlativo_venta($pdo);
 
+            // IVA (Chile): el precio al público ya incluye el IVA. Se desglosa
+            // con la tasa vigente guardada en configuraciones y queda congelado
+            // en la venta (si la ley cambia, el historial no se recalcula).
+            $tasa = (int)($pdo->query(
+                "SELECT valor FROM configuraciones WHERE clave = 'iva_porcentaje' LIMIT 1"
+            )->fetchColumn() ?: 19);
+            $neto = (int)round($total * 100 / (100 + max(0, $tasa)));
+            $ivaMonto = $total - $neto;
+
             $pdo->prepare(
-                'INSERT INTO ventas (numero, vendedor, cliente, total, medio_pago, orden_codigo)
-                 VALUES (?, ?, ?, ?, ?, ?)'
-            )->execute([$numero, $vendedor, $cliente, $total, $medioPago, $ordenFinal]);
+                'INSERT INTO ventas (numero, vendedor, cliente, total, medio_pago, orden_codigo,
+                                     iva_tasa, neto, iva_monto)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            )->execute([$numero, $vendedor, $cliente, $total, $medioPago, $ordenFinal,
+                        max(0, $tasa), $neto, $ivaMonto]);
             $ventaId = (int)$pdo->lastInsertId();
 
             $itemStmt = $pdo->prepare(
@@ -117,7 +128,8 @@ switch ($action) {
                 } catch (Exception $e) { /* no interrumpe la venta */ }
             }
 
-            responder(['ok' => true, 'numero' => $numero, 'total' => $total]);
+            responder(['ok' => true, 'numero' => $numero, 'total' => $total,
+                       'neto' => $neto, 'iva_monto' => $ivaMonto, 'iva_tasa' => max(0, $tasa)]);
         } catch (RuntimeException $e) {
             $pdo->rollBack();
             responder(['ok' => false, 'error' => $e->getMessage()], 409);

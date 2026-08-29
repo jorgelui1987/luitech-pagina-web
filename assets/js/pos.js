@@ -9,6 +9,7 @@
 
   var productos = [];
   var carrito = [];
+  var ivaTasa = 19; // se carga desde la BD (configuraciones.iva_porcentaje)
 
   function fmt(n) { return Number(n).toLocaleString('es-CL'); }
 
@@ -18,6 +19,7 @@
     if (!logueado) return;
     cargarProductos();
     cargarResumenDia();
+    cargarIVA();
   }
 
   /* --------------------------------------------------------- CATÁLOGO */
@@ -104,6 +106,42 @@
     return t;
   }
 
+  /** Desglose fiscal: en Chile el precio al público YA incluye el IVA. */
+  function desgloseIVA(total) {
+    var tasa = Math.max(0, ivaTasa);
+    var neto = Math.round(total * 100 / (100 + tasa));
+    return { neto: neto, iva: total - neto };
+  }
+
+  /** Lee la tasa de IVA guardada en la BD y la muestra en el editor. */
+  function cargarIVA() {
+    api('api/configuracion.php?action=get').then(function (res) {
+      if (!res.ok) return;
+      ivaTasa = parseInt(res.iva_porcentaje, 10);
+      if (isNaN(ivaTasa) || ivaTasa < 0) ivaTasa = 19;
+      $('pos-iva').value = String(ivaTasa);
+      pintarCarrito();
+    }).catch(function () {});
+  }
+
+  /** Guarda la tasa de IVA (persistente para todas las ventas futuras). */
+  function guardarIVA() {
+    var v = parseInt($('pos-iva').value, 10);
+    if (isNaN(v) || v < 0 || v > 100) {
+      window.mostrarToast('El IVA debe estar entre 0 y 100', 'error');
+      return;
+    }
+    api('api/configuracion.php?action=set', { method: 'POST', body: { iva_porcentaje: v } })
+      .then(function (res) {
+        if (!res.ok) { window.mostrarToast(res.error || 'No se pudo guardar el IVA', 'error'); return; }
+        ivaTasa = v;
+        window.mostrarToast('IVA actualizado a ' + v + '%', 'success');
+        pintarCarrito();
+      }).catch(function () {
+        window.mostrarToast('Error de conexión con el servidor', 'error');
+      });
+  }
+
   function pintarCarrito() {
     var cont = $('carrito-lista');
     cont.replaceChildren();
@@ -115,6 +153,7 @@
       }));
       $('btn-cobrar').disabled = true;
       $('carrito-total').textContent = '$0';
+      $('pos-desglose').classList.add('hidden');
       return;
     }
 
@@ -167,6 +206,12 @@
 
     $('btn-cobrar').disabled = false;
     $('carrito-total').textContent = '$' + fmt(totalCarrito());
+
+    var d = desgloseIVA(totalCarrito());
+    $('pos-neto').textContent = '$' + fmt(d.neto);
+    $('pos-iva-monto').textContent = '$' + fmt(d.iva);
+    $('pos-iva-tasa').textContent = ivaTasa + '%';
+    $('pos-desglose').classList.remove('hidden');
   }
 
   /* ----------------------------------------------------- RESUMEN DEL DÍA */
@@ -242,6 +287,12 @@
         '<div class="d c"><b>' + numero + '</b><br>' + cuando + '<br>Pago: ' + v.medio_pago +
         (v.orden_codigo ? '<br>Orden: ' + v.orden_codigo : '') + '</div>' +
         '<table>' + filas + '</table>' +
+        (v.neto !== null && v.iva_tasa !== null && Number(v.iva_tasa) > 0
+          ? '<table style="margin-top:6px">' +
+            '<tr><td>Subtotal neto</td><td align="right">$' + fmt(v.neto) + '</td></tr>' +
+            '<tr><td>IVA (' + v.iva_tasa + '%) incluido</td><td align="right">$' + fmt(v.iva_monto) + '</td></tr>' +
+            '</table>'
+          : '') +
         '<p class="t">TOTAL $' + fmt(v.total) + '</p>' +
         '<div class="c" style="margin-top:10px">¡Gracias por tu compra!<br>Garantía por escrito en tu orden.</div>' +
         '</body></html>'
@@ -257,6 +308,7 @@
     $('buscar').addEventListener('input', function () { pintarCatalogo(this.value); });
     $('btn-limpiar').addEventListener('click', function () { carrito = []; pintarCarrito(); });
     $('btn-cobrar').addEventListener('click', cobrar);
+    $('btn-iva').addEventListener('click', guardarIVA);
 
     api('api/auth.php?action=me').then(function (res) {
       mostrarVista(!!res.logueado);
