@@ -194,7 +194,12 @@ switch ($action) {
         if ($saldo < 1) {
             responder(['ok' => false, 'error' => 'Esta orden no tiene saldo pendiente'], 409);
         }
-        [$codigoHttp, $intent] = mp_api('POST', '/point-integration-api/payment-intents', [
+        // El device_id del terminal va como parámetro de la ruta
+        $rutaIntent = '/point-integration-api/payment-intents';
+        if ($cfg['device'] !== '') {
+            $rutaIntent .= '?device_id=' . rawurlencode($cfg['device']);
+        }
+        [$codigoHttp, $intent] = mp_api('POST', $rutaIntent, [
             'amount'          => $saldo,
             'description'     => 'Orden ' . $codigo,
             'payment'         => ['transaction_amount' => $saldo, 'payment_method_reference' => 'MPE'],
@@ -203,7 +208,17 @@ switch ($action) {
         if ($codigoHttp >= 200 && $codigoHttp < 300 && !empty($intent['id'])) {
             responder(['ok' => true, 'intent_id' => $intent['id'], 'estado' => $intent['status'] ?? '']);
         }
-        responder(['ok' => false, 'error' => 'Mercado Pago rechazó el intento (¿terminal en modo integración?)'], 502);
+        // Motivo exacto del rechazo según Mercado Pago
+        $detalle = '';
+        foreach (['message', 'error', 'curl_error'] as $campo) {
+            if (!empty($intent[$campo])) {
+                $detalle .= ($detalle === '' ? '' : ' | ') . (is_array($intent[$campo]) ? json_encode($intent[$campo], JSON_UNESCAPED_UNICODE) : (string)$intent[$campo]);
+            }
+        }
+        if (!empty($intent['cause'])) {
+            $detalle .= ($detalle === '' ? '' : ' | ') . json_encode($intent['cause'], JSON_UNESCAPED_UNICODE);
+        }
+        responder(['ok' => false, 'error' => 'Mercado Pago rechazó el intento (HTTP ' . $codigoHttp . ')' . ($detalle !== '' ? ': ' . $detalle : '')], 502);
     }
 
     case 'point_estado': {
