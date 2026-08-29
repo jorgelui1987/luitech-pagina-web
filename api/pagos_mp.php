@@ -218,6 +218,9 @@ switch ($action) {
         if (!empty($intent['cause'])) {
             $detalle .= ($detalle === '' ? '' : ' | ') . json_encode($intent['cause'], JSON_UNESCAPED_UNICODE);
         }
+        if ($detalle === '') {
+            $detalle = substr(json_encode($intent, JSON_UNESCAPED_UNICODE), 0, 300); // cuerpo completo si no hay campos conocidos
+        }
         responder(['ok' => false, 'error' => 'Mercado Pago rechazó el intento (HTTP ' . $codigoHttp . ')' . ($detalle !== '' ? ': ' . $detalle : '')], 502);
     }
 
@@ -274,7 +277,7 @@ switch ($action) {
         $diag = [
             'habilitado'    => $cfg['enabled'] ? 1 : 0,
             'token_definido'=> $cfg['token'] !== '' ? 1 : 0,
-            'token_mask'    => $cfg['token'] !== '' ? ('••••' . substr($cfg['token'], -4)) : '',
+            'token_mask'    => $cfg['token'] !== '' ? (substr($cfg['token'], 0, 8) . '…••••' . substr($cfg['token'], -4)) : '',
             'curl'          => function_exists('curl_init') ? 1 : 0,
             'https'         => (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 1 : 0,
             'webhook'       => mp_webhook_url(),
