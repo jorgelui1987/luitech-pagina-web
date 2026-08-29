@@ -130,6 +130,50 @@ $pdo->exec("
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 ");
 
+// --- Técnicos y comisiones (modelo de negocio del taller) ----------------
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS tecnicos (
+        id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        nombre              VARCHAR(120) NOT NULL,
+        rut                 VARCHAR(12)  NULL,
+        telefono            VARCHAR(40)  NULL,
+        porcentaje_comision TINYINT UNSIGNED NOT NULL DEFAULT 30,
+        activo              TINYINT(1)   NOT NULL DEFAULT 1,
+        creado_en           TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+");
+
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS comisiones (
+        id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        orden_codigo   VARCHAR(12)  NOT NULL,
+        tecnico_id     INT UNSIGNED NOT NULL,
+        tecnico_nombre VARCHAR(120) NOT NULL,
+        base_margen    INT UNSIGNED NOT NULL DEFAULT 0,
+        porcentaje     TINYINT UNSIGNED NOT NULL DEFAULT 30,
+        monto          INT UNSIGNED NOT NULL DEFAULT 0,
+        estado         ENUM('Pendiente','Pagada','Anulada') NOT NULL DEFAULT 'Pendiente',
+        fecha_generada TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        fecha_pagada   DATETIME NULL,
+        INDEX idx_com_orden (orden_codigo),
+        INDEX idx_com_tecnico (tecnico_id),
+        FOREIGN KEY (orden_codigo) REFERENCES ordenes(codigo) ON DELETE CASCADE,
+        FOREIGN KEY (tecnico_id) REFERENCES tecnicos(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+");
+
+$columnasOrdenes2 = $pdo->query('SHOW COLUMNS FROM ordenes')->fetchAll(PDO::FETCH_COLUMN);
+$migracionComisiones = [
+    'tecnico_id'     => 'ALTER TABLE ordenes ADD COLUMN tecnico_id INT UNSIGNED NULL AFTER tecnico',
+    'costo_repuesto' => 'ALTER TABLE ordenes ADD COLUMN costo_repuesto INT UNSIGNED NOT NULL DEFAULT 0 AFTER precio_repuestos',
+];
+foreach ($migracionComisiones as $columna => $sql) {
+    if (!in_array($columna, $columnasOrdenes2, true)) {
+        $pdo->exec($sql);
+        echo "[migrate] Columna agregada: ordenes.{$columna}\n";
+    }
+}
+
 // --- Fotos de respaldo por orden (evidencia del estado al ingreso) ------
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS orden_fotos (

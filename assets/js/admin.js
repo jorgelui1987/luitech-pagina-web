@@ -15,6 +15,7 @@
     $('view-login').classList.toggle('hidden', logueado);
     $('view-panel').classList.toggle('hidden', !logueado);
     if (logueado && nombre) $('admin-nombre').textContent = nombre;
+    if (logueado) cargarTecnicos();
     if (!logueado) $('usuario').focus();
   }
 
@@ -681,18 +682,35 @@
       });
   }
 
+  /** Carga los técnicos activos en el selector de Nueva Orden. */
+  function cargarTecnicos() {
+    api('api/tecnicos.php?action=list').then(function (res) {
+      if (!res.ok) return;
+      var sel = $('new-tecnico');
+      sel.replaceChildren();
+      sel.appendChild(new Option('Por Asignar', ''));
+      (res.tecnicos || []).forEach(function (t) {
+        sel.appendChild(new Option(t.nombre, String(t.id)));
+      });
+    }).catch(function () {});
+  }
+
   function agregarOrden(event) {
     event.preventDefault();
 
+    var selTec = $('new-tecnico');
     var cuerpo = {
       cliente: $('new-cliente').value.trim(),
       equipo:  $('new-equipo').value.trim(),
       tipo:    $('new-tipo').value,
       falla:   $('new-falla').value.trim(),
-      tecnico: $('new-tecnico').value.trim(),
       fecha:   $('new-fecha').value,
       obs_recepcion: $('new-obs').value.trim()
     };
+    if (selTec.value !== '') {
+      cuerpo.tecnico_id = parseInt(selTec.value, 10);
+      cuerpo.tecnico = selTec.options[selTec.selectedIndex].getAttribute('data-nombre') || '';
+    }
     var pinFinal = valorPinPatron();
     if (pinFinal) cuerpo.pin_patron = pinFinal;
     var codigo = $('new-codigo').value.trim();
@@ -711,6 +729,8 @@
     if (repuestosN + obraN > 0) cuerpo.total = repuestosN + obraN;
     var garantiaN = parseInt($('new-garantia').value, 10) || 0;
     if (garantiaN > 0) cuerpo.garantia_dias = garantiaN;
+    var costoRepN = parseInt($('new-costo-repuesto').value, 10) || 0;
+    if (costoRepN > 0) cuerpo.costo_repuesto = costoRepN;
 
     if (cuerpo.tecnico === '') delete cuerpo.tecnico;
     if (!cuerpo.fecha) delete cuerpo.fecha;
@@ -962,6 +982,16 @@
     fila.appendChild(izquierda);
     fila.appendChild(derecha);
     cont.appendChild(fila);
+
+    // Costo real del repuesto y margen bruto (si se registró)
+    if ((parseInt(o.costo_repuesto, 10) || 0) > 0) {
+      var margenBruto = Math.max(0, total - (parseInt(o.costo_repuesto, 10) || 0));
+      var lineaCosto = document.createElement('div');
+      lineaCosto.className = 'text-[10px] text-slate-500';
+      lineaCosto.style.gridColumn = '1 / -1';
+      lineaCosto.textContent = 'Costo repuesto: ' + monto(o.costo_repuesto) + ' · Margen bruto: ' + monto(margenBruto);
+      cont.appendChild(lineaCosto);
+    }
   }
 
   /** Caja pequeña con etiqueta + valor para el bloque de cobro. */
@@ -1164,6 +1194,9 @@
       renderEntregaModal(ordenActualModal());
       renderizarTablaAdmin();
       window.mostrarToast('Orden ' + ordenModalCodigo + ' entregada', 'success');
+      if (res.comision) {
+        window.mostrarToast('Comisión generada: ' + monto(res.comision.monto) + ' — ' + res.comision.tecnico, 'success');
+      }
       imprimirRecibo(ordenActualModal());
     }).catch(function () {
       boton.disabled = false;
@@ -1358,6 +1391,7 @@
     });
     iniciarFirmaEntrega();
     cargarConfigAdmin();
+    cargarTecnicos();
     $('new-pin').addEventListener('input', function () {
       this.value = this.value.replace(/\D/g, '');
     });

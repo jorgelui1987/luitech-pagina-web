@@ -29,6 +29,9 @@ const ESTADOS_VALIDOS = ['Ingresado', 'En Diagnóstico', 'En Reparación', 'List
  *  enciende sus etapas según el estado; sin esto quedarían desincronizados). */
 const AVANCE_POR_ESTADO = ['Ingresado' => 10, 'En Diagnóstico' => 30, 'En Reparación' => 60, 'Listo para Retiro' => 100];
 
+/** Piso mínimo de comisión por reparación entregada (incentivo en márgenes chicos). */
+const COMISION_PISO = 5000;
+
 /* ---------------------------------------------------------------------
  * Archivos del acta de recepción (fotos de respaldo y firma del cliente)
  * ------------------------------------------------------------------- */
@@ -159,7 +162,7 @@ switch ($action) {
             'SELECT id, codigo, cliente, equipo, tipo, falla, estado, avance, tecnico, fecha_ingreso,
                     pin_patron, accesorios, obs_recepcion, firma_ingreso,
                     precio_repuestos, mano_obra, total, abono, estado_pago, metodo_pago, garantia_dias,
-                    fecha_entrega, entregado_a, firma_entrega
+                    fecha_entrega, entregado_a, firma_entrega, tecnico_id, costo_repuesto
              FROM ordenes ORDER BY id DESC'
         );
         responder(['ok' => true, 'ordenes' => $stmt->fetchAll()]);
@@ -194,6 +197,21 @@ switch ($action) {
         }
         $garantia = max(0, min(365, (int)($d['garantia_dias'] ?? 0)));
 
+        // Técnico asignado desde el registro de técnicos + costo real del repuesto
+        $tecnicoId = (int)($d['tecnico_id'] ?? 0);
+        if ($tecnicoId > 0) {
+            $stT = db()->prepare('SELECT nombre FROM tecnicos WHERE id = ? AND activo = 1 LIMIT 1');
+            $stT->execute([$tecnicoId]);
+            $nombreT = $stT->fetchColumn();
+            if ($nombreT === false) {
+                responder(['ok' => false, 'error' => 'El técnico seleccionado no existe'], 400);
+            }
+            $tecnico = (string)$nombreT;
+        } else {
+            $tecnicoId = null;
+        }
+        $costoRepuesto = max(0, (int)($d['costo_repuesto'] ?? 0));
+
         if ($cliente === null || $equipo === null || $falla === null) {
             responder(['ok' => false, 'error' => 'Faltan campos obligatorios (cliente, equipo, falla)'], 400);
         }
@@ -219,11 +237,12 @@ switch ($action) {
             $stmt = db()->prepare(
                 'INSERT INTO ordenes (codigo, cliente, equipo, tipo, falla, estado, avance, tecnico,
                                       pin_patron, accesorios, obs_recepcion, firma_ingreso, fecha_ingreso,
-                                      precio_repuestos, mano_obra, total, garantia_dias)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                                      precio_repuestos, mano_obra, total, garantia_dias, tecnico_id, costo_repuesto)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
             );
             $stmt->execute([$codigo, $cliente, $equipo, $tipo, $falla, $estadoIn, $avanceIn, $tecnico,
-                            $pin, $accs, $obs, $firmaRuta, $fecha, $repuestos, $manoObra, $total, $garantia]);
+                            $pin, $accs, $obs, $firmaRuta, $fecha, $repuestos, $manoObra, $total, $garantia,
+                            $tecnicoId, $costoRepuesto]);
 
             // Primera entrada de la bitácora: el ingreso del equipo al taller
             db()->prepare('INSERT INTO orden_bitacora (orden_codigo, tecnico, nota, estado_nuevo) VALUES (?, ?, ?, ?)')
@@ -238,6 +257,7 @@ switch ($action) {
                 'precio_repuestos' => $repuestos, 'mano_obra' => $manoObra,
                 'total' => $total, 'abono' => 0, 'estado_pago' => 'Pendiente',
                 'garantia_dias' => $garantia,
+                'tecnico_id' => $tecnicoId, 'costo_repuesto' => $costoRepuesto,
             ]]);
         } catch (PDOException $e) {
             if ((int)$e->getCode() === 23000) {
@@ -303,6 +323,29 @@ switch ($action) {
         if (isset($d['tecnico'])) {
             $set[]    = 'tecnico = ?';
             $params[] = campo_texto($d, 'tecnico', 80) ?? 'Por Asignar';
+        }
+        // Cambiar el técnico usando el registro de técnicos (actualiza nombre también)
+        if (isset($d['tecnico_id'])) {
+            $tid = (int)$d['tecnico_id'];
+            if ($tid > 0) {
+                $stT = db()->prepare('SELECT nombre FROM tecnicos WHERE id = ? AND activo = 1 LIMIT 1');
+                $stT->execute([$tid]);
+                $nombreT = $stT->fetchColumn();
+                if ($nombreT === false) {
+                    responder(['ok' => false, 'error' => 'El técnico seleccionado no existe'], 400);
+                }
+                $set[]    = 'tecnico_id = ?';
+                $params[] = $tid;
+                $set[]    = 'tecnico = ?';
+                $params[] = (string)$nombreT;
+            } else {
+                $set[] = 'tecnico_id = NULL';
+                $set[] = "tecnico = 'Por Asignar'";
+            }
+        }
+        if (isset($d['costo_repuesto'])) {
+            $set[]    = 'costo_repuesto = ?';
+            $params[] = max(0, (int)$d['costo_repuesto']);
         }
 
         // --- Cobro de la reparación (repuestos, mano de obra, total, abonos) ---
@@ -380,6 +423,40 @@ switch ($action) {
             db()->prepare('UPDATE ordenes SET estado_pago = ? WHERE codigo = ?')->execute([$estadoPago, $codigo]);
         }
 
+        // --- Comisión del técnico: se genera UNA VEZ, al entregar la orden ---
+        // Modelo B: % sobre el margen real (neto cobrado - costo neto repuesto),
+        // con piso mínimo para incentivar en márgenes chicos. Idempotente.
+        $comisionGenerada = null;
+        if (!empty($d['entregar'])) {
+            $rowO = db()->prepare('SELECT tecnico_id, total, costo_repuesto FROM ordenes WHERE codigo = ?');
+            $rowO->execute([$codigo]);
+            $oFila = $rowO->fetch();
+            if ($oFila && (int)$oFila['tecnico_id'] > 0 && (int)$oFila['total'] > 0) {
+                $yaExiste = db()->prepare('SELECT id FROM comisiones WHERE orden_codigo = ? LIMIT 1');
+                $yaExiste->execute([$codigo]);
+                if (!$yaExiste->fetch()) {
+                    $stTec = db()->prepare('SELECT nombre, porcentaje_comision FROM tecnicos WHERE id = ? LIMIT 1');
+                    $stTec->execute([(int)$oFila['tecnico_id']]);
+                    $tecnicoCom = $stTec->fetch();
+                    if ($tecnicoCom) {
+                        $tasaIva     = (int)(config_valor(db(), 'iva_porcentaje', '19'));
+                        $netoCobrado = (int)round((int)$oFila['total'] * 100 / (100 + max(0, $tasaIva)));
+                        $costoNeto   = (int)round((int)$oFila['costo_repuesto'] * 100 / (100 + max(0, $tasaIva)));
+                        $baseMargen  = max(0, $netoCobrado - $costoNeto);
+                        if ($baseMargen > 0) {
+                            $pctCom   = max(0, min(100, (int)$tecnicoCom['porcentaje_comision']));
+                            $montoCom = max(COMISION_PISO, (int)round($baseMargen * $pctCom / 100));
+                            db()->prepare('INSERT INTO comisiones (orden_codigo, tecnico_id, tecnico_nombre, base_margen, porcentaje, monto) VALUES (?, ?, ?, ?, ?, ?)')
+                                ->execute([$codigo, (int)$oFila['tecnico_id'], (string)$tecnicoCom['nombre'], $baseMargen, $pctCom, $montoCom]);
+                            db()->prepare('INSERT INTO orden_bitacora (orden_codigo, tecnico, nota) VALUES (?, ?, ?)')
+                                ->execute([$codigo, (string)$tecnicoCom['nombre'], 'Comisión generada: $' . $montoCom . ' (' . $pctCom . '% del margen $' . $baseMargen . ')']);
+                            $comisionGenerada = ['tecnico' => (string)$tecnicoCom['nombre'], 'monto' => $montoCom, 'base_margen' => $baseMargen, 'porcentaje' => $pctCom];
+                        }
+                    }
+                }
+            }
+        }
+
         // Cada cobro (delta de abono) queda como ingreso en la caja diaria
         $avisoCaja = null;
         if (isset($d['abono']) && $abonoAnterior !== null) {
@@ -413,8 +490,8 @@ switch ($action) {
         }
 
         $stmt2 = db()->prepare(
-            'SELECT codigo, estado, avance, tecnico, falla, precio_repuestos, mano_obra,
-                    total, abono, estado_pago, metodo_pago, garantia_dias,
+            'SELECT codigo, estado, avance, tecnico, falla, precio_repuestos, mano_obra, costo_repuesto,
+                    total, abono, estado_pago, metodo_pago, garantia_dias, tecnico_id,
                     fecha_entrega, entregado_a, firma_entrega
              FROM ordenes WHERE codigo = ?'
         );
@@ -422,6 +499,9 @@ switch ($action) {
         $respuesta = ['ok' => true, 'orden' => $stmt2->fetch()];
         if ($avisoCaja !== null) {
             $respuesta['aviso'] = $avisoCaja;
+        }
+        if ($comisionGenerada !== null) {
+            $respuesta['comision'] = $comisionGenerada;
         }
         responder($respuesta);
     }

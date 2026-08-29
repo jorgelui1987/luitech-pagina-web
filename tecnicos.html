@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Técnicos y Comisiones | Luitech</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <style>
+        .sec{ background:rgba(2,6,23,.5); border:1px solid #1e293b; border-radius:0.75rem; padding:1.15rem; }
+        .sec h2{ font-size:13px; font-weight:800; color:#22d3ee; margin-bottom:10px; }
+        .inp{ width:100%; background:#0f172a; border:1px solid #1e293b; border-radius:0.5rem; padding:0.5rem 0.7rem; color:#fff; font-size:12px; outline:none; }
+        .inp:focus{ border-color:#22d3ee; }
+        label.lb{ display:block; color:#94a3b8; font-weight:600; font-size:11px; margin-bottom:4px; }
+        .btn{ background:#22d3ee; color:#0f172a; font-weight:800; border-radius:0.5rem; padding:0.5rem 1rem; font-size:12px; transition:all .15s; cursor:pointer; }
+        .btn:hover{ background:#67e8f9; }
+        .btn:disabled{ opacity:.4; cursor:not-allowed; }
+        .btn2{ background:#1e293b; color:#cbd5e1; border:1px solid #334155; border-radius:0.5rem; padding:0.45rem 0.8rem; font-size:11px; font-weight:600; cursor:pointer; }
+        .btn2:hover{ background:#334155; }
+        .btn-pagar{ background:#10b981; color:#022c22; font-weight:800; border-radius:0.5rem; padding:0.35rem 0.7rem; font-size:11px; cursor:pointer; transition:all .15s; }
+        .btn-pagar:hover{ background:#34d399; }
+        .fila{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+        @media(min-width:768px){ .fila{ grid-template-columns:repeat(4,1fr); } }
+        .chip-est{ display:inline-block; font-size:10px; font-weight:700; padding:2px 8px; border-radius:9999px; border:1px solid; }
+        .chip-est.pendiente{ background:rgba(69,26,3,.45); color:#fbbf24; border-color:#92400e; }
+        .chip-est.pagada{ background:rgba(6,78,59,.45); color:#34d399; border-color:#065f46; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+
+    <div id="toast-container" class="fixed top-4 right-4 z-[9999] flex flex-col gap-3 px-4 w-full sm:w-auto items-end pointer-events-none"></div>
+
+    <div id="view-nologin" class="hidden min-h-screen flex items-center justify-center p-6 text-center">
+        <div class="bg-slate-950 border border-slate-800 rounded-2xl p-8 max-w-sm">
+            <i class="fa-solid fa-lock text-amber-400 text-3xl mb-4"></i>
+            <h1 class="font-extrabold text-white text-lg">Sesión requerida</h1>
+            <a href="admin.html" class="inline-block mt-5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-sm">Ir al Login</a>
+        </div>
+    </div>
+
+    <main id="view-tec" class="hidden max-w-5xl mx-auto px-4 py-6 space-y-5">
+
+        <header class="flex flex-wrap justify-between items-center gap-3 bg-slate-950 border border-slate-800 rounded-2xl px-5 py-4">
+            <div class="flex items-center gap-3">
+                <img src="assets/img/logo-luitech.png" alt="" width="36" height="36" class="h-9 w-9 rounded-lg object-cover">
+                <span class="text-xl font-black bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500">TÉCNICOS Y COMISIONES</span>
+            </div>
+            <nav class="flex items-center gap-3 text-xs font-semibold">
+                <a href="pos.html" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 px-3 py-1.5 rounded-lg"><i class="fa-solid fa-cash-register mr-1"></i>POS</a>
+                <a href="configuracion.html" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-lg">Configuración</a>
+                <a href="admin.html" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-lg">Panel</a>
+            </nav>
+        </header>
+
+            <section class="sec">
+                <h2 id="form-titulo"><i class="fa-solid fa-plus mr-1"></i>Nuevo técnico</h2>
+                <input type="hidden" id="t-id">
+                <div class="fila">
+                    <div><label class="lb" for="t-nombre">Nombre*</label><input class="inp" id="t-nombre" maxlength="120" placeholder="Ej: Jorge Luis Castro Cáceres"></div>
+                    <div><label class="lb" for="t-rut">RUT</label><input class="inp" id="t-rut" maxlength="12" placeholder="12345678-9"></div>
+                    <div><label class="lb" for="t-telefono">Teléfono</label><input class="inp" id="t-telefono" maxlength="40" placeholder="+56 9 ..."></div>
+                    <div><label class="lb" for="t-pct">% de comisión (sobre el margen)</label><input type="number" class="inp" id="t-pct" min="0" max="100" value="30"></div>
+                </div>
+                <div class="flex gap-2 mt-3">
+                    <button type="button" id="btn-tec-guardar" class="btn">Guardar técnico</button>
+                    <button type="button" id="btn-tec-cancelar" class="btn2 hidden">Cancelar</button>
+                </div>
+                <div class="overflow-x-auto mt-4">
+                    <table class="w-full text-left text-xs" style="min-width:560px">
+                        <thead class="text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-800">
+                            <tr><th class="p-2">Técnico</th><th class="p-2">RUT</th><th class="p-2 text-center">%</th><th class="p-2 text-right">Comisión pendiente</th><th class="p-2 text-center">Acciones</th></tr>
+                        </thead>
+                        <tbody id="tec-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="sec">
+                <h2><i class="fa-solid fa-coins mr-1"></i>Comisiones</h2>
+                <div class="flex flex-wrap items-center gap-2 mb-3 text-xs">
+                    <label class="lb mb-0" for="fil-estado">Estado:</label>
+                    <select id="fil-estado" class="inp" style="width:auto">
+                        <option value="Pendiente">Pendientes</option>
+                        <option value="Pagada">Pagadas</option>
+                        <option value="">Todas</option>
+                    </select>
+                    <span id="com-total" class="font-bold text-amber-400 ml-auto"></span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs" style="min-width:640px">
+                        <thead class="text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-800">
+                            <tr><th class="p-2">Orden</th><th class="p-2">Técnico</th><th class="p-2 text-right">Margen</th><th class="p-2 text-center">%</th><th class="p-2 text-right">Comisión</th><th class="p-2 text-center">Estado</th><th class="p-2 text-center">Acción</th></tr>
+                        </thead>
+                        <tbody id="com-body"></tbody>
+                    </table>
+                </div>
+                <p class="nota mt-2">La comisión se genera automáticamente al <b>entregar</b> una orden con técnico y costo real registrados. Pagarla registra el Egreso en la caja abierta.</p>
+            </section>
+        </div>
+    </main>
+
+    <script src="assets/js/common.js" defer></script>
+    <script src="assets/js/tecnicos.js" defer></script>
+</body>
+</html>
