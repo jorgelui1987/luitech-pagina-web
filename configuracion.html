@@ -105,7 +105,14 @@
                     <div><label class="lb">Public key</label><input class="inp" id="cfg-mp_public_key" maxlength="120" placeholder="APP_USR-..."></div>
                     <div><label class="lb">Terminal Point (device id)</label><input class="inp" id="cfg-mp_point_device" maxlength="80" placeholder="Opcional"></div>
                 </div>
-                <div class="mt-2"><label class="lb">URL de webhook (configúrala en tu cuenta de MP)</label><input class="inp" id="cfg-mp-webhook" readonly></div>
+                <div class="mt-2">
+                    <label class="lb" for="cfg-mp-webhook">URL de webhook — cópiala con el botón y pégala en tu cuenta de Mercado Pago (Tus integraciones → Webhooks)</label>
+                    <div style="display:flex; gap:6px;">
+                        <input class="inp" id="cfg-mp-webhook" readonly style="flex:1;">
+                        <button type="button" id="cfg-webhook-copiar" class="btn2" title="Copiar URL"><i class="fa-solid fa-copy"></i></button>
+                    </div>
+                    <p class="nota" style="margin-top:4px">Debe comenzar con <b>https://</b> (Mercado Pago exige candado para enviar las notificaciones). Esta URL la genera tu sistema: no se escribe ni se pega ahí.</p>
+                </div>
                 <p class="nota mt-1">El webhook necesita un dominio con HTTPS (no funciona en localhost). Los pagos aprobados entran como abono a la orden y a la caja, con registro en la bitácora.</p>
                 <button type="button" id="cfg-btn-mp" class="btn mt-3">Guardar Mercado Pago</button>
                 <button type="button" id="cfg-btn-mp-diag" class="btn2 mt-3"><i class="fa-solid fa-stethoscope mr-1"></i>Diagnóstico</button>

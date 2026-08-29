@@ -240,6 +240,26 @@
       .finally(function () { boton.disabled = false; });
   }
 
+  /** Copia la URL del webhook al portapapeles (para pegarla en Mercado Pago). */
+  function copiarWebhook() {
+    var campo = $('cfg-mp-webhook');
+    if (!campo || campo.value === '') {
+      window.mostrarToast('La URL se genera sola al abrir esta página; recarga si está vacía', 'error');
+      return;
+    }
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(campo.value).then(function () {
+        window.mostrarToast('URL del webhook copiada — pégala en tu cuenta de Mercado Pago', 'success');
+      }).catch(function () {
+        campo.select();
+        if (document.execCommand('copy')) window.mostrarToast('URL copiada', 'success');
+      });
+    } else {
+      campo.select();
+      if (document.execCommand('copy')) window.mostrarToast('URL copiada', 'success');
+    }
+  }
+
   function cambiarClave(event) {
     event.preventDefault();
     var actual = $('clave-actual').value;
@@ -354,6 +374,7 @@
     $('cfg-logo-quitar').addEventListener('click', quitarLogo);
     $('cfg-logo-probar').addEventListener('click', probarSubida);
     $('btn-respaldo').addEventListener('click', descargarRespaldo);
+    $('cfg-webhook-copiar').addEventListener('click', copiarWebhook);
     $('form-clave').addEventListener('submit', cambiarClave);
 
     api('api/auth.php?action=me').then(function (res) {
