@@ -134,6 +134,13 @@ switch ($action) {
         if ($webhook !== '') {
             $prefBody['notification_url'] = $webhook;
         }
+        if (!empty($_SERVER['HTTP_HOST'])) {
+            $esquema = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $dirApi  = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/');
+            $raiz    = substr($dirApi, 0, (int)strrpos($dirApi, '/'));
+            $volver  = $esquema . '://' . $_SERVER['HTTP_HOST'] . $raiz . '/admin.html';
+            $prefBody['back_urls'] = ['success' => $volver, 'pending' => $volver, 'failure' => $volver];
+        }
         [$codigoHttp, $pref] = mp_api('POST', '/checkout/preferences', $prefBody, $cfg['token']);
         if ($codigoHttp >= 200 && $codigoHttp < 300 && !empty($pref['init_point'])) {
             responder(['ok' => true, 'init_point' => $pref['init_point'], 'saldo' => $saldo]);
@@ -227,6 +234,45 @@ switch ($action) {
             mp_aplicar_pago_orden(db(), $referencia, $monto, $pagoId);
         }
         responder(['ok' => true]);
+    }
+
+    case 'verificar': {
+        // El panel consulta cada pocos segundos: si el pago ya entró (por el
+        // webhook o buscando directamente en Mercado Pago), responde pagada.
+        exigir_admin();
+        $codigo = strtoupper(trim((string)($_GET['codigo'] ?? '')));
+        if (preg_match('/^LUH-\d{3,8}$/', $codigo) !== 1) {
+            responder(['ok' => false, 'error' => 'Código inválido'], 400);
+        }
+        $orden = db()->prepare('SELECT total, abono, estado_pago FROM ordenes WHERE codigo = ? LIMIT 1');
+        $orden->execute([$codigo]);
+        $o = $orden->fetch();
+        if (!$o) {
+            responder(['ok' => false, 'error' => 'Orden no encontrada'], 404);
+        }
+        $total = (int)$o['total'];
+        $abono = (int)$o['abono'];
+        $pagada = ($total > 0 && $abono >= $total);
+
+        $cfg = mp_config();
+        if (!$pagada && $cfg['enabled'] && $cfg['token'] !== '') {
+            // Busca pagos aprobados de esta orden que el webhook no haya aplicado
+            [$codigoHttp, $busqueda] = mp_api('GET',
+                '/v1/payments/search?sort=date_created&criteria=external_reference&external_reference=' . rawurlencode($codigo),
+                null, $cfg['token']);
+            foreach (($busqueda['results'] ?? []) as $pago) {
+                if (($pago['status'] ?? '') === 'approved' && (int)round((float)($pago['transaction_amount'] ?? 0)) > 0) {
+                    mp_aplicar_pago_orden(db(), $codigo, (int)round((float)$pago['transaction_amount']), (string)$pago['id']);
+                }
+            }
+            $orden->execute([$codigo]);
+            $o = $orden->fetch();
+            $total = (int)$o['total'];
+            $abono = (int)$o['abono'];
+            $pagada = ($total > 0 && $abono >= $total);
+        }
+        responder(['ok' => true, 'pagada' => $pagada, 'total' => $total,
+                   'abono' => $abono, 'estado_pago' => (string)($o['estado_pago'] ?? '')]);
     }
 
     default:

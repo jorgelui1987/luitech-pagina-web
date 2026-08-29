@@ -9,6 +9,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var empresaCfg = null;   // configuración de empresa (logo, nombre, moneda, términos)
   var simboloMoneda = '$'; // viene de Configuración (moneda_simbolo)
+  var mpTimer = null;      // monitoreo del pago por Mercado Pago
 
   /* --------------------------------------------------------- SESIÓN */
   function mostrarVista(logueado, nombre) {
@@ -886,7 +887,10 @@
     prepararLienzoFirmaEntrega(); // mide el lienzo ya visible
   }
 
-  function cerrarModalOrden() { $('modal-orden').classList.add('hidden'); }
+  function cerrarModalOrden() {
+    detenerMonitoreoMP(); // deja de consultar si el modal se cierra
+    $('modal-orden').classList.add('hidden');
+  }
 
   /* -------------------------------- COBRO / ENTREGA / BITÁCORA (MODAL) */
   /** Devuelve el objeto de la orden abierta en el modal (o null). */
@@ -992,6 +996,15 @@
       lineaCosto.textContent = 'Costo repuesto: ' + monto(o.costo_repuesto) + ' · Margen bruto: ' + monto(margenBruto);
       cont.appendChild(lineaCosto);
     }
+
+    // Botón de Mercado Pago: visible solo si hay saldo y MP está habilitado
+    var botonMP = $('mo-btn-mp');
+    if (botonMP) {
+      var mpActivo = empresaCfg && empresaCfg.mp_enabled === '1';
+      botonMP.classList.toggle('hidden', !(mpActivo && saldo > 0));
+    }
+    var panelMP = $('mp-panel');
+    if (panelMP && saldo <= 0) panelMP.classList.add('mo-oculto');
   }
 
   /** Caja pequeña con etiqueta + valor para el bloque de cobro. */
@@ -1293,6 +1306,78 @@
     setTimeout(ahora, 2500); // respaldo si una imagen nunca responde
   }
 
+  /** Genera el link/QR de pago del saldo en Mercado Pago y monitorea hasta
+   *  que se confirme; al confirmarse imprime el recibo automáticamente. */
+  function cobrarConMP() {
+    var o = ordenActualModal();
+    if (!o) return;
+    if (saldoDe(o) <= 0) { window.mostrarToast('No hay saldo pendiente', 'error'); return; }
+    var boton = $('mo-btn-mp');
+    boton.disabled = true;
+    api('api/pagos_mp.php?action=crear_link', { method: 'POST', body: { codigo: ordenModalCodigo } })
+      .then(function (res) {
+        boton.disabled = false;
+        if (!res.ok) { window.mostrarToast(res.error || 'Mercado Pago rechazó la petición', 'error'); return; }
+        $('mp-qr').src = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(res.init_point);
+        var enlace = $('mp-link');
+        enlace.href = res.init_point;
+        enlace.textContent = res.init_point;
+        $('mp-whatsapp').href = 'https://wa.me/?text=' + encodeURIComponent('Paga tu reparación ' + o.codigo + ' (' + fmt(res.saldo) + ') aquí: ' + res.init_point);
+        $('mp-panel').classList.remove('mo-oculto');
+        $('mp-panel').classList.remove('hidden');
+        var estadoMP = $('mp-estado');
+        if (estadoMP) estadoMP.textContent = 'Esperando el pago… (verificando cada 5 s)';
+        iniciarMonitoreoMP();
+      }).catch(function () {
+        boton.disabled = false;
+        window.mostrarToast('Error de conexión con el servidor', 'error');
+      });
+  }
+
+  /** Consulta cada 5 s si Mercado Pago confirmó el pago; al confirmar,
+   *  refresca la orden e imprime el recibo automáticamente. */
+  function iniciarMonitoreoMP() {
+    detenerMonitoreoMP();
+    mpTimer = setInterval(function () {
+      api('api/pagos_mp.php?action=verificar&codigo=' + encodeURIComponent(ordenModalCodigo))
+        .then(function (res) {
+          if (!res.ok) return;
+          if (res.pagada) {
+            detenerMonitoreoMP();
+            patchOrdenModal({ abono: res.abono, estado_pago: 'Pagado', metodo_pago: 'Mercado Pago' });
+            var linea = $('mp-estado');
+            if (linea) { linea.textContent = '✓ ¡Pago confirmado! Imprimiendo recibo…'; linea.style.color = '#34d399'; }
+            renderCobroModal(ordenActualModal());
+            renderEntregaModal(ordenActualModal());
+            renderizarTablaAdmin();
+            window.mostrarToast('¡Pago de Mercado Pago confirmado!', 'success');
+            imprimirRecibo(ordenActualModal());
+          } else {
+            var linea2 = $('mp-estado');
+            if (linea2) linea2.textContent = 'Esperando el pago… (' + monto(res.abono) + ' de ' + monto(res.total) + ')';
+          }
+        }).catch(function () {});
+    }, 5000);
+  }
+
+  function detenerMonitoreoMP() {
+    if (mpTimer) { clearInterval(mpTimer); mpTimer = null; }
+  }
+
+  function copiarEnlaceMP() {
+    var enlace = $('mp-link');
+    if (!enlace || !enlace.href) return;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(enlace.href).then(function () {
+        window.mostrarToast('Enlace copiado al portapapeles', 'success');
+      }).catch(function () {
+        window.mostrarToast('No se pudo copiar: selecciónalo manualmente', 'error');
+      });
+    } else {
+      window.mostrarToast('Tu navegador no permite copiar automáticamente', 'error');
+    }
+  }
+
   /** Recibo de entrega imprimible (ventana nueva con estilos propios). */
   function imprimirRecibo(o) {
     if (!o) return;
@@ -1392,6 +1477,8 @@
     iniciarFirmaEntrega();
     cargarConfigAdmin();
     cargarTecnicos();
+    $('mo-btn-mp').addEventListener('click', cobrarConMP);
+    $('mp-copiar').addEventListener('click', copiarEnlaceMP);
     $('new-pin').addEventListener('input', function () {
       this.value = this.value.replace(/\D/g, '');
     });

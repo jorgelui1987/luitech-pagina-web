@@ -45,6 +45,12 @@
         .seccion-modal{ border-top:1px solid #1e293b; padding-top:12px; display:flex; flex-direction:column; gap:8px; }
         .mo-col{ display:flex; flex-direction:column; gap:8px; }
         .mo-oculto{ display:none !important; }
+        /* Mercado Pago en el detalle de la orden */
+        #mp-panel{ border:1px dashed #334155; border-radius:0.5rem; padding:10px; text-align:center; }
+        #mp-qr{ width:180px; height:180px; margin:0 auto 8px; display:block; background:#fff; padding:6px; border-radius:0.5rem; }
+        #mp-link{ color:#22d3ee; font-weight:700; font-size:12px; word-break:break-all; }
+        .mp-mini{ background:#1e293b; color:#cbd5e1; border:1px solid #334155; border-radius:0.5rem; padding:0.4rem 0.8rem; font-size:11px; font-weight:600; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; }
+        .mp-mini:hover{ background:#334155; }
         /* Corrección de modales: el build de Tailwind no incluye max-h-[90vh],
            z-[9998], space-y-* ni backdrop-blur-sm. Sin max-height el modal crece
            más que la pantalla y, al centrarse, se recorta arriba/abajo sin scroll. */
@@ -390,9 +396,22 @@
                     <button type="button" id="mo-btn-cobro-total" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2 px-3 rounded-lg transition-all disabled:opacity-40">
                         <i class="fa-solid fa-check-double mr-1"></i> Cobrar saldo total
                     </button>
+                    <button type="button" id="mo-btn-mp" class="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold py-2 px-3 rounded-lg transition-all disabled:opacity-40 hidden">
+                        <i class="fa-solid fa-qrcode mr-1"></i> Cobrar con Mercado Pago
+                    </button>
                     <button type="button" id="mo-btn-recibo" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold py-2 px-3 rounded-lg transition-all">
                         <i class="fa-solid fa-print mr-1"></i> Recibo
                     </button>
+                </div>
+                <div id="mp-panel" class="hidden text-center" style="border:1px dashed #334155; border-radius:0.5rem; padding:10px;">
+                    <img id="mp-qr" alt="QR de pago Mercado Pago" style="width:180px; height:180px; margin:0 auto 8px; display:block; background:#fff; padding:6px; border-radius:0.5rem;">
+                    <p class="text-[10px] text-slate-400 mb-1">Escanea el QR o abre el enlace de pago:</p>
+                    <a id="mp-link" href="#" target="_blank" rel="noopener" style="color:#22d3ee; font-weight:700; font-size:12px; word-break:break-all;">—</a>
+                    <div class="flex gap-2 mt-2 justify-center">
+                        <button type="button" id="mp-copiar" class="mp-mini"><i class="fa-solid fa-copy mr-1"></i>Copiar enlace</button>
+                        <a id="mp-whatsapp" href="#" target="_blank" rel="noopener" class="mp-mini" style="text-decoration:none"><i class="fa-brands fa-whatsapp mr-1"></i>Enviar por WhatsApp</a>
+                    </div>
+                    <p id="mp-estado" class="text-[11px] font-bold text-amber-400 mt-2">Esperando el pago… (verificando cada 5 s)</p>
                 </div>
             </div>
 
