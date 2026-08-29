@@ -65,6 +65,66 @@ function mp_api(string $metodo, string $ruta, ?array $cuerpo, string $token, ?st
     return [$codigo, is_array($datos) ? $datos : []];
 }
 
+/** Arma el texto de error legible desde la respuesta de Mercado Pago. */
+function mp_error_detalle(array $r): string
+{
+    $detalle = '';
+    foreach (['message', 'error', 'curl_error'] as $campo) {
+        if (!empty($r[$campo])) {
+            $detalle .= ($detalle === '' ? '' : ' | ') . (is_array($r[$campo]) ? json_encode($r[$campo], JSON_UNESCAPED_UNICODE) : (string)$r[$campo]);
+        }
+    }
+    if (!empty($r['errors']) && is_array($r['errors'])) {
+        foreach ($r['errors'] as $e) {
+            if (!is_array($e)) continue;
+            $detalle .= ($detalle === '' ? '' : ' | ')
+                . ($e['code'] ?? '')
+                . (isset($e['message']) ? ': ' . $e['message'] : '')
+                . (isset($e['detail']) ? ' — ' . (is_array($e['detail']) ? json_encode($e['detail'], JSON_UNESCAPED_UNICODE) : $e['detail']) : '');
+        }
+    }
+    if (!empty($r['cause'])) {
+        $detalle .= ($detalle === '' ? '' : ' | ') . json_encode($r['cause'], JSON_UNESCAPED_UNICODE);
+    }
+    if ($detalle === '') {
+        $detalle = substr(json_encode($r, JSON_UNESCAPED_UNICODE), 0, 300); // cuerpo completo si no hay campos conocidos
+    }
+    return $detalle;
+}
+
+/** Crea la orden de cobro en /v1/orders probando las variantes del schema
+ *  (la documentación de MP contradice su propio ejemplo sobre el tipo de
+ *  transactions.payments). Devuelve [http, respuesta, variante_usada]. */
+function mp_crear_orden_point(float $monto, string $referencia, string $descripcion, string $device, string $token): array
+{
+    $variantes = [
+        'array-entero' => ['payments' => [['amount' => (int)$monto]]],
+        'array-texto'  => ['payments' => [['amount' => (string)$monto]]],
+        'objeto-texto' => ['payments' => ['amount' => (string)$monto]],
+    ];
+    $codigoHttp = 0;
+    $ordenMP = [];
+    $usada = '';
+    foreach ($variantes as $nombre => $pagos) {
+        $payload = [
+            'type'               => 'point',
+            'external_reference' => $referencia,
+            'description'        => $descripcion,
+            'transactions'       => $pagos,
+            'config'             => ['point' => ['terminal_id' => $device]],
+        ];
+        [$codigoHttp, $ordenMP] = mp_api('POST', '/v1/orders', $payload, $token, 'luitech-' . $referencia . '-' . $nombre . '-' . time());
+        if ($codigoHttp >= 200 && $codigoHttp < 300 && !empty($ordenMP['id'])) {
+            return [$codigoHttp, $ordenMP, $nombre];
+        }
+        if ($codigoHttp !== 400) {
+            break; // 403/409/401/etc: no es problema de formato, no reintentar variantes
+        }
+        $usada = $nombre;
+    }
+    return [$codigoHttp, $ordenMP, $usada];
+}
+
 /** URL pública del webhook, deducida de la petición actual ('' si no hay host). */
 function mp_webhook_url(): string
 {
@@ -224,57 +284,55 @@ switch ($action) {
         if ($saldo < 1) {
             responder(['ok' => false, 'error' => 'Esta orden no tiene saldo pendiente'], 409);
         }
-        // Crea la orden de cobro en el terminal Point (API Orders /v1/orders).
-        // La documentación de MP se contradice sobre el tipo de transactions.payments
-        // (parámetros: array / ejemplo: objeto; amount string vs número), así que se
-        // prueban las variantes y se usa la primera que Mercado Pago acepte.
-        $variantes = [
-            'array-entero' => ['payments' => [['amount' => (int)$saldo]]],
-            'array-texto'  => ['payments' => [['amount' => (string)$saldo]]],
-            'objeto-texto' => ['payments' => ['amount' => (string)$saldo]],
-        ];
-        $codigoHttp = 0;
-        $ordenMP = [];
-        $usada = '';
-        foreach ($variantes as $nombre => $pagos) {
-            $payload = [
-                'type'               => 'point',
-                'external_reference' => $codigo,
-                'description'        => mb_substr('Orden ' . $codigo . ' - ' . (string)$orden['cliente'], 0, 100),
-                'transactions'       => $pagos,
-                'config'             => ['point' => ['terminal_id' => $cfg['device']]],
-            ];
-            [$codigoHttp, $ordenMP] = mp_api('POST', '/v1/orders', $payload, $cfg['token'], 'luitech-' . $codigo . '-' . $saldo . '-' . $nombre . '-' . time());
-            if ($codigoHttp >= 200 && $codigoHttp < 300 && !empty($ordenMP['id'])) {
-                responder(['ok' => true, 'order_id' => (string)$ordenMP['id'], 'monto' => $saldo, 'variante' => $nombre]);
-            }
-            if ($codigoHttp !== 400) {
-                break; // 403/409/401/etc: no es problema de formato, no reintentar variantes
-            }
-            $usada = $nombre;
+        // Crea la orden de cobro en el terminal (API Orders /v1/orders)
+        [$codigoHttp, $ordenMP, $usada] = mp_crear_orden_point(
+            (float)$saldo,
+            $codigo,
+            mb_substr('Orden ' . $codigo . ' - ' . (string)$orden['cliente'], 0, 100),
+            $cfg['device'],
+            $cfg['token']
+        );
+        if ($codigoHttp >= 200 && $codigoHttp < 300 && !empty($ordenMP['id'])) {
+            responder(['ok' => true, 'order_id' => (string)$ordenMP['id'], 'monto' => $saldo, 'variante' => $usada]);
         }
-        // Motivo exacto del rechazo según Mercado Pago
-        $detalle = '';
-        foreach (['message', 'error', 'curl_error'] as $campo) {
-            if (!empty($ordenMP[$campo])) {
-                $detalle .= ($detalle === '' ? '' : ' | ') . (is_array($ordenMP[$campo]) ? json_encode($ordenMP[$campo], JSON_UNESCAPED_UNICODE) : (string)$ordenMP[$campo]);
-            }
+        $detalle = mp_error_detalle($ordenMP);
+        if ($usada !== '') {
+            $detalle .= ' | (variantes probadas, última: ' . $usada . ')';
         }
-        if (!empty($ordenMP['errors']) && is_array($ordenMP['errors'])) {
-            foreach ($ordenMP['errors'] as $e) {
-                if (!is_array($e)) continue;
-                $detalle .= ($detalle === '' ? '' : ' | ')
-                    . ($e['code'] ?? '')
-                    . (isset($e['message']) ? ': ' . $e['message'] : '')
-                    . (isset($e['detail']) ? ' — ' . (is_array($e['detail']) ? json_encode($e['detail'], JSON_UNESCAPED_UNICODE) : $e['detail']) : '');
-            }
+        responder(['ok' => false, 'error' => 'Mercado Pago rechazó el intento (HTTP ' . $codigoHttp . ')' . ($detalle !== '' ? ': ' . $detalle : '')], 502);
+    }
+
+    case 'point_cobrar_venta': {
+        // Envía el TOTAL del carrito del POS al terminal Point.
+        // external_reference "POS-..." (no LUH): el webhook la ignora y la venta
+        // la registra el POS al confirmarse el pago (evita doble ingreso a caja).
+        exigir_admin();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
-        if (!empty($ordenMP['cause'])) {
-            $detalle .= ($detalle === '' ? '' : ' | ') . json_encode($ordenMP['cause'], JSON_UNESCAPED_UNICODE);
+        $cfg = mp_config();
+        if (!$cfg['enabled'] || $cfg['token'] === '') {
+            responder(['ok' => false, 'error' => 'Mercado Pago no está habilitado'], 409);
         }
-        if ($detalle === '') {
-            $detalle = substr(json_encode($ordenMP, JSON_UNESCAPED_UNICODE), 0, 300); // cuerpo completo si no hay campos conocidos
+        if ($cfg['device'] === '') {
+            responder(['ok' => false, 'error' => 'Configura el Device ID del terminal Point'], 409);
         }
+        $monto = (int)round((float)(leer_cuerpo()['monto'] ?? 0));
+        if ($monto < 1) {
+            responder(['ok' => false, 'error' => 'Monto inválido'], 400);
+        }
+        $referencia = 'POS-' . date('Ymd') . '-' . strtoupper(substr(bin2hex(random_bytes(3)), 0, 6));
+        [$codigoHttp, $ordenMP, $usada] = mp_crear_orden_point(
+            (float)$monto,
+            $referencia,
+            'Venta mostrador POS',
+            $cfg['device'],
+            $cfg['token']
+        );
+        if ($codigoHttp >= 200 && $codigoHttp < 300 && !empty($ordenMP['id'])) {
+            responder(['ok' => true, 'order_id' => (string)$ordenMP['id'], 'monto' => $monto, 'referencia' => $referencia, 'variante' => $usada]);
+        }
+        $detalle = mp_error_detalle($ordenMP);
         if ($usada !== '') {
             $detalle .= ' | (variantes probadas, última: ' . $usada . ')';
         }

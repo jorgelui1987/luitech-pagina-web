@@ -11,6 +11,8 @@
   var carrito = [];
   var ivaTasa = 19; // se carga desde la BD (configuraciones.iva_porcentaje)
   var empresaCfg = null; // datos de la empresa para la boleta
+  var posTimer = null;      // monitoreo del cobro Point en el POS
+  var esperandoPoint = false;
 
   function fmt(n) { return Number(n).toLocaleString('es-CL'); }
 
@@ -150,8 +152,83 @@
       empresaCfg = res.config || {};
       ivaTasa = parseInt(empresaCfg.iva_porcentaje, 10);
       if (isNaN(ivaTasa) || ivaTasa < 0) ivaTasa = 19;
+      actualizarBotonPoint();
       pintarCarrito();
     }).catch(function () {});
+  }
+
+  /** Mercado Pago Point disponible: habilitado + Device ID configurado. */
+  function puntoDisponible() {
+    return !!(empresaCfg && String(empresaCfg.mp_enabled) === '1' && (empresaCfg.mp_point_device || '').length > 0);
+  }
+
+  function actualizarBotonPoint() {
+    var b = $('btn-point');
+    if (!b) return;
+    b.classList.toggle('hidden', !puntoDisponible());
+    if (!esperandoPoint) {
+      b.disabled = !carrito.length;
+      b.innerHTML = '<i class="fa-solid fa-credit-card mr-2"></i>Cobrar con Point';
+    }
+  }
+
+  function estadoPoint(texto, color) {
+    var p = $('pos-point-estado');
+    if (!p) return;
+    p.textContent = texto || '';
+    p.style.color = color || '#fbbf24';
+    p.classList.toggle('hidden', !texto);
+  }
+
+  function detenerEsperaPoint(mensaje, color) {
+    if (posTimer) { clearInterval(posTimer); posTimer = null; }
+    esperandoPoint = false;
+    actualizarBotonPoint();
+    $('btn-cobrar').disabled = !carrito.length;
+    estadoPoint(mensaje || '', color);
+  }
+
+  /** Envía el total del carrito al terminal Point; al aprobarse registra
+   *  la venta con medio "Mercado Pago" e imprime la boleta automáticamente. */
+  function cobrarConPoint() {
+    if (!carrito.length) return;
+    var total = totalCarrito();
+    esperandoPoint = true;
+    $('btn-point').disabled = true;
+    $('btn-point').innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Cancelar espera';
+    $('btn-cobrar').disabled = true;
+    estadoPoint('Enviando el cobro ($' + fmt(total) + ') al terminal Point…');
+    api('api/pagos_mp.php?action=point_cobrar_venta', { method: 'POST', body: { monto: total } })
+      .then(function (res) {
+        if (!res.ok) {
+          detenerEsperaPoint('✗ ' + (res.error || 'No se pudo enviar el cobro'), '#f87171');
+          window.mostrarToast(res.error || 'No se pudo enviar el cobro al Point', 'error');
+          return;
+        }
+        estadoPoint('Acerca la tarjeta al terminal Point… ($' + fmt(total) + ')');
+        var orderId = res.order_id;
+        posTimer = setInterval(function () {
+          api('api/pagos_mp.php?action=point_estado&order_id=' + encodeURIComponent(orderId))
+            .then(function (r) {
+              if (!r.ok) return;
+              if (r.pagada) {
+                detenerEsperaPoint('✓ ¡Pago aprobado en el Point!', '#34d399');
+                window.mostrarToast('¡Pago con Point aprobado!', 'success');
+                $('venta-pago').value = 'Mercado Pago';
+                cobrar(); // registra la venta e imprime la boleta
+                return;
+              }
+              if (r.estado === 'rejected' || r.estado === 'error') {
+                detenerEsperaPoint('✗ El terminal rechazó el pago', '#f87171');
+                window.mostrarToast('El terminal rechazó el pago', 'error');
+              }
+            }).catch(function () {});
+        }, 3000);
+      })
+      .catch(function (err) {
+        detenerEsperaPoint('✗ ' + (err && err.message ? err.message : 'Error de conexión'), '#f87171');
+        window.mostrarToast(err && err.message ? err.message : 'Error de conexión con el servidor', 'error');
+      });
   }
 
   function pintarCarrito() {
@@ -164,6 +241,7 @@
         className: 'text-slate-500 text-sm italic py-6 text-center'
       }));
       $('btn-cobrar').disabled = true;
+      actualizarBotonPoint();
       $('carrito-total').textContent = '$0';
       $('pos-desglose').classList.add('hidden');
       return;
@@ -217,6 +295,7 @@
     });
 
     $('btn-cobrar').disabled = false;
+    actualizarBotonPoint();
     $('carrito-total').textContent = '$' + fmt(totalCarrito());
 
     var d = desgloseIVA(totalCarrito());
@@ -266,6 +345,7 @@
       $('venta-rut').value = '';
       $('venta-orden').value = '';
       boton.disabled = true;
+      estadoPoint('', '#34d399'); // oculta la línea del Point tras la venta
       cargarResumenDia();
       setTimeout(cargarProductos, 400); // stock fresco tras el descuento
     }).catch(function () {
@@ -328,6 +408,13 @@
     $('buscar').addEventListener('input', function () { pintarCatalogo(this.value); });
     $('btn-limpiar').addEventListener('click', function () { carrito = []; pintarCarrito(); });
     $('btn-cobrar').addEventListener('click', cobrar);
+    $('btn-point').addEventListener('click', function () {
+      if (esperandoPoint) {
+        detenerEsperaPoint('Espera cancelada. Si el terminal sigue mostrando el cobro, cancélalo allí.', '#fbbf24');
+        return;
+      }
+      cobrarConPoint();
+    });
 
     api('api/auth.php?action=me').then(function (res) {
       mostrarVista(!!res.logueado);
