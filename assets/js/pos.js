@@ -164,7 +164,7 @@
     var b = $('btn-point');
     if (!b || esperandoPoint) return;
     b.disabled = !carrito.length;
-    b.innerHTML = '<i class="fa-solid fa-credit-card mr-2"></i>Cobrar con Point';
+    b.innerHTML = '<i class="fa-solid fa-credit-card mr-2"></i>Cobrar con Mercado Pago';
   }
 
   function estadoPoint(texto, color) {
