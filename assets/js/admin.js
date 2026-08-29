@@ -1330,7 +1330,7 @@
         var enlace = $('mp-link');
         enlace.href = res.init_point;
         enlace.textContent = res.init_point;
-        $('mp-whatsapp').href = 'https://wa.me/?text=' + encodeURIComponent('Paga tu reparación ' + o.codigo + ' (' + fmt(res.saldo) + ') aquí: ' + res.init_point);
+        $('mp-whatsapp').href = 'https://wa.me/?text=' + encodeURIComponent('Paga tu reparación ' + o.codigo + ' (' + monto(res.saldo) + ') aquí: ' + res.init_point);
         $('mp-panel').classList.remove('mo-oculto');
         $('mp-panel').classList.remove('hidden');
         var estadoMP = $('mp-estado');
