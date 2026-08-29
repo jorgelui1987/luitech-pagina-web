@@ -45,6 +45,15 @@
         .seccion-modal{ border-top:1px solid #1e293b; padding-top:12px; display:flex; flex-direction:column; gap:8px; }
         .mo-col{ display:flex; flex-direction:column; gap:8px; }
         .mo-oculto{ display:none !important; }
+        /* Corrección de modales: el build de Tailwind no incluye max-h-[90vh],
+           z-[9998], space-y-* ni backdrop-blur-sm. Sin max-height el modal crece
+           más que la pantalla y, al centrarse, se recorta arriba/abajo sin scroll. */
+        #modal-orden{ position:fixed; inset:0; z-index:9998; background:rgba(2,6,23,.82); }
+        #modal-orden > div{ max-height:90vh; overflow-y:auto; }
+        #modal-orden > div > * + *{ margin-top:14px; }
+        #modal-clave{ position:fixed; inset:0; z-index:9998; background:rgba(2,6,23,.82); }
+        #modal-clave form{ max-height:90vh; overflow-y:auto; }
+        #modal-clave form > * + *{ margin-top:12px; }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
