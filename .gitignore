@@ -31,3 +31,6 @@ Desktop.ini
 # Configuración de editores
 .vscode/
 .idea/
+
+# Respaldos de datos (contienen informacion de clientes: NUNCA a GitHub)
+backups/*.zip
