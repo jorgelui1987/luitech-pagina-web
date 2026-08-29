@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEMO · Acta de Recepción | Luitech</title>
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#020617">
+    <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <style>
+        .lienzo-firma{ touch-action:none; cursor:crosshair; background:#ffffff; display:block; width:100%; height:180px; border-radius:0.5rem; }
+        .chip{ cursor:pointer; user-select:none; }
+        .chip-on{ background:#06b6d4 !important; color:#0f172a !important; border-color:#06b6d4 !important; }
+        .foto-thumb{ position:relative; border:1px solid #1e293b; border-radius:0.5rem; overflow:hidden; aspect-ratio:1/1; }
+        .foto-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+        .foto-borrar{ position:absolute; top:4px; right:4px; background:rgba(15,23,42,.85); color:#f87171;
+                      border:1px solid #7f1d1d; border-radius:0.375rem; width:24px; height:24px; font-size:10px; }
+        #galeria-fotos{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+        @media (min-width:640px){ #galeria-fotos{ grid-template-columns:repeat(6,1fr); } }
+        #hoja-acta{ background:#ffffff; color:#0f172a; }
+        #hoja-acta table{ width:100%; border-collapse:collapse; font-size:12px; }
+        #hoja-acta th{ text-align:left; padding:6px 8px; background:#f1f5f9; color:#334155;
+                       border:1px solid #cbd5e1; font-weight:700; width:32%; }
+        #hoja-acta td{ padding:6px 8px; border:1px solid #cbd5e1; color:#0f172a; }
+        #hoja-acta .fotos-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+        #hoja-acta .fotos-grid img{ width:100%; aspect-ratio:1/1; object-fit:cover; border:1px solid #94a3b8; border-radius:4px; }
+        @media print{
+            body{ background:#ffffff !important; }
+            body *{ visibility:hidden; }
+            #hoja-acta, #hoja-acta *{ visibility:visible; }
+            #hoja-acta{ position:absolute; left:0; top:0; width:100%; border:none !important; box-shadow:none !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+    <!-- Aviso de demo -->
+    <div class="bg-amber-500 text-slate-950 text-xs font-bold text-center px-4 py-2">
+        <i class="fa-solid fa-flask mr-1"></i> DEMO FUNCIONAL — Todo ocurre en tu navegador: no guarda nada, no llama a la API ni modifica tu código. Puedes borrar este archivo cuando quieras.
+    </div>
+
+    <!-- Barra superior -->
+    <header class="bg-slate-950 border-b border-slate-800">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <img src="assets/img/logo-luitech.png" alt="Logo Luitech" width="36" height="36" class="h-9 w-9 rounded-lg object-cover">
+                <span class="font-extrabold text-white">Panel del Taller</span>
+                <span class="bg-red-950/60 text-red-400 border border-red-900/60 text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider">Demo</span>
+            </div>
+            <a href="admin.html" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-2 rounded-lg text-sm font-semibold transition-all">
+                <i class="fa-solid fa-arrow-left mr-1"></i> Volver al panel
+            </a>
+        </div>
+    </header>
+
+    <main class="max-w-6xl w-full mx-auto px-4 sm:px-6 py-8 space-y-8">
+
+        <!-- Toasts del demo -->
+        <div id="toast-container" class="fixed top-4 right-4 z-[9999] flex flex-col gap-2 items-end pointer-events-none"></div>
+
+        <!-- ================= FORMULARIO ACTA DE RECEPCIÓN ================= -->
+        <section class="bg-slate-950/50 border border-slate-800/80 p-5 rounded-xl">
+            <h2 class="text-sm font-bold text-amber-400 flex items-center gap-2 mb-1">
+                <i class="fa-solid fa-clipboard-check"></i> Ingresar Nueva Orden de Trabajo — con Acta de Recepción
+            </h2>
+            <p class="text-[11px] text-slate-500 mb-4">Lo que ya existe hoy + lo nuevo: <span class="text-cyan-400 font-semibold">PIN/patrón, accesorios, fotos de respaldo y firma del cliente</span>.</p>
+
+            <form id="form-acta" class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs" novalidate>
+                <div>
+                    <label for="d-codigo" class="block text-slate-400 mb-1 font-semibold">Código (opcional)</label>
+                    <input type="text" id="d-codigo" placeholder="Vacío = automático" maxlength="10"
+                           class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                </div>
+                <div>
+                    <label for="d-cliente" class="block text-slate-400 mb-1 font-semibold">Nombre del Cliente</label>
+                    <input type="text" id="d-cliente" required maxlength="80" placeholder="Ej. Andrés Silva"
+                           class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                </div>
+                <div>
+                    <label for="d-equipo" class="block text-slate-400 mb-1 font-semibold">Equipo / Modelo</label>
+                    <input type="text" id="d-equipo" required maxlength="60" placeholder="Ej. iPhone 14 Pro Max"
+                           class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                </div>
+                <div>
+                    <label for="d-tipo" class="block text-slate-400 mb-1 font-semibold">Tipo</label>
+                    <select id="d-tipo" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                        <option value="Celular">Celular</option>
+                        <option value="PC/Notebook">PC / Notebook</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+                <div class="md:col-span-2">
+                    <label for="d-falla" class="block text-slate-400 mb-1 font-semibold">Detalle de la Falla</label>
+                    <input type="text" id="d-falla" required maxlength="200" placeholder="Ej. No enciende, quedó mojado"
+                           class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                </div>
+                <div>
+                    <label for="d-tecnico" class="block text-slate-400 mb-1 font-semibold">Técnico</label>
+                    <input type="text" id="d-tecnico" maxlength="40" placeholder="Por Asignar (opcional)"
+                           class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                </div>
+                <div>
+                    <label for="d-pin" class="block text-slate-400 mb-1 font-semibold"><i class="fa-solid fa-lock text-cyan-400 mr-1"></i>PIN / Patrón de desbloqueo</label>
+                    <input type="text" id="d-pin" maxlength="50" placeholder="Ej. 1234 o patrón en L"
+                           class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                </div>
+                <div class="md:col-span-4">
+                    <label class="block text-slate-400 mb-1 font-semibold"><i class="fa-solid fa-plug text-cyan-400 mr-1"></i>Accesorios entregados por el cliente</label>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" class="chip bg-slate-900 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-full text-xs font-semibold transition-all" data-acc="Cargador">Cargador</button>
+                        <button type="button" class="chip bg-slate-900 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-full text-xs font-semibold transition-all" data-acc="Cable">Cable</button>
+                        <button type="button" class="chip bg-slate-900 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-full text-xs font-semibold transition-all" data-acc="Funda">Funda</button>
+                        <button type="button" class="chip bg-slate-900 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-full text-xs font-semibold transition-all" data-acc="Chip / SIM">Chip / SIM</button>
+                        <button type="button" class="chip bg-slate-900 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-full text-xs font-semibold transition-all" data-acc="Memoria SD">Memoria SD</button>
+                        <button type="button" class="chip bg-slate-900 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-full text-xs font-semibold transition-all" data-acc="Caja original">Caja original</button>
+                    </div>
+                </div>
+                <div class="md:col-span-4">
+                    <label for="d-obs" class="block text-slate-400 mb-1 font-semibold">Observaciones de recepción (rayones, golpes, estado general)</label>
+                    <input type="text" id="d-obs" maxlength="250" placeholder="Ej. Rayón en esquina inferior derecha, carcasa sin golpes"
+                           class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                </div>
+                <div class="md:col-span-4">
+                    <label class="block text-slate-400 mb-1 font-semibold"><i class="fa-solid fa-camera text-cyan-400 mr-1"></i>Fotos de respaldo del equipo (máx. 6)</label>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <label class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-3 py-2 rounded-lg font-semibold cursor-pointer transition-all">
+                            <i class="fa-solid fa-camera-retro mr-1"></i> Tomar / elegir fotos
+                            <input type="file" id="input-fotos" accept="image/*" capture="environment" multiple class="hidden">
+                        </label>
+                        <span class="text-[11px] text-slate-500">En el celular abre la cámara. Se comprimen antes de "subir" (igual que en producción).</span>
+                    </div>
+                    <div id="galeria-fotos" class="grid grid-cols-3 sm:grid-cols-6 gap-2 mt-2"></div>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-slate-400 mb-1 font-semibold"><i class="fa-solid fa-pen-nib text-cyan-400 mr-1"></i>Firma del cliente (con dedo o mouse)</label>
+                    <div class="border border-slate-700 rounded-lg p-1 bg-slate-900">
+                        <canvas id="lienzo-firma" class="lienzo-firma"></canvas>
+                    </div>
+                    <button type="button" id="btn-limpiar-firma" class="mt-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-[11px] py-1.5 px-3 rounded-lg font-semibold transition-all">
+                        <i class="fa-solid fa-eraser mr-1"></i> Limpiar firma
+                    </button>
+                </div>
+                <div class="md:col-span-2 flex flex-col justify-end gap-3">
+                    <p class="text-[11px] text-slate-500 leading-relaxed">
+                        <i class="fa-solid fa-circle-info text-slate-600 mr-1"></i>
+                        Al generar el acta se simula el comprobante imprimible: datos del equipo, PIN/patrón (solo uso interno), accesorios, fotos y firma.
+                    </p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button type="button" id="btn-limpiar-todo" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-semibold py-2.5 rounded-lg transition-all">
+                            <i class="fa-solid fa-broom mr-1"></i> Limpiar todo
+                        </button>
+                        <button type="submit" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2.5 rounded-lg transition-all">
+                            <i class="fa-solid fa-file-signature mr-1"></i> Generar Acta
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </section>
+
+        <!-- ================= ACTA GENERADA ================= -->
+        <section id="seccion-acta" class="hidden">
+            <div id="hoja-acta" class="rounded-xl p-6 sm:p-8 shadow-2xl">
+                <div class="flex items-start justify-between gap-4" style="border-bottom:2px solid #0f172a; padding-bottom:12px; margin-bottom:16px;">
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <img src="assets/img/logo-luitech.png" alt="Luitech" width="48" height="48" style="width:48px; height:48px; border-radius:8px; object-fit:cover;">
+                        <div>
+                            <div style="font-weight:800; font-size:18px; font-family:'Space Grotesk',sans-serif;">LUITECH</div>
+                            <div style="font-size:10px; color:#475569;">Servicio Técnico Celulares &amp; PC · Persa Las Cenizas, Local 13, La Serena</div>
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:15px; font-weight:800;">ACTA DE RECEPCIÓN</div>
+                        <div id="a-codigo" style="font-size:12px; font-weight:700; color:#0e7490;">LUH-0000</div>
+                        <div id="a-fecha" style="font-size:10px; color:#475569;"></div>
+                    </div>
+                </div>
+
+                <table>
+                    <tr><th>Cliente</th><td id="a-cliente"></td><th style="width:22%;">Técnico</th><td id="a-tecnico" style="width:22%;"></td></tr>
+                    <tr><th>Equipo / Modelo</th><td id="a-equipo"></td><th>Tipo</th><td id="a-tipo"></td></tr>
+                    <tr><th>Falla declarada</th><td id="a-falla" colspan="3"></td></tr>
+                    <tr><th>PIN / Patrón</th><td id="a-pin"></td><th>Accesorios</th><td id="a-accesorios"></td></tr>
+                    <tr><th>Observaciones</th><td id="a-obs" colspan="3"></td></tr>
+                </table>
+
+                <div style="margin-top:14px;">
+                    <div style="font-size:11px; font-weight:800; color:#334155; margin-bottom:6px;"><i class="fa-solid fa-camera"></i> ESTADO DEL EQUIPO AL INGRESO (fotos de respaldo)</div>
+                    <div id="a-fotos" class="fotos-grid"></div>
+                </div>
+
+                <div style="margin-top:14px; display:flex; gap:24px; align-items:flex-end;">
+                    <div style="text-align:center;">
+                        <img id="a-firma" alt="Firma del cliente" style="height:70px; max-width:220px; object-fit:contain; border-bottom:1px solid #0f172a; padding:0 12px;">
+                        <div style="font-size:10px; color:#475569; margin-top:4px;">Firma de conformidad del cliente</div>
+                    </div>
+                    <div style="font-size:10px; color:#475569; line-height:1.5;">
+                        El equipo descrito fue recibido en el estado fotográfico mostrado, junto a los accesorios indicados.
+                        El cliente declara respaldar su información. Luitech no se responsabiliza por datos no respaldados
+                        ni por fallas previas no detectadas en la recepción. Presupuesto aprobado antes de toda reparación.
+                    </div>
+                </div>
+                <div style="margin-top:12px; padding-top:8px; border-top:1px dashed #94a3b8; font-size:9px; color:#64748b; text-align:center;">
+                    Seguimiento de tu orden en www.tallerluitech.fun con el código <b id="a-codigo2">LUH-0000</b> · Documento generado como demostración
+                </div>
+            </div>
+            <div class="no-print flex flex-wrap items-center justify-end gap-3 mt-4">
+                <button type="button" id="btn-nueva-demo" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs py-2 px-4 rounded-lg font-semibold transition-all">
+                    <i class="fa-solid fa-rotate-left mr-1"></i> Hacer otra demo
+                </button>
+                <button type="button" id="btn-imprimir" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs py-2 px-4 rounded-lg font-bold transition-all">
+                    <i class="fa-solid fa-print mr-1"></i> Imprimir / Guardar PDF
+                </button>
+            </div>
+        </section>
+
+        <p class="text-[11px] text-slate-600 text-center">Demo del "Acta de Recepción" para Luitech · Integración real prevista: <code>form-nueva-orden</code> (admin.html) + <code>api/ordenes.php</code> · Sin uso en producción</p>
+    </main>
+<script>
+    'use strict';
+    var $ = function (id) { return document.getElementById(id); };
+    var MAX_FOTOS = 6;
+    var fotos = []; // [{data: dataURL, kb: number}]
+
+    /* ---------- Toasts ---------- */
+    function toast(msg, tipo) {
+        var colores = tipo === 'error' ? 'border:#7f1d1d;background:#450a0a;color:#fca5a5;' : 'border:#065f46;background:#022c22;color:#6ee7b7;';
+        var div = document.createElement('div');
+        div.style.cssText = 'pointer-events:auto;' + colores + 'border:1px solid;padding:10px 14px;border-radius:10px;font-size:12px;font-weight:600;box-shadow:0 10px 25px rgba(0,0,0,.4);max-width:320px;';
+        div.innerHTML = msg;
+        $('toast-container').appendChild(div);
+        setTimeout(function () { div.remove(); }, 3200);
+    }
+
+    /* ---------- Firma táctil (canvas) ---------- */
+    var lienzo = $('lienzo-firma');
+    var ctx = lienzo.getContext('2d');
+    var dibujando = false;
+    var firmaHecha = false;
+
+    function prepararLienzo(preservar) {
+        var img = preservar ? lienzo.toDataURL() : null;
+        var r = lienzo.getBoundingClientRect();
+        lienzo.width = Math.round(r.width);
+        lienzo.height = Math.round(r.height);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, lienzo.width, lienzo.height);
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = '#0f172a';
+        if (img) { var im = new Image(); im.onload = function () { ctx.drawImage(im, 0, 0); }; im.src = img; }
+    }
+
+    function posLienzo(e) {
+        var r = lienzo.getBoundingClientRect();
+        return { x: e.clientX - r.left, y: e.clientY - r.top };
+    }
+
+    lienzo.addEventListener('pointerdown', function (e) {
+        e.preventDefault();
+        lienzo.setPointerCapture(e.pointerId);
+        dibujando = true;
+        firmaHecha = true;
+        var p = posLienzo(e);
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x + 0.1, p.y + 0.1);
+        ctx.stroke();
+    });
+    lienzo.addEventListener('pointermove', function (e) {
+        if (!dibujando) return;
+        var p = posLienzo(e);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) {
+        lienzo.addEventListener(ev, function () { dibujando = false; });
+    });
+
+    function limpiarFirma() {
+        prepararLienzo(false);
+        firmaHecha = false;
+    }
+    $('btn-limpiar-firma').addEventListener('click', limpiarFirma);
+    window.addEventListener('resize', function () { prepararLienzo(true); });
+
+    /* ---------- Fotos con compresión ---------- */
+    function comprimirFoto(file) {
+        return new Promise(function (resolve) {
+            var url = URL.createObjectURL(file);
+            var img = new Image();
+            img.onload = function () {
+                var MAX = 1200;
+                var w = img.naturalWidth, h = img.naturalHeight;
+                var esc = Math.min(1, MAX / Math.max(w, h));
+                w = Math.round(w * esc); h = Math.round(h * esc);
+                var c = document.createElement('canvas');
+                c.width = w; c.height = h;
+                c.getContext('2d').drawImage(img, 0, 0, w, h);
+                URL.revokeObjectURL(url);
+                var data = c.toDataURL('image/jpeg', 0.72);
+                resolve({ data: data, kb: Math.round(data.length * 0.75 / 1024) });
+            };
+            img.onerror = function () { URL.revokeObjectURL(url); resolve(null); };
+            img.src = url;
+        });
+    }
+
+    function renderFotos() {
+        var g = $('galeria-fotos');
+        g.innerHTML = '';
+        fotos.forEach(function (f, i) {
+            var d = document.createElement('div');
+            d.className = 'foto-thumb';
+            d.innerHTML = '<img src="' + f.data + '" alt="Foto ' + (i + 1) + '">' +
+                '<button type="button" class="foto-borrar" title="Quitar foto"><i class="fa-solid fa-xmark"></i></button>' +
+                '<span style="position:absolute;bottom:2px;left:4px;font-size:9px;color:#e2e8f0;text-shadow:0 1px 2px #000;">' + f.kb + ' KB</span>';
+            d.querySelector('.foto-borrar').addEventListener('click', function () {
+                fotos.splice(i, 1);
+                renderFotos();
+            });
+            g.appendChild(d);
+        });
+    }
+
+    $('input-fotos').addEventListener('change', function (e) {
+        var archivos = Array.prototype.slice.call(e.target.files);
+        e.target.value = '';
+        var pendientes = archivos.slice(0, MAX_FOTOS - fotos.length);
+        if (pendientes.length < archivos.length) toast('Máximo ' + MAX_FOTOS + ' fotos por orden', 'error');
+        var cadena = Promise.resolve();
+        pendientes.forEach(function (file) {
+            cadena = cadena.then(function () {
+                if (!file.type || file.type.indexOf('image/') !== 0) { toast('Solo imágenes (JPG/PNG)', 'error'); return; }
+                return comprimirFoto(file).then(function (f) { if (f) { fotos.push(f); renderFotos(); } });
+            });
+        });
+    });
+
+    /* ---------- Chips de accesorios ---------- */
+    function accesoriosElegidos() {
+        return Array.prototype.slice.call(document.querySelectorAll('.chip.chip-on'))
+            .map(function (b) { return b.getAttribute('data-acc'); });
+    }
+    Array.prototype.slice.call(document.querySelectorAll('.chip')).forEach(function (b) {
+        b.addEventListener('click', function () { b.classList.toggle('chip-on'); });
+    });
+
+    /* ---------- Generar acta ---------- */
+    $('form-acta').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        var cliente = $('d-cliente').value.trim();
+        var equipo = $('d-equipo').value.trim();
+        var falla = $('d-falla').value.trim();
+        if (!cliente || !equipo || !falla) {
+            toast('Completa cliente, equipo y falla (igual que el formulario real)', 'error');
+            return;
+        }
+        if (!firmaHecha) {
+            toast('Falta la firma del cliente en el recuadro', 'error');
+            return;
+        }
+
+        var codigo = ($('d-codigo').value.trim() || 'LUH-' + (1000 + Math.floor(Math.random() * 9000))).toUpperCase();
+        var ahora = new Date();
+        var fecha = ahora.toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' }) +
+                    ' · ' + ahora.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+
+        $('a-codigo').textContent = codigo;
+        $('a-codigo2').textContent = codigo;
+        $('a-fecha').textContent = 'Recibido: ' + fecha;
+        $('a-cliente').textContent = cliente;
+        $('a-equipo').textContent = equipo;
+        $('a-tipo').textContent = $('d-tipo').value;
+        $('a-falla').textContent = falla;
+        $('a-tecnico').textContent = $('d-tecnico').value.trim() || 'Por Asignar';
+        $('a-pin').textContent = $('d-pin').value.trim() || '— (no informado)';
+        $('a-accesorios').textContent = accesoriosElegidos().join(', ') || 'Ninguno';
+        $('a-obs').textContent = $('d-obs').value.trim() || 'Sin observaciones';
+
+        var cont = $('a-fotos');
+        cont.innerHTML = '';
+        if (fotos.length === 0) {
+            cont.innerHTML = '<span style="font-size:11px;color:#64748b;">Sin fotos de respaldo registradas</span>';
+        } else {
+            fotos.forEach(function (f) {
+                var img = document.createElement('img');
+                img.src = f.data;
+                img.alt = 'Foto de respaldo del equipo al ingreso';
+                cont.appendChild(img);
+            });
+        }
+        $('a-firma').src = lienzo.toDataURL('image/png');
+
+        $('seccion-acta').classList.remove('hidden');
+        $('seccion-acta').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        toast('<i class="fa-solid fa-circle-check"></i> Acta generada (demo). Pruébala con Imprimir / Guardar PDF.');
+    });
+
+    /* ---------- Limpiar / imprimir ---------- */
+    function limpiarTodo() {
+        $('form-acta').reset();
+        fotos = [];
+        renderFotos();
+        limpiarFirma();
+        document.querySelectorAll('.chip.chip-on').forEach(function (b) { b.classList.remove('chip-on'); });
+        $('seccion-acta').classList.add('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    $('btn-limpiar-todo').addEventListener('click', function () {
+        limpiarTodo();
+        toast('Formulario reiniciado');
+    });
+    $('btn-nueva-demo').addEventListener('click', limpiarTodo);
+    $('btn-imprimir').addEventListener('click', function () { window.print(); });
+
+    /* ---------- Inicio ---------- */
+    prepararLienzo(false);
+
+</script>
+</body>
+</html>
