@@ -271,6 +271,37 @@
     });
   }
 
+  /** Diagnóstico en vivo de Mercado Pago: habilitado, token, cURL y conexión. */
+  function diagnosticoMP() {
+    var salida = $('mp-diag');
+    if (!salida) return;
+    salida.style.color = '#94a3b8';
+    salida.textContent = 'Consultando Mercado Pago…';
+    api('api/pagos_mp.php?action=diagnostico').then(function (res) {
+      if (!res.ok) { salida.textContent = '✗ ' + (res.error || 'No se pudo ejecutar el diagnóstico'); return; }
+      var d = res.diagnostico || {};
+      var lineas = [];
+      lineas.push((d.habilitado === 1 ? '✓' : '✗') + ' Habilitado en Configuración');
+      lineas.push((d.token_definido === 1 ? '✓' : '✗') + ' Access token guardado' + (d.token_mask ? ' (' + d.token_mask + ')' : ''));
+      lineas.push((d.curl === 1 ? '✓' : '✗') + ' cURL disponible en el servidor');
+      if (d.token_definido === 1 && d.curl === 1) {
+        if (d.token_valido === 1) {
+          lineas.push('✓ Conexión con Mercado Pago OK — cuenta: ' + (d.mp_cuenta || 'tu cuenta'));
+        } else {
+          lineas.push('✗ Conexión con Mercado Pago FALLÓ — ' + (d.mp_error || ('HTTP ' + d.mp_http)));
+        }
+      } else {
+        lineas.push('— Prueba de conexión omitida (falta token o cURL)');
+      }
+      lineas.push('Webhook: ' + (d.webhook || '(no deducible)'));
+      salida.textContent = lineas.join('\n');
+      salida.style.color = (d.token_valido === 1 && d.habilitado === 1) ? '#34d399' : '#f87171';
+    }).catch(function () {
+      salida.textContent = '✗ Error de conexión al ejecutar el diagnóstico';
+      salida.style.color = '#f87171';
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     $('cfg-btn-empresa').addEventListener('click', function () {
       guardarSeccion({
@@ -293,6 +324,7 @@
         mp_access_token: 'cfg-mp_access_token', mp_point_device: 'cfg-mp_point_device'
       }, 'cfg-btn-mp');
     });
+    $('cfg-btn-mp-diag').addEventListener('click', diagnosticoMP);
     $('cfg-btn-loc').addEventListener('click', function () {
       guardarSeccion({
         moneda: 'cfg-moneda', moneda_simbolo: 'cfg-moneda_simbolo',

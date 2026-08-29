@@ -29,9 +29,13 @@ function mp_config(): array
     ];
 }
 
-/** Llamada JSON a la API de Mercado Pago. Devuelve [código_http, datos]. */
+/** Llamada JSON a la API de Mercado Pago. Devuelve [código_http, datos].
+ *  Si cURL no existe o no hay salida a internet, devuelve código 0 con el error. */
 function mp_api(string $metodo, string $ruta, ?array $cuerpo, string $token): array
 {
+    if (!function_exists('curl_init')) {
+        return [0, ['curl_error' => 'El servidor no tiene la extensión cURL habilitada']];
+    }
     $ch = curl_init('https://api.mercadopago.com' . $ruta);
     curl_setopt_array($ch, [
         CURLOPT_CUSTOMREQUEST  => $metodo,
@@ -44,9 +48,13 @@ function mp_api(string $metodo, string $ruta, ?array $cuerpo, string $token): ar
         CURLOPT_POSTFIELDS     => $cuerpo === null ? null : json_encode($cuerpo),
     ]);
     $respuesta = curl_exec($ch);
+    $errorCurl = curl_error($ch);
     $codigo = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
-    $datos = is_string($respuesta) ? json_decode($respuesta, true) : null;
+    if ($respuesta === false || $codigo === 0) {
+        return [0, ['curl_error' => ($errorCurl !== '' ? $errorCurl : 'sin respuesta del servidor')]];
+    }
+    $datos = json_decode((string)$respuesta, true);
     return [$codigo, is_array($datos) ? $datos : []];
 }
 
@@ -145,7 +153,10 @@ switch ($action) {
         if ($codigoHttp >= 200 && $codigoHttp < 300 && !empty($pref['init_point'])) {
             responder(['ok' => true, 'init_point' => $pref['init_point'], 'saldo' => $saldo]);
         }
-        responder(['ok' => false, 'error' => 'Mercado Pago rechazó la petición (¿token válido?)'], 502);
+        if ($codigoHttp === 0) {
+            responder(['ok' => false, 'error' => 'Sin salida a internet desde el servidor: ' . ($pref['curl_error'] ?? 'desconocido')], 502);
+        }
+        responder(['ok' => false, 'error' => 'Mercado Pago rechazó la petición (HTTP ' . $codigoHttp . (isset($pref['message']) ? ': ' . ($pref['message'] ?? '') : '') . ' — ¿token válido?)'], 502);
     }
 
     case 'point_dispositivos': {
@@ -234,6 +245,38 @@ switch ($action) {
             mp_aplicar_pago_orden(db(), $referencia, $monto, $pagoId);
         }
         responder(['ok' => true]);
+    }
+
+    case 'diagnostico': {
+        // Prueba en vivo de todo lo que Mercado Pago necesita para funcionar
+        exigir_admin();
+        $cfg = mp_config();
+        $diag = [
+            'habilitado'    => $cfg['enabled'] ? 1 : 0,
+            'token_definido'=> $cfg['token'] !== '' ? 1 : 0,
+            'token_mask'    => $cfg['token'] !== '' ? ('••••' . substr($cfg['token'], -4)) : '',
+            'curl'          => function_exists('curl_init') ? 1 : 0,
+            'https'         => (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 1 : 0,
+            'webhook'       => mp_webhook_url(),
+        ];
+        if ($cfg['token'] !== '' && $diag['curl'] === 1) {
+            [$codigoHttp, $yo] = mp_api('GET', '/users/me', null, $cfg['token']);
+            $diag['mp_http']   = $codigoHttp;
+            $diag['mp_cuenta'] = (string)($yo['nickname'] ?? ($yo['email'] ?? ''));
+            if ($codigoHttp === 200) {
+                $diag['token_valido'] = 1;
+            } elseif ($codigoHttp === 401) {
+                $diag['token_valido'] = 0;
+                $diag['mp_error'] = 'Token inválido o expirado';
+            } elseif ($codigoHttp === 0) {
+                $diag['token_valido'] = 0;
+                $diag['mp_error'] = 'Sin salida a internet: ' . ($yo['curl_error'] ?? 'desconocido');
+            } else {
+                $diag['token_valido'] = 0;
+                $diag['mp_error'] = 'HTTP ' . $codigoHttp;
+            }
+        }
+        responder(['ok' => true, 'diagnostico' => $diag]);
     }
 
     case 'verificar': {
