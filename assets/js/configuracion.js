@@ -186,6 +186,49 @@
       }).catch(function () {});
   }
 
+  /** Genera y descarga el respaldo completo (BD + uploads en un ZIP). */
+  function descargarRespaldo() {
+    var boton = $('btn-respaldo');
+    var estado = $('respaldo-estado');
+    boton.disabled = true;
+    if (estado) estado.textContent = 'Generando respaldo… (puede tardar si hay muchas fotos)';
+    fetch('api/respaldo.php?action=descargar', { credentials: 'same-origin' })
+      .then(function (res) {
+        var tipo = res.headers.get('Content-Type') || '';
+        if (tipo.indexOf('application/json') !== -1) {
+          return res.json().then(function (j) {
+            throw new Error(j.error || 'Error al generar el respaldo');
+          });
+        }
+        if (!res.ok) throw new Error('El servidor respondió HTTP ' + res.status);
+        return res.blob().then(function (blob) { return blob; });
+      })
+      .then(function (blob) {
+        var hoy = new Date();
+        var nombre = 'respaldo-luitech-' + hoy.getFullYear() + '-' +
+          String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0') + '.zip';
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = nombre;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
+        if (estado) {
+          estado.textContent = '✓ Respaldo generado y descargado (' + Math.round(blob.size / 1024) + ' KB)';
+          estado.style.color = '#34d399';
+        }
+        window.mostrarToast('Respaldo generado y descargado', 'success');
+      })
+      .catch(function (err) {
+        var mensaje = err && err.message ? err.message : 'Error al generar el respaldo';
+        if (estado) { estado.textContent = '✗ ' + mensaje; estado.style.color = '#f87171'; }
+        window.mostrarToast(mensaje, 'error');
+      })
+      .finally(function () { boton.disabled = false; });
+  }
+
   function cambiarClave(event) {
     event.preventDefault();
     var actual = $('clave-actual').value;
@@ -255,6 +298,7 @@
     });
     $('cfg-logo-quitar').addEventListener('click', quitarLogo);
     $('cfg-logo-probar').addEventListener('click', probarSubida);
+    $('btn-respaldo').addEventListener('click', descargarRespaldo);
     $('form-clave').addEventListener('submit', cambiarClave);
 
     api('api/auth.php?action=me').then(function (res) {

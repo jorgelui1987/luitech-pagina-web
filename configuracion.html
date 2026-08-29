@@ -135,6 +135,13 @@
             </section>
 
             <section class="sec">
+                <h2><i class="fa-solid fa-database mr-1"></i>Respaldo de datos</h2>
+                <p class="nota mb-3">Descarga un ZIP con <b>toda la base de datos</b> (órdenes, ventas, comisiones, técnicos, configuración) más las <b>fotos, firmas y logo</b>. Genera también una copia protegida en el servidor (se conservan las últimas 10). Recomendación: descárgalo antes de cada cambio importante y guárdalo en tu PC.</p>
+                <button type="button" id="btn-respaldo" class="btn"><i class="fa-solid fa-download mr-1"></i>Generar y descargar respaldo</button>
+                <span id="respaldo-estado" class="nota font-bold ml-2"></span>
+            </section>
+
+            <section class="sec">
                 <h2><i class="fa-solid fa-key mr-1"></i>Cambiar mi contraseña</h2>
                 <form id="form-clave" class="flex flex-col gap-2 max-w-sm">
                     <input type="password" id="clave-actual" required placeholder="Contraseña ACTUAL" autocomplete="current-password" class="inp">
