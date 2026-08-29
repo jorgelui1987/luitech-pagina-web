@@ -32,8 +32,12 @@
         window.mostrarToast('¡Orden encontrada! Código: ' + codigo, 'success');
         $('seguimiento').scrollIntoView({ behavior: 'smooth' });
       })
-      .catch(function () {
-        window.mostrarToast('No se pudo conectar con el servidor.', 'error');
+      .catch(function (err) {
+        var detalle = err && err.message ? err.message : 'sin respuesta del servidor';
+        window.mostrarToast('No se pudo conectar: ' + detalle, 'error');
+        if (window.console && console.error) {
+          console.error('[Consulta Express] Falló la petición a api/ordenes.php?action=track — revisa que estés navegando por la dirección correcta del sitio y que Laragon (Apache + MySQL) esté iniciado.', err);
+        }
       });
   }
   window.buscarOrdenExpress = buscarOrdenExpress;

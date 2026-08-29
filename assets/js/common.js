@@ -23,7 +23,7 @@
       credentials: 'same-origin'
     }).then(function (res) {
       return res.json().catch(function () {
-        throw new Error('Respuesta inválida del servidor');
+        throw new Error('Respuesta inválida del servidor (HTTP ' + res.status + ' en ' + url + ')');
       });
     });
   }
