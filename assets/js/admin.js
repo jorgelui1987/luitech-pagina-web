@@ -1336,9 +1336,9 @@
         var estadoMP = $('mp-estado');
         if (estadoMP) estadoMP.textContent = 'Esperando el pago… (verificando cada 5 s)';
         iniciarMonitoreoMP();
-      }).catch(function () {
+      }).catch(function (err) {
         boton.disabled = false;
-        window.mostrarToast('Error de conexión con el servidor', 'error');
+        window.mostrarToast(err && err.message ? err.message : 'Error de conexión con el servidor', 'error');
       });
   }
 

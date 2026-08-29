@@ -15,6 +15,8 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
+preparar_configuraciones(); // garantiza la tabla aunque el hosting no ejecute migrate
+
 iniciar_respuesta_json();
 
 $action = $_GET['action'] ?? '';

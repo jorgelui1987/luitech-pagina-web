@@ -17,6 +17,8 @@ require __DIR__ . '/config.php';
 iniciar_respuesta_json();
 exigir_admin();
 
+preparar_configuraciones(); // garantiza la tabla aunque el hosting no ejecute migrate
+
 $action = $_GET['action'] ?? '';
 
 /** Lista blanca de claves editables y sus reglas de validación. */
