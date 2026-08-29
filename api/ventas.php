@@ -72,7 +72,7 @@ switch ($action) {
         }
 
         $vendedor   = campo_texto($d, 'vendedor', 80)   ?? 'Mostrador';
-        $medioPago  = in_array(($d['medio_pago'] ?? ''), ['Efectivo','Debito','Credito','Transferencia'], true)
+        $medioPago  = in_array(($d['medio_pago'] ?? ''), ['Efectivo','Debito','Credito','Transferencia','Mercado Pago'], true)
                       ? $d['medio_pago'] : 'Efectivo';
         $ordenCod   = strtoupper(trim((string)($d['orden_codigo'] ?? '')));
         $ordenFinal = preg_match('/^LUH-\d{3,8}$/', $ordenCod) ? $ordenCod : null;

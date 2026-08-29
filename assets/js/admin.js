@@ -1013,6 +1013,13 @@
     }
     var panelMP = $('mp-panel');
     if (panelMP && saldo <= 0) panelMP.classList.add('mo-oculto');
+
+    // Botón de Point: solo con MP activo, Device ID configurado y saldo pendiente
+    var botonPoint = $('mo-btn-point');
+    if (botonPoint) {
+      var conDevice = empresaCfg && (empresaCfg.mp_point_device || '').length > 0;
+      botonPoint.classList.toggle('hidden', !(mpActivo && conDevice && saldo > 0));
+    }
   }
 
   /** Caja pequeña con etiqueta + valor para el bloque de cobro. */
@@ -1386,6 +1393,67 @@
     }
   }
 
+  /** Envía el cobro del saldo al terminal Point y monitorea hasta confirmarse. */
+  function cobrarConPoint() {
+    var o = ordenActualModal();
+    if (!o) return;
+    if (saldoDe(o) <= 0) { window.mostrarToast('No hay saldo pendiente', 'error'); return; }
+    if (!(empresaCfg && (empresaCfg.mp_point_device || '').length > 0)) {
+      window.mostrarToast('Configura el Device ID del terminal Point en Configuración', 'error');
+      return;
+    }
+    var boton = $('mo-btn-point');
+    boton.disabled = true;
+    detenerMonitoreoMP();
+    $('point-panel').classList.remove('mo-oculto');
+    var linea = $('point-estado');
+    if (linea) { linea.textContent = 'Enviando el cobro al terminal Point…'; linea.style.color = '#fbbf24'; }
+
+    api('api/pagos_mp.php?action=point_cobrar', { method: 'POST', body: { codigo: ordenModalCodigo } })
+      .then(function (res) {
+        if (!res.ok) {
+          boton.disabled = false;
+          window.mostrarToast(res.error || 'No se pudo enviar el cobro al Point', 'error');
+          return;
+        }
+        var intentoId = res.intent_id;
+        if (linea) { linea.textContent = 'Acerca la tarjeta al terminal Point…'; }
+        mpTimer = setInterval(function () {
+          api('api/pagos_mp.php?action=point_estado&id=' + encodeURIComponent(intentoId))
+            .then(function (r) {
+              if (!r.ok) return;
+              var st = r.intento && r.intento.status ? r.intento.status : '';
+              var stPago = r.intento && r.intento.payment && r.intento.payment.status ? r.intento.payment.status : '';
+              if (st === 'approved' || stPago === 'approved') {
+                detenerMonitoreoMP();
+                boton.disabled = false;
+                if (linea) { linea.textContent = '✓ ¡Pago aprobado en el Point!'; linea.style.color = '#34d399'; }
+                api('api/pagos_mp.php?action=verificar&codigo=' + encodeURIComponent(ordenModalCodigo))
+                  .then(function (v) {
+                    if (v.ok && v.pagada) {
+                      patchOrdenModal({ abono: v.abono, estado_pago: 'Pagado', metodo_pago: 'Mercado Pago' });
+                    }
+                    renderCobroModal(ordenActualModal());
+                    renderEntregaModal(ordenActualModal());
+                    renderizarTablaAdmin();
+                    window.mostrarToast('¡Pago con Point confirmado!', 'success');
+                    imprimirRecibo(ordenActualModal());
+                  });
+                return;
+              }
+              if (st === 'error' || st === 'rejected') {
+                detenerMonitoreoMP();
+                boton.disabled = false;
+                if (linea) { linea.textContent = '✗ El terminal rechazó el pago'; linea.style.color = '#f87171'; }
+              }
+            }).catch(function () {});
+        }, 3000);
+      }).catch(function () {
+        boton.disabled = false;
+        window.mostrarToast('Error de conexión con el servidor', 'error');
+      });
+  }
+
   /** Recibo de entrega imprimible (ventana nueva con estilos propios). */
   function imprimirRecibo(o) {
     if (!o) return;
@@ -1487,6 +1555,7 @@
     cargarTecnicos();
     $('mo-btn-mp').addEventListener('click', cobrarConMP);
     $('mp-copiar').addEventListener('click', copiarEnlaceMP);
+    $('mo-btn-point').addEventListener('click', cobrarConPoint);
     $('new-pin').addEventListener('input', function () {
       this.value = this.value.replace(/\D/g, '');
     });

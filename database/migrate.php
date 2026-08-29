@@ -344,6 +344,18 @@ foreach ($migracionVentasIva as $columna => $sql) {
     }
 }
 
+// --- Mercado Pago como medio de pago (ordenes y ventas) ------------------
+$colMetodoOrden = $pdo->query("SHOW COLUMNS FROM ordenes LIKE 'metodo_pago'")->fetch(PDO::FETCH_ASSOC);
+if ($colMetodoOrden && strpos($colMetodoOrden['Type'], 'Mercado Pago') === false) {
+    $pdo->exec("ALTER TABLE ordenes MODIFY COLUMN metodo_pago ENUM('Efectivo','Debito','Credito','Transferencia','Mercado Pago') NULL");
+    echo "[migrate] ordenes.metodo_pago ahora acepta Mercado Pago\n";
+}
+$colMedioVenta = $pdo->query("SHOW COLUMNS FROM ventas LIKE 'medio_pago'")->fetch(PDO::FETCH_ASSOC);
+if ($colMedioVenta && strpos($colMedioVenta['Type'], 'Mercado Pago') === false) {
+    $pdo->exec("ALTER TABLE ventas MODIFY COLUMN medio_pago ENUM('Efectivo','Debito','Credito','Transferencia','Mercado Pago') NOT NULL DEFAULT 'Efectivo'");
+    echo "[migrate] ventas.medio_pago ahora acepta Mercado Pago\n";
+}
+
 // --- Gastos del negocio ---------------------------------------------------
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS gastos (

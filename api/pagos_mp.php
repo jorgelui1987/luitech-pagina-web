@@ -217,10 +217,13 @@ switch ($action) {
             responder(['ok' => false, 'error' => 'ID de intento inválido'], 400);
         }
         [$codigoHttp, $intent] = mp_api('GET', '/point-integration-api/payment-intents/' . rawurlencode($intentId), null, $cfg['token']);
-        $estado = (string)($intent['status'] ?? '');
-        $referencia = (string)($intent['additional_info']['external_reference'] ?? '');
-        if ($estado === 'approved' && preg_match('/^LUH-\d{3,8}$/', $referencia) === 1) {
-            mp_aplicar_pago_orden(db(), $referencia, (int)($intent['amount'] ?? 0), (string)($intent['payment']['id'] ?? $intentId));
+        $estado      = (string)($intent['status'] ?? '');
+        $estadoPagoP = (string)($intent['payment']['status'] ?? '');
+        $referencia  = (string)($intent['additional_info']['external_reference'] ?? '');
+        $montoIntent = (int)round((float)($intent['amount'] ?? ($intent['payment']['transaction_amount'] ?? 0)));
+        if (($estado === 'approved' || $estadoPagoP === 'approved')
+            && preg_match('/^LUH-\d{3,8}$/', $referencia) === 1 && $montoIntent > 0) {
+            mp_aplicar_pago_orden(db(), $referencia, $montoIntent, (string)($intent['payment']['id'] ?? $intentId));
         }
         responder(['ok' => $codigoHttp >= 200 && $codigoHttp < 300, 'intento' => $intent]);
     }
