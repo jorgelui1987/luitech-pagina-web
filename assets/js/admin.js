@@ -330,9 +330,15 @@
     });
   }
 
+  /** Indica si el acordeón del patrón está desplegado (el cuerpo tiene .abierto). */
+  function patronAbierto() {
+    var cuerpo = $('patron-cuerpo');
+    return !!cuerpo && cuerpo.classList.contains('abierto');
+  }
+
   /** Recalcula el tamaño del lienzo del patrón (tras mostrarlo o redimensionar). */
   function calcularPatron() {
-    if (!lienzoPatron || lienzoPatron.classList.contains('hidden')) return;
+    if (!lienzoPatron || !patronAbierto()) return;
     var r = lienzoPatron.getBoundingClientRect();
     if (r.width < 10) return;
     lienzoPatron.width = Math.round(r.width);
@@ -377,36 +383,40 @@
     window.addEventListener('resize', calcularPatron);
   }
 
-  /** Despliega o guarda (colapsa) el cuadro del patrón 3×3. */
+  /** Acordeón: despliega o guarda (colapsa) el cuadro del patrón 3×3. */
   function alternarPatron() {
     if (!lienzoPatron) return;
-    if (lienzoPatron.classList.contains('hidden')) {
-      lienzoPatron.classList.remove('hidden');
-      $('btn-patron-limpiar').classList.remove('hidden');
-      calcularPatron(); // mide el espacio real y dibuja conservando lo trazado
+    var cuerpo = $('patron-cuerpo');
+    var btn = $('btn-patron-toggle');
+    if (cuerpo.classList.contains('abierto')) {
+      cuerpo.classList.remove('abierto'); // se recoge animado (max-height → 0)
     } else {
-      lienzoPatron.classList.add('hidden');
-      $('btn-patron-limpiar').classList.add('hidden');
+      cuerpo.classList.add('abierto');    // se despliega animado (max-height → 340px)
+      calcularPatron(); // mide el espacio real y dibuja conservando lo trazado
     }
+    if (btn) btn.setAttribute('aria-expanded', patronAbierto() ? 'true' : 'false');
     actualizarBotonPatron();
   }
 
-  /** Texto del botón: cerrado / abierto / con patrón ya dibujado. */
+  /** Etiqueta de la cabecera del acordeón: cerrado / abierto / con patrón ya dibujado. */
   function actualizarBotonPatron() {
     var btn = $('btn-patron-toggle');
     if (!btn) return;
-    var abierto = lienzoPatron && !lienzoPatron.classList.contains('hidden');
+    var etiqueta = $('patron-etiqueta');
+    var chevron = $('patron-chevron');
+    var abierto = patronAbierto();
     var dibujado = patronSecuencia.length >= 2;
-    if (abierto) {
-      btn.innerHTML = '<i class="fa-solid fa-xmark mr-1"></i> Ocultar patrón';
-      btn.classList.toggle('text-cyan-400', dibujado);
-    } else if (dibujado) {
-      btn.innerHTML = '<i class="fa-solid fa-check mr-1"></i> Patrón dibujado: ' + patronSecuencia.join('-');
-      btn.classList.add('text-cyan-400');
-    } else {
-      btn.innerHTML = '<i class="fa-solid fa-plus mr-1"></i> Dibujar patrón';
-      btn.classList.remove('text-cyan-400');
+    if (etiqueta) {
+      if (abierto) {
+        etiqueta.innerHTML = '<i class="fa-solid fa-xmark mr-1"></i> Ocultar patrón';
+      } else if (dibujado) {
+        etiqueta.innerHTML = '<i class="fa-solid fa-check mr-1"></i> Patrón dibujado: ' + patronSecuencia.join('-');
+      } else {
+        etiqueta.innerHTML = '<i class="fa-solid fa-plus mr-1"></i> Dibujar patrón';
+      }
     }
+    if (chevron) chevron.classList.toggle('abierto', abierto);
+    btn.classList.toggle('text-cyan-400', dibujado);
   }
 
   /** Serializa PIN y/o patrón: 'PIN: 1234', 'Patrón: 1-4-7' o ambos juntos. */
@@ -418,14 +428,14 @@
     return patron || pinParte; // null si no hay ninguno
   }
 
-  /** Deja PIN y patrón listos para una nueva orden (cuadro colapsado). */
+  /** Deja PIN y patrón listos para una nueva orden (acordeón colapsado). */
   function limpiarPinPatron() {
     $('new-pin').value = '';
     patronSecuencia = [];
-    if (lienzoPatron && !lienzoPatron.classList.contains('hidden')) {
-      lienzoPatron.classList.add('hidden');
-      $('btn-patron-limpiar').classList.add('hidden');
-    }
+    var cuerpo = $('patron-cuerpo');
+    if (cuerpo) cuerpo.classList.remove('abierto');
+    var btn = $('btn-patron-toggle');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
     actualizarBotonPatron();
   }
 

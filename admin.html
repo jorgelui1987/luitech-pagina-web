@@ -22,6 +22,11 @@
         #mo-fotos{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
         .lienzo-patron{ touch-action:none; cursor:pointer; width:100%; max-width:160px; aspect-ratio:1/1;
                         background:#0f172a; border:1px solid #1e293b; border-radius:0.5rem; display:block; }
+        /* Acordeón del patrón: cabecera clicable + cuerpo que se expande/colapsa animado */
+        #patron-cuerpo{ max-height:0; overflow:hidden; transition:max-height .25s ease; }
+        #patron-cuerpo.abierto{ max-height:340px; }
+        #patron-chevron{ transition:transform .2s ease; }
+        #patron-chevron.abierto{ transform:rotate(180deg); }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -159,13 +164,22 @@
                         <label for="new-pin" class="block text-slate-400 mb-1 font-semibold"><i class="fa-solid fa-lock text-cyan-400 mr-1"></i>PIN numérico</label>
                         <input type="text" id="new-pin" inputmode="numeric" maxlength="6" placeholder="Ej. 1234"
                                class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
-                        <button type="button" id="btn-patron-toggle" class="mt-1 inline-flex items-center bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-[11px] font-semibold px-3 py-1.5 rounded-lg transition-all">
-                            <i class="fa-solid fa-plus mr-1"></i> Dibujar patrón
-                        </button>
-                        <canvas id="new-patron" class="lienzo-patron hidden" width="160" height="160"></canvas>
-                        <button type="button" id="btn-patron-limpiar" class="hidden mt-1 text-[10px] font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2 py-1 rounded-md transition-all">
-                            <i class="fa-solid fa-eraser mr-1"></i> Limpiar patrón
-                        </button>
+                        <!-- Acordeón: botón "Patrón" como cabecera; el cuerpo se despliega al hacer clic -->
+                        <div id="patron-acordeon" class="mt-1 rounded-lg border border-slate-700 overflow-hidden bg-slate-900">
+                            <button type="button" id="btn-patron-toggle" aria-expanded="false" aria-controls="patron-cuerpo"
+                                    class="w-full flex items-center justify-between gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold px-3 py-2 transition-all">
+                                <span id="patron-etiqueta"><i class="fa-solid fa-plus mr-1"></i> Dibujar patrón</span>
+                                <i id="patron-chevron" class="fa-solid fa-chevron-down text-[10px]"></i>
+                            </button>
+                            <div id="patron-cuerpo">
+                                <div class="p-2">
+                                    <canvas id="new-patron" class="lienzo-patron mx-auto" width="160" height="160"></canvas>
+                                    <button type="button" id="btn-patron-limpiar" class="mt-1 w-full text-[10px] font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2 py-1 rounded-md transition-all">
+                                        <i class="fa-solid fa-eraser mr-1"></i> Limpiar patrón
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="md:col-span-3">
                         <label for="new-obs" class="block text-slate-400 mb-1 font-semibold">Observaciones de recepción (estado físico)</label>
