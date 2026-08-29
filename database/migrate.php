@@ -318,6 +318,7 @@ $configSemillas = [
     'dte_proveedor'         => '',
     'dte_api_key'           => '',
     'mp_enabled'            => '0',
+    'mp_public_key'         => '',
     'mp_access_token'       => '',
     'mp_point_device'       => '',
 ];

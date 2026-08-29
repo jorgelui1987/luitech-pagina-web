@@ -56,6 +56,17 @@
       } else {
         estadoLogo('✗ Sin logo subido (la boleta saldrá sin logo)', '#f87171');
       }
+      // Indicador del estado de Mercado Pago
+      var estadoMP = $('mp-estado-cfg');
+      if (estadoMP) {
+        if (cfg.mp_enabled === '1') {
+          estadoMP.textContent = '✓ Mercado Pago HABILITADO (el botón de cobro aparece en las órdenes con saldo)';
+          estadoMP.style.color = '#34d399';
+        } else {
+          estadoMP.textContent = '✗ Mercado Pago DESHABILITADO: marca la casilla y guarda';
+          estadoMP.style.color = '#f87171';
+        }
+      }
       var webhook = $('cfg-mp-webhook');
       if (webhook) webhook.value = cfg.webhook_mp || '';
     }).catch(function () {});
@@ -278,8 +289,8 @@
     });
     $('cfg-btn-mp').addEventListener('click', function () {
       guardarSeccion({
-        mp_enabled: 'cfg-mp_enabled', mp_access_token: 'cfg-mp_access_token',
-        mp_point_device: 'cfg-mp_point_device'
+        mp_enabled: 'cfg-mp_enabled', mp_public_key: 'cfg-mp_public_key',
+        mp_access_token: 'cfg-mp_access_token', mp_point_device: 'cfg-mp_point_device'
       }, 'cfg-btn-mp');
     });
     $('cfg-btn-loc').addEventListener('click', function () {

@@ -997,11 +997,19 @@
       cont.appendChild(lineaCosto);
     }
 
-    // Botón de Mercado Pago: visible solo si hay saldo y MP está habilitado
+    // Botón de Mercado Pago: visible solo si hay saldo y MP está habilitado;
+    // si no lo está, muestra el aviso con la solución
     var botonMP = $('mo-btn-mp');
+    var mpActivo = empresaCfg && empresaCfg.mp_enabled === '1';
     if (botonMP) {
-      var mpActivo = empresaCfg && empresaCfg.mp_enabled === '1';
       botonMP.classList.toggle('hidden', !(mpActivo && saldo > 0));
+    }
+    if (!mpActivo && saldo > 0) {
+      var avisoMP = document.createElement('div');
+      avisoMP.className = 'text-[10px] text-amber-400';
+      avisoMP.style.gridColumn = '1 / -1';
+      avisoMP.textContent = 'Mercado Pago no está habilitado: actívalo en Configuración → Mercado Pago.';
+      cont.appendChild(avisoMP);
     }
     var panelMP = $('mp-panel');
     if (panelMP && saldo <= 0) panelMP.classList.add('mo-oculto');

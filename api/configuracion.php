@@ -39,6 +39,7 @@ const CONFIG_CLAVES = [
     'dte_proveedor'         => ['max' => 60],
     'dte_api_key'           => ['secreto' => true],
     'mp_enabled'            => ['flag' => true],
+    'mp_public_key'         => ['max' => 120],
     'mp_access_token'       => ['secreto' => true],
     'mp_point_device'       => ['max' => 80],
 ];

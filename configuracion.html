@@ -99,8 +99,10 @@
             <section class="sec">
                 <h2><i class="fa-solid fa-credit-card mr-1"></i>Mercado Pago</h2>
                 <label class="flex items-center gap-2 text-xs text-slate-300"><input type="checkbox" id="cfg-mp_enabled" class="chk"> Cobros con Mercado Pago habilitados</label>
+                <span id="mp-estado-cfg" class="nota font-bold"></span>
                 <div class="fila mt-2">
                     <div><label class="lb">Access token (producción)</label><input type="password" class="inp" id="cfg-mp_access_token" placeholder="Dejar vacío = mantener"><p class="nota">Escribe BORRAR para eliminarlo.</p></div>
+                    <div><label class="lb">Public key</label><input class="inp" id="cfg-mp_public_key" maxlength="120" placeholder="APP_USR-..."></div>
                     <div><label class="lb">Terminal Point (device id)</label><input class="inp" id="cfg-mp_point_device" maxlength="80" placeholder="Opcional"></div>
                 </div>
                 <div class="mt-2"><label class="lb">URL de webhook (configúrala en tu cuenta de MP)</label><input class="inp" id="cfg-mp-webhook" readonly></div>
