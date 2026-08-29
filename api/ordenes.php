@@ -19,6 +19,8 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
+aplicar_zona_horaria();
+
 iniciar_respuesta_json();
 
 const ESTADOS_VALIDOS = ['Ingresado', 'En Diagnóstico', 'En Reparación', 'Listo para Retiro'];

@@ -14,6 +14,8 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 
+aplicar_zona_horaria();
+
 iniciar_respuesta_json();
 exigir_admin();
 
@@ -57,6 +59,18 @@ switch ($action) {
         }
 
         $cliente    = campo_texto($d, 'cliente', 120)   ?? 'Publico General';
+
+        // RUT del cliente (opcional; validado con dígito verificador)
+        $clienteRut = strtoupper(trim((string)($d['cliente_rut'] ?? '')));
+        if ($clienteRut !== '') {
+            $clienteRut = preg_replace('/[^0-9kK]/', '', $clienteRut) ?? '';
+            if (!validar_rut_chileno($clienteRut)) {
+                responder(['ok' => false, 'error' => 'RUT del cliente inválido'], 400);
+            }
+        } else {
+            $clienteRut = null;
+        }
+
         $vendedor   = campo_texto($d, 'vendedor', 80)   ?? 'Mostrador';
         $medioPago  = in_array(($d['medio_pago'] ?? ''), ['Efectivo','Debito','Credito','Transferencia'], true)
                       ? $d['medio_pago'] : 'Efectivo';
@@ -78,10 +92,10 @@ switch ($action) {
             $ivaMonto = $total - $neto;
 
             $pdo->prepare(
-                'INSERT INTO ventas (numero, vendedor, cliente, total, medio_pago, orden_codigo,
+                'INSERT INTO ventas (numero, vendedor, cliente, cliente_rut, total, medio_pago, orden_codigo,
                                      iva_tasa, neto, iva_monto)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-            )->execute([$numero, $vendedor, $cliente, $total, $medioPago, $ordenFinal,
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            )->execute([$numero, $vendedor, $cliente, $clienteRut, $total, $medioPago, $ordenFinal,
                         max(0, $tasa), $neto, $ivaMonto]);
             $ventaId = (int)$pdo->lastInsertId();
 

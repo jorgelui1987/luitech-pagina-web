@@ -10,8 +10,17 @@
   var productos = [];
   var carrito = [];
   var ivaTasa = 19; // se carga desde la BD (configuraciones.iva_porcentaje)
+  var empresaCfg = null; // datos de la empresa para la boleta
 
   function fmt(n) { return Number(n).toLocaleString('es-CL'); }
+
+  /** Escapa texto para incrustarlo en el HTML de la boleta. */
+  function esc(t) {
+    return String(t === null || t === undefined ? '' : t)
+      .replace(/[&<>"]/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+      });
+  }
 
   function mostrarVista(logueado) {
     $('view-nologin').classList.toggle('hidden', logueado);
@@ -19,7 +28,7 @@
     if (!logueado) return;
     cargarProductos();
     cargarResumenDia();
-    cargarIVA();
+    cargarConfig();
   }
 
   /* --------------------------------------------------------- CATÁLOGO */
@@ -113,11 +122,12 @@
     return { neto: neto, iva: total - neto };
   }
 
-  /** Lee la tasa de IVA guardada en la BD y la muestra en el editor. */
-  function cargarIVA() {
-    api('api/configuracion.php?action=get').then(function (res) {
+  /** Configuración: tasa de IVA + datos de la empresa para la boleta. */
+  function cargarConfig() {
+    api('api/configuracion.php?action=get_all').then(function (res) {
       if (!res.ok) return;
-      ivaTasa = parseInt(res.iva_porcentaje, 10);
+      empresaCfg = res.config || {};
+      ivaTasa = parseInt(empresaCfg.iva_porcentaje, 10);
       if (isNaN(ivaTasa) || ivaTasa < 0) ivaTasa = 19;
       $('pos-iva').value = String(ivaTasa);
       pintarCarrito();
@@ -235,6 +245,7 @@
                    cantidad: it.cantidad, precio_unitario: it.precio_unitario };
         }),
         cliente:    $('venta-cliente').value.trim(),
+        cliente_rut: $('venta-rut').value.trim().toUpperCase(),
         medio_pago: $('venta-pago').value,
         orden_codigo: $('venta-orden').value.trim().toUpperCase()
       }
@@ -250,6 +261,7 @@
       carrito = [];
       pintarCarrito();
       $('venta-cliente').value = '';
+      $('venta-rut').value = '';
       $('venta-orden').value = '';
       boton.disabled = true;
       cargarResumenDia();
@@ -281,10 +293,17 @@
         'h2{text-align:center;margin:4px 0;font-size:15px}.c{text-align:center}.d{border-top:1px dashed #000;margin:8px 0;border-bottom:1px dashed #000;padding:8px 0}' +
         'table{width:100%;border-collapse:collapse}td{padding:2px 0;vertical-align:top;font-size:11px}' +
         '.t{font-size:14px;font-weight:bold;text-align:right;margin-top:8px}' +
+        'img.logo{max-width:110px;margin:0 auto 4px;display:block}' +
         '</style></head><body>' +
-        '<h2>LUITECH SERVICIO TECNICO</h2>' +
-        '<div class="c">Persa Las Cenizas - Local 13<br>B.O\'Higgins 564, La Serena<br>WhatsApp +56 9 8220 9690</div>' +
+        (empresaCfg && empresaCfg.empresa_logo
+          ? '<img class="logo" src="' + esc(new URL(empresaCfg.empresa_logo, location.href).href) + '">'
+          : '') +
+        '<h2>' + esc(empresaCfg && empresaCfg.empresa_nombre ? empresaCfg.empresa_nombre : 'LUITECH SERVICIO TECNICO') + '</h2>' +
+        '<div class="c">' + esc(empresaCfg && empresaCfg.empresa_direccion ? empresaCfg.empresa_direccion : 'Persa Las Cenizas - Local 13 · B.O\'Higgins 564, La Serena') +
+        '<br>' + esc(empresaCfg && empresaCfg.empresa_telefono ? 'WhatsApp ' + empresaCfg.empresa_telefono : 'WhatsApp +56 9 8220 9690') + '</div>' +
         '<div class="d c"><b>' + numero + '</b><br>' + cuando + '<br>Pago: ' + v.medio_pago +
+        (v.cliente && v.cliente !== 'Publico General' ? '<br>Cliente: ' + esc(v.cliente) : '') +
+        (v.cliente_rut ? '<br>RUT: ' + esc(v.cliente_rut) : '') +
         (v.orden_codigo ? '<br>Orden: ' + v.orden_codigo : '') + '</div>' +
         '<table>' + filas + '</table>' +
         (v.neto !== null && v.iva_tasa !== null && Number(v.iva_tasa) > 0

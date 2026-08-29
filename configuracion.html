@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración | Luitech</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <style>
+        .sec{ background:rgba(2,6,23,.5); border:1px solid #1e293b; border-radius:0.75rem; padding:1.15rem; }
+        .sec h2{ font-size:13px; font-weight:800; color:#22d3ee; margin-bottom:10px; }
+        .inp{ width:100%; background:#0f172a; border:1px solid #1e293b; border-radius:0.5rem; padding:0.5rem 0.7rem; color:#fff; font-size:12px; outline:none; }
+        .inp:focus{ border-color:#22d3ee; }
+        .inp[readonly]{ color:#94a3b8; }
+        label.lb{ display:block; color:#94a3b8; font-weight:600; font-size:11px; margin-bottom:4px; }
+        .btn{ background:#22d3ee; color:#0f172a; font-weight:800; border-radius:0.5rem; padding:0.5rem 1rem; font-size:12px; transition:all .15s; cursor:pointer; }
+        .btn:hover{ background:#67e8f9; }
+        .btn:disabled{ opacity:.4; cursor:not-allowed; }
+        .btn2{ background:#1e293b; color:#cbd5e1; border:1px solid #334155; border-radius:0.5rem; padding:0.45rem 0.8rem; font-size:11px; font-weight:600; cursor:pointer; }
+        .btn2:hover{ background:#334155; }
+        .chk{ accent-color:#22d3ee; width:15px; height:15px; }
+        .nota{ font-size:10.5px; color:#64748b; line-height:1.5; }
+        .fila{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+        @media(min-width:768px){ .fila{ grid-template-columns:repeat(3,1fr); } }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+
+    <div id="toast-container" class="fixed top-4 right-4 z-[9999] flex flex-col gap-3 px-4 w-full sm:w-auto items-end pointer-events-none"></div>
+
+    <div id="view-nologin" class="hidden min-h-screen flex items-center justify-center p-6 text-center">
+        <div class="bg-slate-950 border border-slate-800 rounded-2xl p-8 max-w-sm">
+            <i class="fa-solid fa-lock text-amber-400 text-3xl mb-4"></i>
+            <h1 class="font-extrabold text-white text-lg">Sesión requerida</h1>
+            <a href="admin.html" class="inline-block mt-5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-sm">Ir al Login</a>
+        </div>
+    </div>
+
+    <main id="view-config" class="hidden max-w-5xl mx-auto px-4 py-6 space-y-5">
+
+        <header class="flex flex-wrap justify-between items-center gap-3 bg-slate-950 border border-slate-800 rounded-2xl px-5 py-4">
+            <div class="flex items-center gap-3">
+                <img src="assets/img/logo-luitech.png" alt="" width="36" height="36" class="h-9 w-9 rounded-lg object-cover">
+                <span class="text-xl font-black bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500">CONFIGURACIÓN</span>
+            </div>
+            <nav class="flex items-center gap-3 text-xs font-semibold">
+                <a href="pos.html" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 px-3 py-1.5 rounded-lg"><i class="fa-solid fa-cash-register mr-1"></i>POS</a>
+                <a href="admin.html" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-lg">Panel</a>
+            </nav>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+            <section class="sec">
+                <h2><i class="fa-solid fa-building mr-1"></i>Datos de la empresa</h2>
+                <div class="flex items-center gap-3 mb-3">
+                    <img id="cfg-logo-img" alt="Logo de la empresa" class="h-14 w-14 rounded-lg object-cover border border-slate-700 hidden">
+                    <div id="cfg-logo-vacio" class="h-14 w-14 rounded-lg border border-dashed border-slate-700 flex items-center justify-center text-slate-600"><i class="fa-solid fa-image"></i></div>
+                    <label class="btn2 cursor-pointer"><i class="fa-solid fa-upload mr-1"></i>Subir logo
+                        <input type="file" id="cfg-logo-file" accept="image/png,image/jpeg,image/webp" class="hidden"></label>
+                    <button type="button" id="cfg-logo-quitar" class="btn2"><i class="fa-solid fa-trash-can mr-1"></i>Quitar</button>
+                </div>
+                <p class="nota mb-3">Aparecerá en las boletas del POS y en los recibos de entrega (PNG/JPG/WebP, máx. 2 MB).</p>
+                <div class="fila">
+                    <div><label class="lb">Nombre</label><input class="inp" id="cfg-empresa_nombre" maxlength="120"></div>
+                    <div><label class="lb">RUT</label><input class="inp" id="cfg-empresa_rut" maxlength="12" placeholder="12345678-9"></div>
+                    <div><label class="lb">Giro</label><input class="inp" id="cfg-empresa_giro" maxlength="120"></div>
+                    <div><label class="lb">Dirección</label><input class="inp" id="cfg-empresa_direccion" maxlength="160"></div>
+                    <div><label class="lb">País</label><input class="inp" id="cfg-empresa_pais" maxlength="60"></div>
+                    <div><label class="lb">Teléfono</label><input class="inp" id="cfg-empresa_telefono" maxlength="40"></div>
+                    <div><label class="lb">Email</label><input class="inp" id="cfg-empresa_email" maxlength="120"></div>
+                </div>
+                <button type="button" id="cfg-btn-empresa" class="btn mt-3">Guardar empresa</button>
+            </section>
+
+            <section class="sec">
+                <h2><i class="fa-solid fa-file-invoice-dollar mr-1"></i>Facturación</h2>
+                <div class="fila">
+                    <div><label class="lb">IVA % (editable)</label><input type="number" class="inp" id="cfg-iva_porcentaje" min="0" max="100"></div>
+                    <div><label class="lb">Garantía por defecto (días)</label><input type="number" class="inp" id="cfg-garantia_dias_default" min="0" max="365"></div>
+                </div>
+                <p class="nota mt-2">En Chile el precio al público incluye el IVA: el sistema lo desglosa en cada venta con esta tasa.</p>
+                <label class="flex items-center gap-2 text-xs text-slate-300 mt-3"><input type="checkbox" id="cfg-dte_habilitado" class="chk"> Facturación electrónica (DTE) habilitada</label>
+                <p class="nota mt-1">Emitir boletas electrónicas reales requiere firma electrónica del SII o contratar un proveedor PAC. Estos datos quedan listos para conectar esa integración.</p>
+                <div class="fila mt-2">
+                    <div><label class="lb">Proveedor PAC</label><input class="inp" id="cfg-dte_proveedor" maxlength="60" placeholder="Ej: Apiux, Facturación.cl"></div>
+                    <div><label class="lb">API key del PAC</label><input type="password" class="inp" id="cfg-dte_api_key" placeholder="Dejar vacío = mantener"></div>
+                </div>
+                <button type="button" id="cfg-btn-fact" class="btn mt-3">Guardar facturación</button>
+            </section>
+
+            <section class="sec">
+                <h2><i class="fa-solid fa-credit-card mr-1"></i>Mercado Pago</h2>
+                <label class="flex items-center gap-2 text-xs text-slate-300"><input type="checkbox" id="cfg-mp_enabled" class="chk"> Cobros con Mercado Pago habilitados</label>
+                <div class="fila mt-2">
+                    <div><label class="lb">Access token (producción)</label><input type="password" class="inp" id="cfg-mp_access_token" placeholder="Dejar vacío = mantener"><p class="nota">Escribe BORRAR para eliminarlo.</p></div>
+                    <div><label class="lb">Terminal Point (device id)</label><input class="inp" id="cfg-mp_point_device" maxlength="80" placeholder="Opcional"></div>
+                </div>
+                <div class="mt-2"><label class="lb">URL de webhook (configúrala en tu cuenta de MP)</label><input class="inp" id="cfg-mp-webhook" readonly></div>
+                <p class="nota mt-1">El webhook necesita un dominio con HTTPS (no funciona en localhost). Los pagos aprobados entran como abono a la orden y a la caja, con registro en la bitácora.</p>
+                <button type="button" id="cfg-btn-mp" class="btn mt-3">Guardar Mercado Pago</button>
+            </section>
+
+            <section class="sec">
+                <h2><i class="fa-solid fa-earth-americas mr-1"></i>Localización</h2>
+                <div class="fila">
+                    <div><label class="lb">Moneda</label><input class="inp" id="cfg-moneda" maxlength="20" placeholder="CLP"></div>
+                    <div><label class="lb">Símbolo</label><input class="inp" id="cfg-moneda_simbolo" maxlength="5" placeholder="$"></div>
+                    <div><label class="lb">Zona horaria</label><input class="inp" id="cfg-zona_horaria" list="lista-tz" placeholder="America/Santiago">
+                        <datalist id="lista-tz">
+                            <option>America/Santiago</option>
+                            <option>America/Argentina/Buenos_Aires</option>
+                            <option>America/Lima</option>
+                            <option>America/Mexico_City</option>
+                            <option>America/Bogota</option>
+                            <option>UTC</option>
+                        </datalist>
+                    </div>
+                </div>
+                <button type="button" id="cfg-btn-loc" class="btn mt-3">Guardar localización</button>
+            </section>
+
+            <section class="sec">
+                <h2><i class="fa-solid fa-scroll mr-1"></i>Términos y garantía</h2>
+                <label class="lb">Texto que se imprime al pie de boletas y recibos</label>
+                <textarea class="inp" id="cfg-terminos_texto" rows="3" maxlength="500"></textarea>
+                <button type="button" id="cfg-btn-term" class="btn mt-3">Guardar términos</button>
+            </section>
+
+            <section class="sec">
+                <h2><i class="fa-solid fa-key mr-1"></i>Cambiar mi contraseña</h2>
+                <form id="form-clave" class="flex flex-col gap-2 max-w-sm">
+                    <input type="password" id="clave-actual" required placeholder="Contraseña ACTUAL" autocomplete="current-password" class="inp">
+                    <input type="password" id="clave-nueva" required minlength="8" maxlength="72" placeholder="Nueva (mínimo 8 caracteres)" autocomplete="new-password" class="inp">
+                    <input type="password" id="clave-repetida" required minlength="8" maxlength="72" placeholder="Repite la nueva" autocomplete="new-password" class="inp">
+                    <button type="submit" id="btn-clave-guardar" class="btn">Guardar nueva contraseña</button>
+                </form>
+            </section>
+        </div>
+    </main>
+
+    <script src="assets/js/common.js" defer></script>
+    <script src="assets/js/configuracion.js" defer></script>
+</body>
+</html>

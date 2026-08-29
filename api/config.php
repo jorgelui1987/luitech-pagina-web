@@ -112,3 +112,47 @@ function campo_texto(array $fuente, string $clave, int $max = 255): ?string
     }
     return mb_substr($valor, 0, $max);
 }
+
+/** Lee un valor de la tabla configuraciones (o el fallback si no existe). */
+function config_valor(PDO $pdo, string $clave, string $fallback): string
+{
+    $st = $pdo->prepare('SELECT valor FROM configuraciones WHERE clave = ? LIMIT 1');
+    $st->execute([$clave]);
+    $valor = $st->fetchColumn();
+    return ($valor === false || $valor === null) ? $fallback : (string)$valor;
+}
+
+/** Valida un RUT chileno (acepta con/sin puntos y guion; dígito verificador módulo 11). */
+function validar_rut_chileno(string $rut): bool
+{
+    $limpio = strtoupper(preg_replace('/[^0-9kK]/', '', $rut) ?? '');
+    if (preg_match('/^(\d{1,8})([\dkK])$/', $limpio, $m) !== 1) {
+        return false;
+    }
+    $suma = 0;
+    $factor = 2;
+    for ($i = strlen($m[1]) - 1; $i >= 0; $i--) {
+        $suma += (int)$m[1][$i] * $factor;
+        $factor = ($factor === 7) ? 2 : $factor + 1;
+    }
+    $resto = 11 - ($suma % 11);
+    $esperado = ($resto === 11) ? '0' : (($resto === 10) ? 'K' : (string)$resto);
+    return $m[2] === $esperado;
+}
+
+/** Aplica la zona horaria configurada (una vez por petición). Si la BD aún no
+ *  responde, deja la del servidor. Llamar antes de usar date() en las APIs. */
+function aplicar_zona_horaria(): void
+{
+    static $aplicada = false;
+    if ($aplicada) {
+        return;
+    }
+    $aplicada = true;
+    try {
+        $tz = db()->query("SELECT valor FROM configuraciones WHERE clave = 'zona_horaria' LIMIT 1")->fetchColumn();
+        if (is_string($tz) && $tz !== '' && in_array($tz, DateTimeZone::listIdentifiers(), true)) {
+            date_default_timezone_set($tz);
+        }
+    } catch (Exception $e) { /* sin BD todavía: se usa la del servidor */ }
+}

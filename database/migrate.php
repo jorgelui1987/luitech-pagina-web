@@ -250,14 +250,42 @@ $pdo->exec("
 $pdo->prepare("INSERT IGNORE INTO configuraciones (clave, valor) VALUES ('iva_porcentaje', '19')")
     ->execute();
 
+// Semillas de configuración general (INSERT IGNORE: no pisa lo guardado)
+$configSemillas = [
+    'empresa_nombre'        => 'Luitech Servicio Técnico',
+    'empresa_rut'           => '',
+    'empresa_giro'          => '',
+    'empresa_direccion'     => "B.O'Higgins 564, La Serena",
+    'empresa_pais'          => 'Chile',
+    'empresa_telefono'      => '+56 9 8220 9690',
+    'empresa_email'         => '',
+    'empresa_logo'          => '',
+    'moneda'                => 'CLP',
+    'moneda_simbolo'        => '$',
+    'zona_horaria'          => 'America/Santiago',
+    'garantia_dias_default' => '30',
+    'terminos_texto'        => '¡Gracias por confiar en Luitech! Conserve este comprobante para hacer efectiva la garantía.',
+    'dte_habilitado'        => '0',
+    'dte_proveedor'         => '',
+    'dte_api_key'           => '',
+    'mp_enabled'            => '0',
+    'mp_access_token'       => '',
+    'mp_point_device'       => '',
+];
+$stmtCfg = $pdo->prepare('INSERT IGNORE INTO configuraciones (clave, valor) VALUES (?, ?)');
+foreach ($configSemillas as $claveCfg => $valorCfg) {
+    $stmtCfg->execute([$claveCfg, $valorCfg]);
+}
+
 // --- IVA por venta (desglose fiscal congelado al momento de cobrar) -------
 // En Chile el precio al público incluye el IVA: neto = total / (1 + tasa).
 // Cada venta guarda la tasa usada, así el historial no cambia si la ley cambia.
 $columnasVentas = $pdo->query('SHOW COLUMNS FROM ventas')->fetchAll(PDO::FETCH_COLUMN);
 $migracionVentasIva = [
-    'iva_tasa'  => 'ALTER TABLE ventas ADD COLUMN iva_tasa SMALLINT UNSIGNED NULL AFTER total',
-    'neto'      => 'ALTER TABLE ventas ADD COLUMN neto INT UNSIGNED NULL AFTER iva_tasa',
-    'iva_monto' => 'ALTER TABLE ventas ADD COLUMN iva_monto INT UNSIGNED NULL AFTER neto',
+    'cliente_rut' => 'ALTER TABLE ventas ADD COLUMN cliente_rut VARCHAR(12) NULL AFTER cliente',
+    'iva_tasa'    => 'ALTER TABLE ventas ADD COLUMN iva_tasa SMALLINT UNSIGNED NULL AFTER total',
+    'neto'        => 'ALTER TABLE ventas ADD COLUMN neto INT UNSIGNED NULL AFTER iva_tasa',
+    'iva_monto'   => 'ALTER TABLE ventas ADD COLUMN iva_monto INT UNSIGNED NULL AFTER neto',
 ];
 foreach ($migracionVentasIva as $columna => $sql) {
     if (!in_array($columna, $columnasVentas, true)) {

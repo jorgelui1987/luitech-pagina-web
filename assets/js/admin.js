@@ -7,6 +7,8 @@
 
   var api = window.LuitechAPI;
   var $ = function (id) { return document.getElementById(id); };
+  var empresaCfg = null;   // configuración de empresa (logo, nombre, moneda, términos)
+  var simboloMoneda = '$'; // viene de Configuración (moneda_simbolo)
 
   /* --------------------------------------------------------- SESIÓN */
   function mostrarVista(logueado, nombre) {
@@ -59,7 +61,18 @@
 
   /** Formatea un monto entero como moneda sin decimales (ej. $ 12.500). */
   function monto(valor) {
-    return '$ ' + Math.max(0, Math.round(Number(valor) || 0)).toLocaleString('es-CL');
+    return simboloMoneda + ' ' + Math.max(0, Math.round(Number(valor) || 0)).toLocaleString('es-CL');
+  }
+
+  /** Carga la configuración de empresa (logo, nombre, moneda, términos). */
+  function cargarConfigAdmin() {
+    api('api/configuracion.php?action=get_all').then(function (res) {
+      if (!res.ok) return;
+      empresaCfg = res.config || {};
+      simboloMoneda = (empresaCfg.moneda_simbolo || '$').slice(0, 5);
+      var gd = parseInt(empresaCfg.garantia_dias_default, 10);
+      if (!isNaN(gd) && gd > 0) $('new-garantia').value = String(gd);
+    }).catch(function () {});
   }
 
   /** Saldo pendiente de una orden (nunca negativo). */
@@ -1250,6 +1263,7 @@
       '<style>' +
       'body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;max-width:420px;margin:24px auto;padding:0 12px;}' +
       'h1{font-size:18px;margin:0;text-align:center;letter-spacing:1px;}' +
+      'img.logo{max-width:120px;margin:0 auto 6px;display:block;}' +
       'p.sub{font-size:11px;color:#475569;text-align:center;margin:2px 0 14px;}' +
       'table{width:100%;border-collapse:collapse;font-size:12px;}' +
       'th{text-align:left;padding:6px 8px;background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;width:38%;font-weight:normal;}' +
@@ -1257,8 +1271,12 @@
       'img{max-height:70px;margin-top:10px;display:block;}' +
       'p.nota{font-size:10px;color:#64748b;text-align:center;margin-top:14px;}' +
       '</style></head><body>' +
-      '<h1>LUITECH — SERVICIO TÉCNICO</h1>' +
-      '<p class="sub">Recibo de entrega · Orden ' + escapar(o.codigo) + '</p>' +
+      (empresaCfg && empresaCfg.empresa_logo
+        ? '<img class="logo" src="' + escapar(new URL(empresaCfg.empresa_logo, location.href).href) + '">'
+        : '') +
+      '<h1>' + escapar(empresaCfg && empresaCfg.empresa_nombre ? empresaCfg.empresa_nombre : 'LUITECH — SERVICIO TÉCNICO') + '</h1>' +
+      '<p class="sub">Recibo de entrega · Orden ' + escapar(o.codigo) +
+      (empresaCfg && empresaCfg.empresa_direccion ? '<br>' + escapar(empresaCfg.empresa_direccion) : '') + '</p>' +
       '<table>' +
       filaRecibo('Cliente', escapar(o.cliente)) +
       filaRecibo('Equipo', escapar(o.equipo)) +
@@ -1272,7 +1290,7 @@
       filaRecibo('Garantía', gd > 0 ? escapar(gd + ' días (hasta ' + vence + ')') : 'Sin garantía') +
       '</table>' +
       (o.firma_entrega ? '<img src="' + escapar(o.firma_entrega) + '" alt="Firma de retiro">' : '') +
-      '<p class="nota">¡Gracias por confiar en Luitech! Conserve este recibo para hacer efectiva la garantía.</p>' +
+      '<p class="nota">' + escapar(empresaCfg && empresaCfg.terminos_texto ? empresaCfg.terminos_texto : '¡Gracias por confiar en Luitech! Conserve este recibo para hacer efectiva la garantía.') + '</p>' +
       '</body></html>';
 
     var ventana = window.open('', '_blank', 'width=520,height=720');
@@ -1355,6 +1373,7 @@
       if (e.key === 'Enter') { e.preventDefault(); agregarNota(); }
     });
     iniciarFirmaEntrega();
+    cargarConfigAdmin();
     $('new-pin').addEventListener('input', function () {
       this.value = this.value.replace(/\D/g, '');
     });
