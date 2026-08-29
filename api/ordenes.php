@@ -25,6 +25,10 @@ iniciar_respuesta_json();
 
 const ESTADOS_VALIDOS = ['Ingresado', 'En Diagnóstico', 'En Reparación', 'Listo para Retiro'];
 
+/** Porcentaje estándar de avance al cambiar de estado (el tracker público
+ *  enciende sus etapas según el estado; sin esto quedarían desincronizados). */
+const AVANCE_POR_ESTADO = ['Ingresado' => 10, 'En Diagnóstico' => 30, 'En Reparación' => 60, 'Listo para Retiro' => 100];
+
 /* ---------------------------------------------------------------------
  * Archivos del acta de recepción (fotos de respaldo y firma del cliente)
  * ------------------------------------------------------------------- */
@@ -123,7 +127,7 @@ switch ($action) {
         }
 
         $stmt = db()->prepare(
-            'SELECT codigo, equipo, falla, estado, avance, tecnico, fecha_ingreso
+            'SELECT codigo, equipo, falla, estado, avance, tecnico, fecha_ingreso, fecha_entrega
              FROM ordenes WHERE codigo = ? LIMIT 1'
         );
         $stmt->execute([$codigo]);
@@ -281,6 +285,12 @@ switch ($action) {
         if (isset($d['avance'])) {
             $set[]    = 'avance = ?';
             $params[] = max(0, min(100, (int)$d['avance']));
+        }
+        // Cambiar el estado también avanza el porcentaje automáticamente
+        // (si no viene un avance explícito en la misma petición)
+        if (isset($d['estado']) && !isset($d['avance'])) {
+            $set[]    = 'avance = ?';
+            $params[] = AVANCE_POR_ESTADO[$d['estado']] ?? 10;
         }
         if (isset($d['falla'])) {
             $falla = campo_texto($d, 'falla', 1000);

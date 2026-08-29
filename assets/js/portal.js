@@ -62,7 +62,8 @@
     'Listo para Retiro': 'bg-emerald-950 border-emerald-800 text-emerald-400',
     'En Reparación':     'bg-cyan-950 border-cyan-800 text-cyan-400',
     'En Diagnóstico':    'bg-amber-950 border-amber-800 text-amber-400',
-    'Ingresado':         'bg-slate-800 border-slate-700 text-slate-300'
+    'Ingresado':         'bg-slate-800 border-slate-700 text-slate-300',
+    'Entregado':         'bg-emerald-950 border-emerald-800 text-emerald-400'
   };
 
   function cargarDatosEnTracker(o) {
@@ -72,17 +73,28 @@
     $('track-falla').textContent       = o.falla;
     $('track-fecha').textContent       = formatearFecha(o.fecha_ingreso);
 
+    // Si ya fue entregada (tiene fecha de entrega), eso manda sobre el estado
+    var entregada = !!o.fecha_entrega;
+    var estadoMostrado = entregada ? 'Entregado' : o.estado;
+
     var badge = $('track-status-badge');
     badge.className = 'rounded-xl px-5 py-2 flex items-center justify-center gap-2 font-bold text-sm border ' +
-      (CLASES_BADGE[o.estado] || CLASES_BADGE['Ingresado']);
-    badge.replaceChildren(puntoPulso(), document.createTextNode(o.estado));
+      (CLASES_BADGE[estadoMostrado] || CLASES_BADGE['Ingresado']);
+    badge.replaceChildren(puntoPulso(), document.createTextNode(estadoMostrado));
 
-    $('track-progress-bar').style.width = o.avance + '%';
+    // Las etapas se encienden según el ESTADO real de la orden (no solo el %),
+    // así nunca quedan desincronizadas del estado que cambia el técnico.
+    var pasoActivo = ({ 'Ingresado': 1, 'En Diagnóstico': 2, 'En Reparación': 3, 'Listo para Retiro': 4 })[o.estado] || 1;
+    if (entregada) pasoActivo = 5;
 
-    var umbrales = [10, 30, 60, 80, 100];
+    var minimos = [10, 30, 60, 90, 100];
+    var avanceVisual = Math.max(parseInt(o.avance, 10) || 0, minimos[pasoActivo - 1]);
+    $('track-progress-bar').style.width = avanceVisual + '%';
+
     for (var i = 1; i <= 5; i++) {
       var paso = $('step-' + i);
-      var activo = o.avance >= umbrales[i - 1];
+      if (!paso) continue;
+      var activo = i <= pasoActivo;
       paso.className = 'w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shadow-lg transition-all duration-500 ' +
         (activo
           ? (i === 5 ? 'bg-emerald-500 text-slate-950 shadow-emerald-500/20' : 'bg-cyan-500 text-slate-950 shadow-cyan-500/20')
