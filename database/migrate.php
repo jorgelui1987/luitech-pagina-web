@@ -23,7 +23,12 @@ for ($i = 1; $i <= $maxIntentos; $i++) {
         break;
     } catch (PDOException $e) {
         if ($i === $maxIntentos) {
-            fwrite(STDERR, '[migrate] BD no disponible tras ' . $maxIntentos . " intentos: " . $e->getMessage() . "\n");
+            $mensaje = '[migrate] BD no disponible tras ' . $maxIntentos . " intentos: " . $e->getMessage() . "\n";
+            if (defined('STDERR')) {
+                fwrite(STDERR, $mensaje); // CLI
+            } else {
+                echo '<pre>' . htmlspecialchars($mensaje) . '</pre>'; // navegador
+            }
             exit(1);
         }
         echo "[migrate] Esperando base de datos ({$i}/{$maxIntentos})...\n";
