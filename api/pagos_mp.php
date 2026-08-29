@@ -236,11 +236,11 @@ switch ($action) {
                 $detalle .= ($detalle === '' ? '' : ' | ') . (is_array($ordenMP[$campo]) ? json_encode($ordenMP[$campo], JSON_UNESCAPED_UNICODE) : (string)$ordenMP[$campo]);
             }
         }
-        if (!empty($intent['cause'])) {
-            $detalle .= ($detalle === '' ? '' : ' | ') . json_encode($intent['cause'], JSON_UNESCAPED_UNICODE);
+        if (!empty($ordenMP['cause'])) {
+            $detalle .= ($detalle === '' ? '' : ' | ') . json_encode($ordenMP['cause'], JSON_UNESCAPED_UNICODE);
         }
         if ($detalle === '') {
-            $detalle = substr(json_encode($intent, JSON_UNESCAPED_UNICODE), 0, 300); // cuerpo completo si no hay campos conocidos
+            $detalle = substr(json_encode($ordenMP, JSON_UNESCAPED_UNICODE), 0, 300); // cuerpo completo si no hay campos conocidos
         }
         responder(['ok' => false, 'error' => 'Mercado Pago rechazó el intento (HTTP ' . $codigoHttp . ')' . ($detalle !== '' ? ': ' . $detalle : '')], 502);
     }
@@ -292,7 +292,7 @@ switch ($action) {
             if (preg_match('/^[A-Za-z0-9\-]{8,120}$/', $pagoId) !== 1) {
                 responder(['ok' => true]);
             }
-            [$codigoHttpI, $intent] = mp_api('GET', '/point-integration-api/payment-intents/' . rawurlencode($pagoId), null, $cfg['token']);
+            [$codigoHttpI, $intent] = mp_api('GET', '/point/integration-api/payment-intents/' . rawurlencode($pagoId), null, $cfg['token']);
             $referencia  = (string)($intent['additional_info']['external_reference'] ?? '');
             $montoIntent = (int)round((float)($intent['amount'] ?? ($intent['payment']['transaction_amount'] ?? 0)));
             $aprobado    = (($intent['status'] ?? '') === 'approved' || (($intent['payment']['status'] ?? '') === 'approved'));

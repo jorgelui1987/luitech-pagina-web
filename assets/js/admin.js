@@ -1446,9 +1446,11 @@
               }
             }).catch(function () {});
         }, 3000);
-      }).catch(function () {
+      }).catch(function (err) {
         boton.disabled = false;
-        window.mostrarToast('Error de conexión con el servidor', 'error');
+        var motivo = err && err.message ? err.message : 'Error de conexión con el servidor';
+        if (linea) { linea.textContent = '✗ ' + motivo; linea.style.color = '#f87171'; }
+        window.mostrarToast(motivo, 'error');
       });
   }
 
