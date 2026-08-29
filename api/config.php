@@ -140,6 +140,27 @@ function validar_rut_chileno(string $rut): bool
     return $m[2] === $esperado;
 }
 
+/** Garantiza que la tabla de configuraciones exista con sus semillas mínimas
+ *  (auto-reparable: sirve cuando el hosting no ejecuta database/migrate.php). */
+function preparar_configuraciones(): void
+{
+    static $lista = false;
+    if ($lista) {
+        return;
+    }
+    $lista = true;
+    try {
+        db()->exec("CREATE TABLE IF NOT EXISTS configuraciones (
+            clave          VARCHAR(50)  PRIMARY KEY,
+            valor          VARCHAR(100) NOT NULL,
+            actualizado_en TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
+                           ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        db()->prepare("INSERT IGNORE INTO configuraciones (clave, valor) VALUES ('iva_porcentaje', '19'), ('zona_horaria', 'America/Santiago')")
+            ->execute();
+    } catch (Exception $e) { /* si la BD no responde, las APIs darán su propio error */ }
+}
+
 /** Aplica la zona horaria configurada (una vez por petición). Si la BD aún no
  *  responde, deja la del servidor. Llamar antes de usar date() en las APIs. */
 function aplicar_zona_horaria(): void
