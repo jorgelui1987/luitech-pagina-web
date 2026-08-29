@@ -311,6 +311,19 @@ switch ($action) {
             responder(['ok' => true]);
         }
 
+        // Notificaciones de orden (terminal Point en modo PDV)
+        if ($tipo === 'order' || str_starts_with((string)($d['action'] ?? ''), 'order.')) {
+            $referencia  = (string)($d['data']['external_reference'] ?? '');
+            $montoOrden  = (int)round((float)($d['data']['total_paid_amount'] ?? 0));
+            $estadoOrden = (string)($d['data']['status'] ?? '');
+            $aprobado    = in_array($estadoOrden, ['processed', 'accredited'], true);
+            if ($aprobado && preg_match('/^LUH-\d{3,8}$/', $referencia) === 1 && $montoOrden > 0) {
+                $pagoIdOrden = (string)($d['data']['transactions']['payments'][0]['id'] ?? $pagoId);
+                mp_aplicar_pago_orden(db(), $referencia, $montoOrden, 'order-' . $pagoId);
+            }
+            responder(['ok' => true]);
+        }
+
         // Pagos normales (link/QR)
         if (preg_match('/^\d{5,20}$/', $pagoId) !== 1) {
             responder(['ok' => true]);
