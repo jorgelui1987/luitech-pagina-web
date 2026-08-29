@@ -32,21 +32,26 @@ function mp_config(): array
 }
 
 /** Llamada JSON a la API de Mercado Pago. Devuelve [código_http, datos].
- *  Si cURL no existe o no hay salida a internet, devuelve código 0 con el error. */
-function mp_api(string $metodo, string $ruta, ?array $cuerpo, string $token): array
+ *  Si cURL no existe o no hay salida a internet, devuelve código 0 con el error.
+ *  $idempotencia: para POST, clave de idempotencia (recomendada por MP en /v1/orders). */
+function mp_api(string $metodo, string $ruta, ?array $cuerpo, string $token, ?string $idempotencia = null): array
 {
     if (!function_exists('curl_init')) {
         return [0, ['curl_error' => 'El servidor no tiene la extensión cURL habilitada']];
+    }
+    $cabeceras = [
+        'Authorization: Bearer ' . $token,
+        'Content-Type: application/json',
+    ];
+    if ($idempotencia !== null) {
+        $cabeceras[] = 'X-Idempotency-Key: ' . $idempotencia;
     }
     $ch = curl_init('https://api.mercadopago.com' . $ruta);
     curl_setopt_array($ch, [
         CURLOPT_CUSTOMREQUEST  => $metodo,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT        => 15,
-        CURLOPT_HTTPHEADER     => [
-            'Authorization: Bearer ' . $token,
-            'Content-Type: application/json',
-        ],
+        CURLOPT_HTTPHEADER     => $cabeceras,
         CURLOPT_POSTFIELDS     => $cuerpo === null ? null : json_encode($cuerpo),
     ]);
     $respuesta = curl_exec($ch);
@@ -219,13 +224,23 @@ switch ($action) {
         if ($saldo < 1) {
             responder(['ok' => false, 'error' => 'Esta orden no tiene saldo pendiente'], 409);
         }
-        // Crea la orden de cobro en el terminal Point (API Point Orders)
+        // Crea la orden de cobro en el terminal Point (API Orders /v1/orders,
+        // la misma que genera las notificaciones "order.processed" del webhook)
         $payload = [
-            'amount'             => (float)$saldo,
-            'description'        => mb_substr('Orden ' . $codigo . ' — ' . (string)$orden['cliente'], 0, 100),
+            'type'               => 'point',
+            'total_amount'       => (float)$saldo,
             'external_reference' => $codigo,
+            'description'        => mb_substr('Orden ' . $codigo . ' — ' . (string)$orden['cliente'], 0, 100),
+            'items'              => [[
+                'title'        => mb_substr('Orden ' . $codigo, 0, 60),
+                'quantity'     => 1,
+                'unit_amount'  => (float)$saldo,
+                'unit_measure' => 'unit',
+                'type'         => 'other',
+            ]],
+            'config'             => ['point' => ['terminal_id' => $cfg['device']]],
         ];
-        [$codigoHttp, $ordenMP] = mp_api('POST', '/point/integration-api/devices/' . rawurlencode($cfg['device']) . '/orders', $payload, $cfg['token']);
+        [$codigoHttp, $ordenMP] = mp_api('POST', '/v1/orders', $payload, $cfg['token'], 'luitech-' . $codigo . '-' . $saldo . '-' . time());
         if ($codigoHttp >= 200 && $codigoHttp < 300 && !empty($ordenMP['id'])) {
             responder(['ok' => true, 'order_id' => (string)$ordenMP['id'], 'monto' => $saldo]);
         }
@@ -255,21 +270,24 @@ switch ($action) {
         if ($orderId === '') {
             responder(['ok' => false, 'error' => 'Falta el ID de la orden de Mercado Pago'], 400);
         }
-        [$codigoHttp, $ordenMP] = mp_api('GET', '/point/integration-api/orders/' . rawurlencode($orderId), null, $cfg['token']);
+        [$codigoHttp, $ordenMP] = mp_api('GET', '/v1/orders/' . rawurlencode($orderId), null, $cfg['token']);
         if ($codigoHttp !== 200) {
             responder(['ok' => false, 'error' => 'No se pudo consultar el estado (HTTP ' . $codigoHttp . ')'], 502);
         }
         $status = strtolower((string)($ordenMP['status'] ?? ''));
-        $isPaid = in_array($status, ['closed', 'processed', 'approved'], true);
+        $isPaid = in_array($status, ['processed', 'closed', 'accredited', 'approved'], true);
         $referencia = (string)($ordenMP['external_reference'] ?? '');
-        if ($isPaid && preg_match('/^LUH-\d{3,8}$/', $referencia) === 1) {
-            $montoPagado = (int)round((float)($ordenMP['total_paid_amount'] ?? 0));
-            if ($montoPagado > 0) {
-                mp_aplicar_pago_orden(db(), $referencia, $montoPagado, 'mp-order-' . $orderId);
+        // Monto pagado: total_paid_amount o la suma de las transacciones
+        $montoPagado = (int)round((float)($ordenMP['total_paid_amount'] ?? 0));
+        if ($montoPagado === 0 && isset($ordenMP['transactions']['payments']) && is_array($ordenMP['transactions']['payments'])) {
+            foreach ($ordenMP['transactions']['payments'] as $pago) {
+                $montoPagado += (int)round((float)($pago['paid_amount'] ?? 0));
             }
         }
-        responder(['ok' => true, 'estado' => $status, 'pagada' => $isPaid,
-                   'monto' => (int)round((float)($ordenMP['total_paid_amount'] ?? 0))]);
+        if ($isPaid && preg_match('/^LUH-\d{3,8}$/', $referencia) === 1 && $montoPagado > 0) {
+            mp_aplicar_pago_orden(db(), $referencia, $montoPagado, 'mp-order-' . $orderId);
+        }
+        responder(['ok' => true, 'estado' => $status, 'pagada' => $isPaid, 'monto' => $montoPagado]);
     }
 
     case 'webhook': {
