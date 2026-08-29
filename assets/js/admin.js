@@ -1416,15 +1416,13 @@
           window.mostrarToast(res.error || 'No se pudo enviar el cobro al Point', 'error');
           return;
         }
-        var intentoId = res.intent_id;
+        var ordenMPId = res.order_id;
         if (linea) { linea.textContent = 'Acerca la tarjeta al terminal Point…'; }
         mpTimer = setInterval(function () {
-          api('api/pagos_mp.php?action=point_estado&id=' + encodeURIComponent(intentoId))
+          api('api/pagos_mp.php?action=point_estado&order_id=' + encodeURIComponent(ordenMPId))
             .then(function (r) {
               if (!r.ok) return;
-              var st = r.intento && r.intento.status ? r.intento.status : '';
-              var stPago = r.intento && r.intento.payment && r.intento.payment.status ? r.intento.payment.status : '';
-              if (st === 'approved' || stPago === 'approved') {
+              if (r.pagada) {
                 detenerMonitoreoMP();
                 boton.disabled = false;
                 if (linea) { linea.textContent = '✓ ¡Pago aprobado en el Point!'; linea.style.color = '#34d399'; }
@@ -1441,7 +1439,7 @@
                   });
                 return;
               }
-              if (st === 'error' || st === 'rejected') {
+              if (r.estado === 'error' || r.estado === 'rejected') {
                 detenerMonitoreoMP();
                 boton.disabled = false;
                 if (linea) { linea.textContent = '✗ El terminal rechazó el pago'; linea.style.color = '#f87171'; }

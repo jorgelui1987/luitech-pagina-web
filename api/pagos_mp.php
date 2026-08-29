@@ -162,25 +162,15 @@ switch ($action) {
     }
 
     case 'point_dispositivos': {
-        // Lista los terminales Point vinculados a la cuenta (API oficial /terminals/v1)
+        // Lista los dispositivos Point de la cuenta (API Point Orders)
         exigir_admin();
         $cfg = mp_config();
         if (!$cfg['enabled'] || $cfg['token'] === '') {
             responder(['ok' => false, 'error' => 'Mercado Pago no está habilitado'], 409);
         }
-        [$codigoHttp, $datos] = mp_api('GET', '/terminals/v1/list?limit=50&offset=0', null, $cfg['token']);
-        $terminales = ($datos['data']['terminals'] ?? []);
-        $lista = [];
-        foreach ((is_array($terminales) ? $terminales : []) as $t) {
-            $lista[] = [
-                'id'             => (string)($t['id'] ?? ''),
-                'pos_id'         => (string)($t['pos_id'] ?? ''),
-                'store_id'       => (string)($t['store_id'] ?? ''),
-                'operating_mode' => (string)($t['operating_mode'] ?? ''),
-            ];
-        }
+        [$codigoHttp, $datos] = mp_api('GET', '/point/integration-api/devices', null, $cfg['token']);
         responder(['ok' => $codigoHttp >= 200 && $codigoHttp < 300, 'http' => $codigoHttp,
-                   'terminales' => $lista,
+                   'dispositivos' => $datos,
                    'body' => $codigoHttp !== 200 ? substr(json_encode($datos, JSON_UNESCAPED_UNICODE), 0, 250) : '']);
     }
 
@@ -229,25 +219,21 @@ switch ($action) {
         if ($saldo < 1) {
             responder(['ok' => false, 'error' => 'Esta orden no tiene saldo pendiente'], 409);
         }
-        // El device_id del terminal va como parámetro de la ruta
-        $rutaIntent = '/point-integration-api/payment-intents';
-        if ($cfg['device'] !== '') {
-            $rutaIntent .= '?device_id=' . rawurlencode($cfg['device']);
-        }
-        [$codigoHttp, $intent] = mp_api('POST', $rutaIntent, [
-            'amount'          => $saldo,
-            'description'     => 'Orden ' . $codigo,
-            'payment'         => ['installments' => 1, 'type' => 'debit_card'],
-            'additional_info' => ['external_reference' => $codigo, 'print_on_terminal' => true],
-        ], $cfg['token']);
-        if ($codigoHttp >= 200 && $codigoHttp < 300 && !empty($intent['id'])) {
-            responder(['ok' => true, 'intent_id' => $intent['id'], 'estado' => $intent['status'] ?? '']);
+        // Crea la orden de cobro en el terminal Point (API Point Orders)
+        $payload = [
+            'amount'             => (float)$saldo,
+            'description'        => mb_substr('Orden ' . $codigo . ' — ' . (string)$orden['cliente'], 0, 100),
+            'external_reference' => $codigo,
+        ];
+        [$codigoHttp, $ordenMP] = mp_api('POST', '/point/integration-api/devices/' . rawurlencode($cfg['device']) . '/orders', $payload, $cfg['token']);
+        if ($codigoHttp >= 200 && $codigoHttp < 300 && !empty($ordenMP['id'])) {
+            responder(['ok' => true, 'order_id' => (string)$ordenMP['id'], 'monto' => $saldo]);
         }
         // Motivo exacto del rechazo según Mercado Pago
         $detalle = '';
         foreach (['message', 'error', 'curl_error'] as $campo) {
-            if (!empty($intent[$campo])) {
-                $detalle .= ($detalle === '' ? '' : ' | ') . (is_array($intent[$campo]) ? json_encode($intent[$campo], JSON_UNESCAPED_UNICODE) : (string)$intent[$campo]);
+            if (!empty($ordenMP[$campo])) {
+                $detalle .= ($detalle === '' ? '' : ' | ') . (is_array($ordenMP[$campo]) ? json_encode($ordenMP[$campo], JSON_UNESCAPED_UNICODE) : (string)$ordenMP[$campo]);
             }
         }
         if (!empty($intent['cause'])) {
@@ -265,20 +251,25 @@ switch ($action) {
         if (!$cfg['enabled'] || $cfg['token'] === '') {
             responder(['ok' => false, 'error' => 'Mercado Pago no está habilitado'], 409);
         }
-        $intentId = trim((string)($_GET['id'] ?? ''));
-        if (preg_match('/^[A-Za-z0-9\-]{8,80}$/', $intentId) !== 1) {
-            responder(['ok' => false, 'error' => 'ID de intento inválido'], 400);
+        $orderId = trim((string)($_GET['order_id'] ?? ''));
+        if ($orderId === '') {
+            responder(['ok' => false, 'error' => 'Falta el ID de la orden de Mercado Pago'], 400);
         }
-        [$codigoHttp, $intent] = mp_api('GET', '/point-integration-api/payment-intents/' . rawurlencode($intentId), null, $cfg['token']);
-        $estado      = (string)($intent['status'] ?? '');
-        $estadoPagoP = (string)($intent['payment']['status'] ?? '');
-        $referencia  = (string)($intent['additional_info']['external_reference'] ?? '');
-        $montoIntent = (int)round((float)($intent['amount'] ?? ($intent['payment']['transaction_amount'] ?? 0)));
-        if (($estado === 'approved' || $estadoPagoP === 'approved')
-            && preg_match('/^LUH-\d{3,8}$/', $referencia) === 1 && $montoIntent > 0) {
-            mp_aplicar_pago_orden(db(), $referencia, $montoIntent, (string)($intent['payment']['id'] ?? $intentId));
+        [$codigoHttp, $ordenMP] = mp_api('GET', '/point/integration-api/orders/' . rawurlencode($orderId), null, $cfg['token']);
+        if ($codigoHttp !== 200) {
+            responder(['ok' => false, 'error' => 'No se pudo consultar el estado (HTTP ' . $codigoHttp . ')'], 502);
         }
-        responder(['ok' => $codigoHttp >= 200 && $codigoHttp < 300, 'intento' => $intent]);
+        $status = strtolower((string)($ordenMP['status'] ?? ''));
+        $isPaid = in_array($status, ['closed', 'processed', 'approved'], true);
+        $referencia = (string)($ordenMP['external_reference'] ?? '');
+        if ($isPaid && preg_match('/^LUH-\d{3,8}$/', $referencia) === 1) {
+            $montoPagado = (int)round((float)($ordenMP['total_paid_amount'] ?? 0));
+            if ($montoPagado > 0) {
+                mp_aplicar_pago_orden(db(), $referencia, $montoPagado, 'mp-order-' . $orderId);
+            }
+        }
+        responder(['ok' => true, 'estado' => $status, 'pagada' => $isPaid,
+                   'monto' => (int)round((float)($ordenMP['total_paid_amount'] ?? 0))]);
     }
 
     case 'webhook': {
