@@ -118,6 +118,24 @@
     });
   }
 
+    /** Tras una subida con respuesta OK, relee del servidor para confirmar
+     *  que realmente quedó guardado (y en qué base de datos). */
+    function verificarGuardado(resSubida) {
+      api('api/configuracion.php?action=get_all').then(function (res) {
+        if (res.ok && res.config && res.config.empresa_logo) {
+          window.mostrarToast('Logo actualizado', 'success');
+          cargar();
+          return;
+        }
+        var escritoEn = resSubida && resSubida.db ? resSubida.db : '?';
+        var leidoDe = (res.ok && res.config && res.config.db) ? res.config.db : '?';
+        estadoLogo('✗ Guardó en [' + escritoEn + '] pero al releer desde [' + leidoDe + '] no estaba — AVÍSAME ESTO', '#f87171');
+        window.mostrarToast('El servidor respondió OK pero el logo no quedó guardado', 'error');
+      }).catch(function () {
+        estadoLogo('✗ No se pudo verificar el logo guardado', '#f87171');
+      });
+    }
+
   /** Sube el logo con dos estrategias y diagnóstico visible:
    *  1) redimensiona en el navegador (max 600px PNG);
    *  2) si el navegador no pudo procesarlo (SVG/HEIC/etc.), envía el original
@@ -127,20 +145,6 @@
     var peso = Math.round(archivo.size / 1024);
     estadoLogo('Subiendo: ' + archivo.name + ' (' + peso + ' KB' + (archivo.type ? ', ' + archivo.type : ', tipo desconocido') + ')…', '#fbbf24');
 
-    function terminadoOk() {
-      // Verificación real: releer del servidor antes de dar por bueno el logo
-      api('api/configuracion.php?action=get_all').then(function (res) {
-        if (res.ok && res.config && res.config.empresa_logo) {
-          window.mostrarToast('Logo actualizado', 'success');
-          cargar();
-        } else {
-          estadoLogo('✗ El servidor respondió OK pero el logo NO quedó guardado — avísame esto', '#f87171');
-          window.mostrarToast('Respuesta OK pero el logo no quedó guardado', 'error');
-        }
-      }).catch(function () {
-        estadoLogo('✗ No se pudo verificar el logo guardado', '#f87171');
-      });
-    }
     function terminadoError(mensaje) {
       estadoLogo('✗ Error: ' + mensaje, '#f87171');
       window.mostrarToast(mensaje, 'error');
@@ -167,7 +171,7 @@
         terminadoError((res && res.error) || 'No se pudo subir el logo');
         return;
       }
-      terminadoOk();
+      verificarGuardado(res);
     }).catch(function (err) {
       terminadoError(err && err.message ? err.message : 'Error de conexión con el servidor');
     });
