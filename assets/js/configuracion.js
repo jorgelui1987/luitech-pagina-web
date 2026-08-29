@@ -310,15 +310,20 @@
         } else {
           lineas.push('✗ Conexión con Mercado Pago FALLÓ — ' + (d.mp_error || ('HTTP ' + d.mp_http)));
         }
-        // Terminales Point que Mercado Pago ve en esta cuenta
-        if (d.dispositivos_http === 200) {
-          if ((d.dispositivos || []).length > 0) {
-            lineas.push('✓ Terminales Point en tu cuenta: ' + d.dispositivos.map(function (x) { return x.id; }).join(', '));
-          } else {
-            lineas.push('✗ Tu cuenta NO tiene terminales Point registradas');
-          }
+        // Terminales Point que Mercado Pago ve en esta cuenta (API /terminals/v1)
+        if (d.dispositivos_http === 200 && (d.dispositivos || []).length > 0) {
+          d.dispositivos.forEach(function (t) {
+            var modo = t.modo || 'UNDEFINED';
+            if (modo === 'PDV') {
+              lineas.push('✓ Terminal ' + t.id + ' — modo PDV (integrado), listo para cobrar');
+            } else {
+              lineas.push('⚠ Terminal ' + t.id + ' — modo ' + modo + ': actívalo a PDV');
+            }
+          });
+        } else if (d.dispositivos_http === 200) {
+          lineas.push('✗ Tu cuenta NO tiene terminales Point registradas: crea la tienda y punto de venta en MP, y vincula el terminal');
         } else if (d.dispositivos_http === 404) {
-          lineas.push('✗ MP no reconoce la API de Point para esta aplicación: agrega el producto "Point" en Tus integraciones');
+          lineas.push('✗ MP no reconoce la API de terminales para esta aplicación: agrega el producto "Point" en Tus integraciones');
           if (d.dispositivos_body) lineas.push('   Respuesta MP: ' + d.dispositivos_body);
         } else {
           lineas.push('✗ No se pudo listar los terminales (HTTP ' + d.dispositivos_http + ')' + (d.dispositivos_body ? ': ' + d.dispositivos_body : ''));

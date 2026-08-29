@@ -162,13 +162,48 @@ switch ($action) {
     }
 
     case 'point_dispositivos': {
+        // Lista los terminales Point vinculados a la cuenta (API oficial /terminals/v1)
         exigir_admin();
         $cfg = mp_config();
         if (!$cfg['enabled'] || $cfg['token'] === '') {
             responder(['ok' => false, 'error' => 'Mercado Pago no está habilitado'], 409);
         }
-        [$codigoHttp, $datos] = mp_api('GET', '/point-integration-api/devices', null, $cfg['token']);
-        responder(['ok' => $codigoHttp >= 200 && $codigoHttp < 300, 'dispositivos' => $datos]);
+        [$codigoHttp, $datos] = mp_api('GET', '/terminals/v1/list?limit=50&offset=0', null, $cfg['token']);
+        $terminales = ($datos['data']['terminals'] ?? []);
+        $lista = [];
+        foreach ((is_array($terminales) ? $terminales : []) as $t) {
+            $lista[] = [
+                'id'             => (string)($t['id'] ?? ''),
+                'pos_id'         => (string)($t['pos_id'] ?? ''),
+                'store_id'       => (string)($t['store_id'] ?? ''),
+                'operating_mode' => (string)($t['operating_mode'] ?? ''),
+            ];
+        }
+        responder(['ok' => $codigoHttp >= 200 && $codigoHttp < 300, 'http' => $codigoHttp,
+                   'terminales' => $lista,
+                   'body' => $codigoHttp !== 200 ? substr(json_encode($datos, JSON_UNESCAPED_UNICODE), 0, 250) : '']);
+    }
+
+    case 'point_pdv': {
+        // Activa el modo PDV (integrado) en el terminal configurado
+        exigir_admin();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            responder(['ok' => false, 'error' => 'Método no permitido'], 405);
+        }
+        $cfg = mp_config();
+        if (!$cfg['enabled'] || $cfg['token'] === '') {
+            responder(['ok' => false, 'error' => 'Mercado Pago no está habilitado'], 409);
+        }
+        $deviceId = trim((string)(leer_cuerpo()['device_id'] ?? ($cfg['device'] ?? '')));
+        if ($deviceId === '') {
+            responder(['ok' => false, 'error' => 'Falta el Device ID del terminal'], 400);
+        }
+        [$codigoHttp, $resultado] = mp_api('PATCH', '/terminals/v1/setup', [
+            'terminals' => [['id' => $deviceId, 'operating_mode' => 'PDV']],
+        ], $cfg['token']);
+        $ok = $codigoHttp >= 200 && $codigoHttp < 300;
+        responder(['ok' => $ok, 'http' => $codigoHttp,
+                   'detalle' => $ok ? ($resultado['terminals'][0] ?? '') : substr(json_encode($resultado, JSON_UNESCAPED_UNICODE), 0, 250)]);
     }
 
     case 'point_cobrar': {
@@ -320,20 +355,23 @@ switch ($action) {
                 $diag['mp_error'] = 'HTTP ' . $codigoHttp;
             }
 
-            // Terminales Point que MP ve en esta cuenta (clave para el 404)
-            [$codigoHttpD, $dispositivos] = mp_api('GET', '/point-integration-api/devices', null, $cfg['token']);
-            $diag['dispositivos_http'] = $codigoHttpD;
-            $diag['dispositivos_body'] = ($codigoHttpD !== 200)
-                ? substr(json_encode($dispositivos, JSON_UNESCAPED_UNICODE), 0, 250) : '';
+            [$codigoHttp, $datos] = mp_api('GET', '/terminals/v1/list?limit=50&offset=0', null, $cfg['token']);
+            $diag['dispositivos_http'] = $codigoHttp;
+            $diag['dispositivos_body'] = ($codigoHttp !== 200)
+                ? substr(json_encode($datos, JSON_UNESCAPED_UNICODE), 0, 250) : '';
             $lista = [];
-            $crudos = isset($dispositivos['results']) ? $dispositivos['results'] : $dispositivos;
-            foreach ((is_array($crudos) ? $crudos : []) as $disp) {
-                if (is_array($disp) && !empty($disp['id'])) {
-                    $lista[] = ['id' => (string)$disp['id'], 'nombre' => (string)($disp['name'] ?? '')];
+            $crudos = ($datos['data']['terminals'] ?? []);
+            foreach ((is_array($crudos) ? $crudos : []) as $t) {
+                if (is_array($t) && !empty($t['id'])) {
+                    $lista[] = [
+                        'id'    => (string)$t['id'],
+                        'modo'  => (string)($t['operating_mode'] ?? 'UNDEFINED'),
+                        'pos'   => (string)($t['pos_id'] ?? ''),
+                    ];
                 }
             }
             $diag['dispositivos'] = $lista;
-            if ($codigoHttpD === 0) { $diag['dispositivos_error'] = (string)($dispositivos['curl_error'] ?? ''); }
+            if ($codigoHttp === 0) { $diag['dispositivos_error'] = (string)($datos['curl_error'] ?? ''); }
         }
         responder(['ok' => true, 'diagnostico' => $diag]);
     }
