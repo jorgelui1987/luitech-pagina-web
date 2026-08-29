@@ -108,7 +108,7 @@
                 <div class="mt-2">
                     <label class="lb" for="cfg-mp-webhook">URL de webhook — cópiala con el botón y pégala en tu cuenta de Mercado Pago (Tus integraciones → Webhooks)</label>
                     <div style="display:flex; gap:6px;">
-                        <input class="inp" id="cfg-mp-webhook" readonly style="flex:1;">
+                        <input class="inp" id="cfg-mp-webhook" readonly style="flex:1;" onfocus="this.select()" title="Haz clic para seleccionar toda la URL y cópiala con Ctrl+C (o usa el botón)">
                         <button type="button" id="cfg-webhook-copiar" class="btn2" title="Copiar URL"><i class="fa-solid fa-copy"></i></button>
                     </div>
                     <p class="nota" style="margin-top:4px">Debe comenzar con <b>https://</b> (Mercado Pago exige candado para enviar las notificaciones). Esta URL la genera tu sistema: no se escribe ni se pega ahí.</p>
