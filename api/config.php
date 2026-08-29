@@ -33,6 +33,10 @@ const ADMIN_USER_MIN_LEN = 3;
 // --- Encabezados comunes para endpoints JSON --------------------------
 function iniciar_respuesta_json(): void
 {
+    // Los errores se registran en el log del servidor, NUNCA se imprimen:
+    // un warning impreso antes del JSON corrompe la respuesta (HTTP 200 inválido).
+    ini_set('display_errors', '0');
+    error_reporting(E_ALL);
     header('Content-Type: application/json; charset=utf-8');
     header('X-Content-Type-Options: nosniff');
     header('Cache-Control: no-store');
@@ -87,7 +91,13 @@ function exigir_admin(): void
 function responder(array $datos, int $codigo_http = 200): never
 {
     http_response_code($codigo_http);
-    echo json_encode($datos, JSON_UNESCAPED_UNICODE);
+    $json = json_encode($datos, JSON_UNESCAPED_UNICODE);
+    if ($json === false) {
+        // Datos con UTF-8 inválido (p. ej. texto antiguo en la BD): sustituye
+        // los bytes malos en vez de devolver un cuerpo vacío/inválido.
+        $json = json_encode($datos, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR);
+    }
+    echo ($json === false) ? '{"ok":false,"error":"Error interno al codificar la respuesta"}' : $json;
     exit;
 }
 

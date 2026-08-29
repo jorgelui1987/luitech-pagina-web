@@ -209,7 +209,7 @@ switch ($action) {
         if (preg_match('/^LUH-\d{3,8}$/', $codigo) !== 1) {
             responder(['ok' => false, 'error' => 'Código inválido'], 400);
         }
-        $st = db()->prepare('SELECT total, abono FROM ordenes WHERE codigo = ?');
+        $st = db()->prepare('SELECT total, abono, cliente FROM ordenes WHERE codigo = ?');
         $st->execute([$codigo]);
         $orden = $st->fetch();
         if (!$orden) {
