@@ -128,8 +128,18 @@
     estadoLogo('Subiendo: ' + archivo.name + ' (' + peso + ' KB' + (archivo.type ? ', ' + archivo.type : ', tipo desconocido') + ')…', '#fbbf24');
 
     function terminadoOk() {
-      window.mostrarToast('Logo actualizado', 'success');
-      cargar(); // refresca indicador (verde) y vista previa
+      // Verificación real: releer del servidor antes de dar por bueno el logo
+      api('api/configuracion.php?action=get_all').then(function (res) {
+        if (res.ok && res.config && res.config.empresa_logo) {
+          window.mostrarToast('Logo actualizado', 'success');
+          cargar();
+        } else {
+          estadoLogo('✗ El servidor respondió OK pero el logo NO quedó guardado — avísame esto', '#f87171');
+          window.mostrarToast('Respuesta OK pero el logo no quedó guardado', 'error');
+        }
+      }).catch(function () {
+        estadoLogo('✗ No se pudo verificar el logo guardado', '#f87171');
+      });
     }
     function terminadoError(mensaje) {
       estadoLogo('✗ Error: ' + mensaje, '#f87171');
@@ -240,10 +250,50 @@
       subirLogo(archivo);
     });
     $('cfg-logo-quitar').addEventListener('click', quitarLogo);
+    $('cfg-logo-probar').addEventListener('click', probarSubida);
     $('form-clave').addEventListener('submit', cambiarClave);
 
     api('api/auth.php?action=me').then(function (res) {
       mostrarVista(!!(res && res.logueado));
     }).catch(function () { mostrarVista(false); });
   });
+  /** Sube una imagen de prueba generada por el navegador: si da verde, el
+   *  sistema de subida funciona y el problema es el archivo del usuario. */
+  function probarSubida() {
+    var lienzo = document.createElement('canvas');
+    lienzo.width = 160;
+    lienzo.height = 40;
+    var ctx = lienzo.getContext('2d');
+    ctx.fillStyle = '#22d3ee';
+    ctx.fillRect(0, 0, 160, 40);
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.fillText('LOGO TEST', 28, 26);
+    lienzo.toBlob(function (blob) {
+      if (!blob) {
+        estadoLogo('✗ Error: el navegador no pudo generar la imagen de prueba', '#f87171');
+        return;
+      }
+      estadoLogo('Probando subida con imagen de prueba…', '#fbbf24');
+      var fd = new FormData();
+      fd.append('logo', blob, 'prueba.png');
+      fetch('api/configuracion.php?action=set_logo', {
+        method: 'POST', body: fd, credentials: 'same-origin'
+      }).then(function (r) { return r.json(); }).then(function (res) {
+        if (!res.ok) {
+          estadoLogo('✗ La prueba falló: ' + (res.error || 'motivo desconocido'), '#f87171');
+          window.mostrarToast('La prueba falló: ' + (res.error || ''), 'error');
+          return;
+        }
+        estadoLogo('✓ La subida FUNCIONA (imagen de prueba guardada). El problema es el archivo de tu logo — mira su formato', '#34d399');
+        window.mostrarToast('Subida correcta: el problema es el formato de tu archivo', 'error');
+        cargar();
+      }).catch(function () {
+        estadoLogo('✗ La prueba falló: error de conexión con el servidor', '#f87171');
+        window.mostrarToast('La prueba falló: error de conexión', 'error');
+      });
+    }, 'image/png');
+  }
+
+  /* __CONT__ */
 })();
