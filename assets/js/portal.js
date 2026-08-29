@@ -28,9 +28,18 @@
           window.mostrarToast(res.error || 'Orden no encontrada.', 'error');
           return;
         }
-        cargarDatosEnTracker(res.orden);
-        window.mostrarToast('¡Orden encontrada! Código: ' + codigo, 'success');
-        $('seguimiento').scrollIntoView({ behavior: 'smooth' });
+        try {
+          cargarDatosEnTracker(res.orden);
+          window.mostrarToast('¡Orden encontrada! Código: ' + codigo, 'success');
+          $('seguimiento').scrollIntoView({ behavior: 'smooth' });
+        } catch (errRender) {
+          // Error al pintar la orden (no de conexión): muestra el motivo exacto
+          window.mostrarToast('La orden existe pero hubo un error al mostrarla: ' +
+            (errRender && errRender.message ? errRender.message : ''), 'error');
+          if (window.console && console.error) {
+            console.error('[Consulta Express] Error al renderizar el tracker:', errRender);
+          }
+        }
       })
       .catch(function (err) {
         var detalle = err && err.message ? err.message : 'sin respuesta del servidor';
@@ -41,6 +50,12 @@
       });
   }
   window.buscarOrdenExpress = buscarOrdenExpress;
+
+  /** Convierte 'YYYY-MM-DD' en 'DD/MM/YYYY' (si el formato no cuadra, lo deja igual). */
+  function formatearFecha(fecha) {
+    var partes = String(fecha || '').split('-');
+    return partes.length === 3 ? partes[2] + '/' + partes[1] + '/' + partes[0] : String(fecha || '');
+  }
 
   /* ------------------------------------------------------------ TRACKER */
   var CLASES_BADGE = {
