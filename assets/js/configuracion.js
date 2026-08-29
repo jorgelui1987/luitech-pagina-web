@@ -42,6 +42,17 @@
         $('cfg-logo-img').classList.add('hidden');
         $('cfg-logo-vacio').classList.remove('hidden');
       }
+      // Indicador claro de si el logo quedó guardado en el servidor
+      var estado = $('cfg-logo-estado');
+      if (estado) {
+        if (cfg.empresa_logo) {
+          estado.textContent = '✓ Logo cargado: ' + String(cfg.empresa_logo).split('/').pop();
+          estado.style.color = '#34d399';
+        } else {
+          estado.textContent = '✗ Sin logo subido (la boleta saldrá sin logo)';
+          estado.style.color = '#f87171';
+        }
+      }
       var webhook = $('cfg-mp-webhook');
       if (webhook) webhook.value = cfg.webhook_mp || '';
     }).catch(function () {});
