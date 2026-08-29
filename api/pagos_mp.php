@@ -225,19 +225,13 @@ switch ($action) {
             responder(['ok' => false, 'error' => 'Esta orden no tiene saldo pendiente'], 409);
         }
         // Crea la orden de cobro en el terminal Point (API Orders /v1/orders,
-        // la misma que genera las notificaciones "order.processed" del webhook)
+        // según schema oficial: el monto va en transactions.payments.amount
+        // como string entero sin decimales; config.point.terminal_id asigna el terminal)
         $payload = [
             'type'               => 'point',
-            'total_amount'       => (float)$saldo,
             'external_reference' => $codigo,
-            'description'        => mb_substr('Orden ' . $codigo . ' — ' . (string)$orden['cliente'], 0, 100),
-            'items'              => [[
-                'title'        => mb_substr('Orden ' . $codigo, 0, 60),
-                'quantity'     => 1,
-                'unit_amount'  => (float)$saldo,
-                'unit_measure' => 'unit',
-                'type'         => 'other',
-            ]],
+            'description'        => mb_substr('Orden ' . $codigo . ' - ' . (string)$orden['cliente'], 0, 100),
+            'transactions'       => ['payments' => ['amount' => (string)$saldo]],
             'config'             => ['point' => ['terminal_id' => $cfg['device']]],
         ];
         [$codigoHttp, $ordenMP] = mp_api('POST', '/v1/orders', $payload, $cfg['token'], 'luitech-' . $codigo . '-' . $saldo . '-' . time());
@@ -249,6 +243,15 @@ switch ($action) {
         foreach (['message', 'error', 'curl_error'] as $campo) {
             if (!empty($ordenMP[$campo])) {
                 $detalle .= ($detalle === '' ? '' : ' | ') . (is_array($ordenMP[$campo]) ? json_encode($ordenMP[$campo], JSON_UNESCAPED_UNICODE) : (string)$ordenMP[$campo]);
+            }
+        }
+        if (!empty($ordenMP['errors']) && is_array($ordenMP['errors'])) {
+            foreach ($ordenMP['errors'] as $e) {
+                if (!is_array($e)) continue;
+                $detalle .= ($detalle === '' ? '' : ' | ')
+                    . ($e['code'] ?? '')
+                    . (isset($e['message']) ? ': ' . $e['message'] : '')
+                    . (isset($e['detail']) ? ' — ' . (is_array($e['detail']) ? json_encode($e['detail'], JSON_UNESCAPED_UNICODE) : $e['detail']) : '');
             }
         }
         if (!empty($ordenMP['cause'])) {
