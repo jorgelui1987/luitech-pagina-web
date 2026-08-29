@@ -22,6 +22,26 @@
       });
   }
 
+  /** Imprime la ventana emergente esperando a que carguen sus imágenes
+   *  (sin esto, el logo salía en blanco: print() corría antes de la carga). */
+  function imprimirVentana(w) {
+    w.focus();
+    var imagenes = w.document.images;
+    var pendientes = imagenes.length;
+    var impresa = false;
+    function ahora() {
+      if (impresa) return;
+      impresa = true;
+      w.print();
+    }
+    if (pendientes === 0) { ahora(); return; }
+    Array.prototype.forEach.call(imagenes, function (im) {
+      im.addEventListener('load', function () { pendientes--; if (pendientes <= 0) ahora(); });
+      im.addEventListener('error', function () { pendientes--; if (pendientes <= 0) ahora(); });
+    });
+    setTimeout(ahora, 2500); // respaldo si una imagen nunca responde
+  }
+
   function mostrarVista(logueado) {
     $('view-nologin').classList.toggle('hidden', logueado);
     $('view-pos').classList.toggle('hidden', !logueado);
@@ -122,34 +142,16 @@
     return { neto: neto, iva: total - neto };
   }
 
-  /** Configuración: tasa de IVA + datos de la empresa para la boleta. */
+  /** Configuración: tasa de IVA + datos de la empresa para la boleta.
+   *  (La tasa se edita en Configuración; aquí solo se muestra el desglose.) */
   function cargarConfig() {
     api('api/configuracion.php?action=get_all').then(function (res) {
       if (!res.ok) return;
       empresaCfg = res.config || {};
       ivaTasa = parseInt(empresaCfg.iva_porcentaje, 10);
       if (isNaN(ivaTasa) || ivaTasa < 0) ivaTasa = 19;
-      $('pos-iva').value = String(ivaTasa);
       pintarCarrito();
     }).catch(function () {});
-  }
-
-  /** Guarda la tasa de IVA (persistente para todas las ventas futuras). */
-  function guardarIVA() {
-    var v = parseInt($('pos-iva').value, 10);
-    if (isNaN(v) || v < 0 || v > 100) {
-      window.mostrarToast('El IVA debe estar entre 0 y 100', 'error');
-      return;
-    }
-    api('api/configuracion.php?action=set', { method: 'POST', body: { iva_porcentaje: v } })
-      .then(function (res) {
-        if (!res.ok) { window.mostrarToast(res.error || 'No se pudo guardar el IVA', 'error'); return; }
-        ivaTasa = v;
-        window.mostrarToast('IVA actualizado a ' + v + '%', 'success');
-        pintarCarrito();
-      }).catch(function () {
-        window.mostrarToast('Error de conexión con el servidor', 'error');
-      });
   }
 
   function pintarCarrito() {
@@ -317,8 +319,7 @@
         '</body></html>'
       );
       w.document.close();
-      w.focus();
-      w.print();
+      imprimirVentana(w);
     }).catch(function () {});
   }
 
@@ -327,7 +328,6 @@
     $('buscar').addEventListener('input', function () { pintarCatalogo(this.value); });
     $('btn-limpiar').addEventListener('click', function () { carrito = []; pintarCarrito(); });
     $('btn-cobrar').addEventListener('click', cobrar);
-    $('btn-iva').addEventListener('click', guardarIVA);
 
     api('api/auth.php?action=me').then(function (res) {
       mostrarVista(!!res.logueado);

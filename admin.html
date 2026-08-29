@@ -51,9 +51,6 @@
         #modal-orden{ position:fixed; inset:0; z-index:9998; background:rgba(2,6,23,.82); }
         #modal-orden > div{ max-height:90vh; overflow-y:auto; }
         #modal-orden > div > * + *{ margin-top:14px; }
-        #modal-clave{ position:fixed; inset:0; z-index:9998; background:rgba(2,6,23,.82); }
-        #modal-clave form{ max-height:90vh; overflow-y:auto; }
-        #modal-clave form > * + *{ margin-top:12px; }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -128,10 +125,6 @@
                        class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-2 rounded-lg font-semibold transition-all">
                         <i class="fa-solid fa-gear"></i>
                     </a>
-                    <button type="button" id="btn-clave" title="Cambiar mi contraseña"
-                            class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-2 rounded-lg font-semibold transition-all">
-                        <i class="fa-solid fa-key"></i>
-                    </button>
                     <a href="tv.html" target="_blank" rel="noopener" title="Abrir pantalla de sala de espera"
                        class="bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 px-3 py-2 rounded-lg font-semibold transition-all">
                         <i class="fa-solid fa-tv mr-1"></i> Modo TV
@@ -325,29 +318,6 @@
             </section>
 
         </main>
-    </div>
-
-    <!-- Modal: cambiar contraseña -->
-    <div id="modal-clave" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[9998] flex items-center justify-center p-4">
-        <form id="form-clave" class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-sm p-6 space-y-3 shadow-2xl">
-            <div class="flex justify-between items-center">
-                <h2 class="font-extrabold text-white text-sm"><i class="fa-solid fa-key text-cyan-400 mr-1"></i>Cambiar mi contraseña</h2>
-                <button type="button" id="btn-clave-cerrar" aria-label="Cerrar"
-                        class="text-slate-400 hover:text-white w-8 h-8 rounded-lg hover:bg-slate-800 transition-all">
-                    <i class="fa-solid fa-xmark pointer-events-none"></i>
-                </button>
-            </div>
-            <input type="password" id="clave-actual" required placeholder="Contraseña ACTUAL" autocomplete="current-password"
-                   class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2.5 text-white text-xs focus:outline-none focus:border-cyan-500">
-            <input type="password" id="clave-nueva" required minlength="8" maxlength="72" placeholder="Nueva (mínimo 8 caracteres)" autocomplete="new-password"
-                   class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2.5 text-white text-xs focus:outline-none focus:border-cyan-500">
-            <input type="password" id="clave-repetida" required minlength="8" maxlength="72" placeholder="Repite la nueva" autocomplete="new-password"
-                   class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2.5 text-white text-xs focus:outline-none focus:border-cyan-500">
-            <button type="submit" id="btn-clave-guardar"
-                    class="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2.5 rounded-xl text-sm transition-all disabled:opacity-40">
-                Guardar nueva contraseña
-            </button>
-        </form>
     </div>
 
     <!-- Modal: detalle de orden (acta de recepción + cobro + entrega + bitácora) -->

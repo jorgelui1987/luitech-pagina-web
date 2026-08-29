@@ -1240,6 +1240,26 @@
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
+  /** Imprime la ventana emergente esperando a que carguen sus imágenes
+   *  (sin esto, el logo salía en blanco: print() corría antes de la carga). */
+  function imprimirVentana(ventana) {
+    ventana.focus();
+    var imagenes = ventana.document.images;
+    var pendientes = imagenes.length;
+    var impresa = false;
+    function ahora() {
+      if (impresa) return;
+      impresa = true;
+      ventana.print();
+    }
+    if (pendientes === 0) { ahora(); return; }
+    Array.prototype.forEach.call(imagenes, function (im) {
+      im.addEventListener('load', function () { pendientes--; if (pendientes <= 0) ahora(); });
+      im.addEventListener('error', function () { pendientes--; if (pendientes <= 0) ahora(); });
+    });
+    setTimeout(ahora, 2500); // respaldo si una imagen nunca responde
+  }
+
   /** Recibo de entrega imprimible (ventana nueva con estilos propios). */
   function imprimirRecibo(o) {
     if (!o) return;
@@ -1301,40 +1321,7 @@
     ventana.document.open();
     ventana.document.write(html);
     ventana.document.close();
-    ventana.focus();
-    ventana.print();
-  }
-
-  /* ------------------------------------------------------ CAMBIAR CLAVE */
-  function abrirModalClave() {
-    ['clave-actual','clave-nueva','clave-repetida'].forEach(function (i) { $(i).value = ''; });
-    $('modal-clave').classList.remove('hidden');
-    $('clave-actual').focus();
-  }
-  function cerrarModalClave() { $('modal-clave').classList.add('hidden'); }
-
-  function guardarNuevaClave(ev) {
-    ev.preventDefault();
-    var actual = $('clave-actual').value;
-    var nueva  = $('clave-nueva').value;
-    var repite = $('clave-repetida').value;
-
-    if (nueva !== repite) { window.mostrarToast('La nueva contraseña y su repetición no coinciden', 'error'); return; }
-    if (nueva.length < 8) { window.mostrarToast('La nueva contraseña debe tener al menos 8 caracteres', 'error'); return; }
-
-    var boton = $('btn-clave-guardar');
-    boton.disabled = true;
-
-    api('api/auth.php?action=cambiar_clave', {
-      method: 'POST',
-      body: { clave_actual: actual, nueva: nueva, repetida: repite }
-    }).then(function (res) {
-      if (!res.ok) { window.mostrarToast(res.error || 'No se pudo cambiar', 'error'); return; }
-      cerrarModalClave();
-      window.mostrarToast('Contraseña actualizada ✓', 'success');
-    }).catch(function () {
-      window.mostrarToast('Error de conexión con el servidor', 'error');
-    }).finally(function () { boton.disabled = false; });
+    imprimirVentana(ventana);
   }
 
   /* ------------------------------------------------------------ ARRANQUE */
@@ -1344,9 +1331,6 @@
     $('btn-logout').addEventListener('click', cerrarSesion);
     $('btn-recargar').addEventListener('click', renderizarTablaAdmin);
     $('btn-simular').addEventListener('click', simularAvanceOrden);
-    $('btn-clave').addEventListener('click', abrirModalClave);
-    $('btn-clave-cerrar').addEventListener('click', cerrarModalClave);
-    $('form-clave').addEventListener('submit', guardarNuevaClave);
 
     // Acta de recepción: firma táctil, fotos y accesorios
     iniciarFirma();
@@ -1405,7 +1389,7 @@
 
     // Cerrar los modales con Escape
     document.addEventListener('keydown', function (ev) {
-      if (ev.key === 'Escape') { cerrarModalClave(); cerrarModalOrden(); }
+      if (ev.key === 'Escape') { cerrarModalOrden(); }
     });
 
     // Verificar sesión existente al cargar
