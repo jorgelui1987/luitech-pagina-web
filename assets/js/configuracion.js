@@ -290,6 +290,18 @@
         } else {
           lineas.push('✗ Conexión con Mercado Pago FALLÓ — ' + (d.mp_error || ('HTTP ' + d.mp_http)));
         }
+        // Terminales Point que Mercado Pago ve en esta cuenta
+        if (d.dispositivos_http === 200) {
+          if ((d.dispositivos || []).length > 0) {
+            lineas.push('✓ Terminales Point en tu cuenta: ' + d.dispositivos.map(function (x) { return x.id; }).join(', '));
+          } else {
+            lineas.push('✗ Tu cuenta NO tiene terminales Point registradas');
+          }
+        } else if (d.dispositivos_http === 404) {
+          lineas.push('✗ MP no reconoce la API de Point para esta aplicación: agrega el producto "Point" en Tus integraciones');
+        } else {
+          lineas.push('✗ No se pudo listar los terminales (HTTP ' + d.dispositivos_http + ')');
+        }
       } else {
         lineas.push('— Prueba de conexión omitida (falta token o cURL)');
       }

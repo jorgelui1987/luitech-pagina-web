@@ -298,6 +298,19 @@ switch ($action) {
                 $diag['token_valido'] = 0;
                 $diag['mp_error'] = 'HTTP ' . $codigoHttp;
             }
+
+            // Terminales Point que MP ve en esta cuenta (clave para el 404)
+            [$codigoHttpD, $dispositivos] = mp_api('GET', '/point-integration-api/devices', null, $cfg['token']);
+            $diag['dispositivos_http'] = $codigoHttpD;
+            $lista = [];
+            $crudos = isset($dispositivos['results']) ? $dispositivos['results'] : $dispositivos;
+            foreach ((is_array($crudos) ? $crudos : []) as $disp) {
+                if (is_array($disp) && !empty($disp['id'])) {
+                    $lista[] = ['id' => (string)$disp['id'], 'nombre' => (string)($disp['name'] ?? '')];
+                }
+            }
+            $diag['dispositivos'] = $lista;
+            if ($codigoHttpD === 0) { $diag['dispositivos_error'] = (string)($dispositivos['curl_error'] ?? ''); }
         }
         responder(['ok' => true, 'diagnostico' => $diag]);
     }
