@@ -164,11 +164,21 @@
 
   function actualizarBotonPoint() {
     var b = $('btn-point');
-    if (!b) return;
-    b.classList.toggle('hidden', !puntoDisponible());
-    if (!esperandoPoint) {
-      b.disabled = !carrito.length;
-      b.innerHTML = '<i class="fa-solid fa-credit-card mr-2"></i>Cobrar con Point';
+    if (!b || esperandoPoint) return;
+    var disp = puntoDisponible();
+    b.classList.toggle('hidden', !disp);
+    b.disabled = !carrito.length;
+    b.innerHTML = '<i class="fa-solid fa-credit-card mr-2"></i>Cobrar con Point';
+    if (!carrito.length) { estadoPoint(''); return; }
+    if (!disp) {
+      // Diagnóstico visible: por qué el cobro Point no está disponible
+      var motivo = 'Mercado Pago deshabilitado';
+      if (!empresaCfg) motivo = 'Cargando configuración…';
+      else if (String(empresaCfg.mp_enabled) !== '1') motivo = 'Mercado Pago DESHABILITADO en Configuración → Mercado Pago';
+      else if (!(empresaCfg.mp_point_device || '').length) motivo = 'Falta el Device ID del terminal en Configuración → Mercado Pago';
+      estadoPoint('ℹ Cobro Point no disponible: ' + motivo, '#94a3b8');
+    } else {
+      estadoPoint(''); // listo para usar
     }
   }
 
