@@ -249,14 +249,35 @@ switch ($action) {
     case 'webhook': {
         // PÚBLICO: Mercado Pago avisa aquí. No exige sesión y siempre responde 200
         // (para que MP no reintente infinito). La validación real es consultar el
-        // pago con el token del comercio guardado en Configuración.
+        // pago/intento con el token del comercio guardado en Configuración.
         $d = leer_cuerpo();
         $pagoId = (string)($d['data']['id'] ?? $d['id'] ?? $_GET['data.id'] ?? '');
-        if ($pagoId === '' || preg_match('/^\d{5,20}$/', $pagoId) !== 1) {
+        $tipo   = (string)($d['type'] ?? $d['topic'] ?? $_GET['type'] ?? 'payment');
+        if ($pagoId === '') {
             responder(['ok' => true]);
         }
         $cfg = mp_config();
         if (!$cfg['enabled'] || $cfg['token'] === '') {
+            responder(['ok' => true]);
+        }
+
+        // Notificaciones del terminal Point (intento de pago integrado)
+        if ($tipo === 'point_integration_webhook') {
+            if (preg_match('/^[A-Za-z0-9\-]{8,120}$/', $pagoId) !== 1) {
+                responder(['ok' => true]);
+            }
+            [$codigoHttpI, $intent] = mp_api('GET', '/point-integration-api/payment-intents/' . rawurlencode($pagoId), null, $cfg['token']);
+            $referencia  = (string)($intent['additional_info']['external_reference'] ?? '');
+            $montoIntent = (int)round((float)($intent['amount'] ?? ($intent['payment']['transaction_amount'] ?? 0)));
+            $aprobado    = (($intent['status'] ?? '') === 'approved' || (($intent['payment']['status'] ?? '') === 'approved'));
+            if ($aprobado && preg_match('/^LUH-\d{3,8}$/', $referencia) === 1 && $montoIntent > 0) {
+                mp_aplicar_pago_orden(db(), $referencia, $montoIntent, (string)($intent['payment']['id'] ?? $pagoId));
+            }
+            responder(['ok' => true]);
+        }
+
+        // Pagos normales (link/QR)
+        if (preg_match('/^\d{5,20}$/', $pagoId) !== 1) {
             responder(['ok' => true]);
         }
         [$codigoHttp, $pago] = mp_api('GET', '/v1/payments/' . $pagoId, null, $cfg['token']);
