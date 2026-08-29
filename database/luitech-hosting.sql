@@ -44,6 +44,17 @@ CREATE TABLE IF NOT EXISTS ordenes (
     accesorios     VARCHAR(255)      NULL,
     obs_recepcion  VARCHAR(250)      NULL,
     firma_ingreso  VARCHAR(255)      NULL,
+    -- Cobro y cierre: valor de la reparación, pagos, garantía y entrega
+    precio_repuestos INT UNSIGNED    NOT NULL DEFAULT 0,
+    mano_obra        INT UNSIGNED    NOT NULL DEFAULT 0,
+    total            INT UNSIGNED    NOT NULL DEFAULT 0,
+    abono            INT UNSIGNED    NOT NULL DEFAULT 0,
+    estado_pago    ENUM('Pendiente','Abonado','Pagado') NOT NULL DEFAULT 'Pendiente',
+    metodo_pago    ENUM('Efectivo','Debito','Credito','Transferencia') NULL,
+    garantia_dias  SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    fecha_entrega  DATETIME          NULL,
+    entregado_a    VARCHAR(120)      NULL,
+    firma_entrega  VARCHAR(255)      NULL,
     fecha_ingreso  DATE              NOT NULL,
     creado_en      TIMESTAMP         NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP         NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -62,6 +73,21 @@ CREATE TABLE IF NOT EXISTS orden_fotos (
     creado_en    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (orden_codigo) REFERENCES ordenes(codigo) ON DELETE CASCADE,
     INDEX idx_of_orden (orden_codigo)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- Bitácora de reparación (historial técnico por orden: notas y cambios
+-- de estado). Se borra en cascada junto con la orden.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS orden_bitacora (
+    id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    orden_codigo VARCHAR(12)  NOT NULL,
+    tecnico      VARCHAR(80)  NOT NULL DEFAULT '',
+    nota         VARCHAR(500) NOT NULL,
+    estado_nuevo VARCHAR(30)  NULL,
+    creado_en    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (orden_codigo) REFERENCES ordenes(codigo) ON DELETE CASCADE,
+    INDEX idx_ob_orden (orden_codigo)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT IGNORE INTO ordenes (codigo, cliente, equipo, tipo, falla, estado, avance, tecnico, fecha_ingreso) VALUES

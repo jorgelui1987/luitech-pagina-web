@@ -89,6 +89,42 @@ foreach ($migracionColumnas as $columna => $sql) {
     }
 }
 
+// --- Cobro y cierre de la orden (idempotente) ----------------------------
+// Valor de la reparación (repuestos + mano de obra), pagos, garantía y
+// datos de la entrega física (fecha, quién retira, su firma).
+$migracionCobro = [
+    'precio_repuestos' => 'ALTER TABLE ordenes ADD COLUMN precio_repuestos INT UNSIGNED NOT NULL DEFAULT 0 AFTER firma_ingreso',
+    'mano_obra'        => 'ALTER TABLE ordenes ADD COLUMN mano_obra INT UNSIGNED NOT NULL DEFAULT 0 AFTER precio_repuestos',
+    'total'            => 'ALTER TABLE ordenes ADD COLUMN total INT UNSIGNED NOT NULL DEFAULT 0 AFTER mano_obra',
+    'abono'            => 'ALTER TABLE ordenes ADD COLUMN abono INT UNSIGNED NOT NULL DEFAULT 0 AFTER total',
+    'estado_pago'      => "ALTER TABLE ordenes ADD COLUMN estado_pago ENUM('Pendiente','Abonado','Pagado') NOT NULL DEFAULT 'Pendiente' AFTER abono",
+    'metodo_pago'      => "ALTER TABLE ordenes ADD COLUMN metodo_pago ENUM('Efectivo','Debito','Credito','Transferencia') NULL AFTER estado_pago",
+    'garantia_dias'    => 'ALTER TABLE ordenes ADD COLUMN garantia_dias SMALLINT UNSIGNED NOT NULL DEFAULT 0 AFTER metodo_pago',
+    'fecha_entrega'    => 'ALTER TABLE ordenes ADD COLUMN fecha_entrega DATETIME NULL AFTER garantia_dias',
+    'entregado_a'      => 'ALTER TABLE ordenes ADD COLUMN entregado_a VARCHAR(120) NULL AFTER fecha_entrega',
+    'firma_entrega'    => 'ALTER TABLE ordenes ADD COLUMN firma_entrega VARCHAR(255) NULL AFTER entregado_a',
+];
+foreach ($migracionCobro as $columna => $sql) {
+    if (!in_array($columna, $columnasExistentes, true)) {
+        $pdo->exec($sql);
+        echo "[migrate] Columna agregada: ordenes.{$columna}\n";
+    }
+}
+
+// --- Bitácora de reparación (historial técnico por orden) -----------------
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS orden_bitacora (
+        id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        orden_codigo VARCHAR(12)  NOT NULL,
+        tecnico      VARCHAR(80)  NOT NULL DEFAULT '',
+        nota         VARCHAR(500) NOT NULL,
+        estado_nuevo VARCHAR(30)  NULL,
+        creado_en    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (orden_codigo) REFERENCES ordenes(codigo) ON DELETE CASCADE,
+        INDEX idx_ob_orden (orden_codigo)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+");
+
 // --- Fotos de respaldo por orden (evidencia del estado al ingreso) ------
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS orden_fotos (

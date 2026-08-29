@@ -57,6 +57,32 @@
     return td;
   }
 
+  /** Formatea un monto entero como moneda sin decimales (ej. $ 12.500). */
+  function monto(valor) {
+    return '$ ' + Math.max(0, Math.round(Number(valor) || 0)).toLocaleString('es-CL');
+  }
+
+  /** Saldo pendiente de una orden (nunca negativo). */
+  function saldoDe(o) {
+    return Math.max(0, (parseInt(o.total, 10) || 0) - (parseInt(o.abono, 10) || 0));
+  }
+
+  /** Chip visual del estado de pago (Pagado / Abonado / Pendiente). */
+  function chipPago(estadoPago) {
+    var chip = document.createElement('span');
+    var clase = estadoPago === 'Pagado' ? 'pagado' : (estadoPago === 'Abonado' ? 'abonado' : 'pendiente');
+    chip.className = 'chip-pago ' + clase;
+    chip.textContent = estadoPago || 'Pendiente';
+    return chip;
+  }
+
+  /** Total en vivo del presupuesto de la nueva orden (repuestos + mano de obra). */
+  function calcularTotalNueva() {
+    var repuestos = parseInt($('new-repuestos').value, 10) || 0;
+    var obra = parseInt($('new-mano-obra').value, 10) || 0;
+    $('new-total').value = monto(repuestos + obra);
+  }
+
   function selectEstado(codigo, actual) {
     var select = document.createElement('select');
     select.className = 'bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-amber-500';
@@ -483,6 +509,48 @@
     return wrap;
   }
 
+  /* -------------------------------------------------- RESUMEN DEL TALLER */
+  /** Tarjeta de métrica (etiqueta + icono + valor). */
+  function tarjetaResumen(etiqueta, icono, valor, colorValor) {
+    var d = document.createElement('div');
+    d.className = 'bg-slate-950/50 border border-slate-800/80 rounded-xl p-3';
+    var p1 = document.createElement('p');
+    p1.className = 'text-[10px] uppercase tracking-wider text-slate-500 font-bold';
+    p1.textContent = etiqueta;
+    var icon = document.createElement('i');
+    icon.className = 'fa-solid ' + icono + ' text-cyan-400 mr-1';
+    p1.insertBefore(icon, p1.firstChild);
+    var p2 = document.createElement('p');
+    p2.className = 'text-xl font-extrabold ' + colorValor;
+    p2.textContent = valor;
+    d.appendChild(p1);
+    d.appendChild(p2);
+    return d;
+  }
+
+  /** Métricas calculadas en vivo desde la lista de órdenes. */
+  function renderResumen(ordenes) {
+    var panel = $('resumen-panel');
+    if (!panel) return;
+    var hoy = new Date();
+    var mesActual = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0');
+
+    var enTaller = 0, listas = 0, entregadasMes = 0;
+    var montoPorCobrar = 0, ordenesPorCobrar = 0;
+    ordenes.forEach(function (o) {
+      if (o.estado === 'Listo para Retiro') { listas++; } else { enTaller++; }
+      var saldo = saldoDe(o);
+      if (saldo > 0) { ordenesPorCobrar++; montoPorCobrar += saldo; }
+      if ((o.fecha_entrega || '').slice(0, 7) === mesActual) entregadasMes++;
+    });
+
+    panel.replaceChildren();
+    panel.appendChild(tarjetaResumen('En el taller', 'fa-screwdriver-wrench', String(enTaller), 'text-cyan-400'));
+    panel.appendChild(tarjetaResumen('Listas para retiro', 'fa-bell', String(listas), 'text-amber-400'));
+    panel.appendChild(tarjetaResumen('Por cobrar', 'fa-money-bill-wave', ordenesPorCobrar ? monto(montoPorCobrar) : '$ 0', ordenesPorCobrar ? 'text-red-400' : 'text-slate-500'));
+    panel.appendChild(tarjetaResumen('Entregadas este mes', 'fa-box-open', String(entregadasMes), 'text-emerald-400'));
+  }
+
   function renderizarTablaAdmin() {
     var tbody = $('admin-table-body');
     tbody.replaceChildren();
@@ -495,7 +563,7 @@
 
       if (!res.ordenes.length) {
         var vacio = celda('Aún no hay órdenes registradas. Crea la primera con el formulario superior.', 'p-6 text-center text-slate-500 italic');
-        vacio.colSpan = 8;
+        vacio.colSpan = 10;
         tbody.appendChild(vacio);
         return;
       }
@@ -524,6 +592,34 @@
         tr.appendChild(tdAvance);
 
         tr.appendChild(celda(o.tecnico, 'p-3 text-slate-400'));
+
+        // Cobro: total + chip de estado de pago (y saldo si queda pendiente)
+        var tdCobro = document.createElement('td');
+        tdCobro.className = 'p-3';
+        if ((parseInt(o.total, 10) || 0) > 0) {
+          var lineaCobro = document.createElement('div');
+          lineaCobro.className = 'flex items-center gap-2';
+          var importe = document.createElement('span');
+          importe.className = 'font-semibold text-slate-200 whitespace-nowrap';
+          importe.textContent = monto(o.total);
+          lineaCobro.appendChild(importe);
+          lineaCobro.appendChild(chipPago(o.estado_pago));
+          tdCobro.appendChild(lineaCobro);
+          var saldoN = saldoDe(o);
+          if (saldoN > 0) {
+            var saldoTxt = document.createElement('div');
+            saldoTxt.className = 'text-[10px] text-red-400';
+            saldoTxt.textContent = 'Saldo: ' + monto(saldoN);
+            tdCobro.appendChild(saldoTxt);
+          }
+        } else {
+          var sinCobro = document.createElement('span');
+          sinCobro.className = 'text-slate-600';
+          sinCobro.textContent = '—';
+          tdCobro.appendChild(sinCobro);
+        }
+        tr.appendChild(tdCobro);
+
         tr.appendChild(celda(o.fecha_ingreso, 'p-3 text-slate-500 text-xs'));
 
         var tdAcciones = document.createElement('td');
@@ -534,6 +630,8 @@
 
         tbody.appendChild(tr);
       });
+
+      renderResumen(res.ordenes);
     }).catch(function (e) {
       window.mostrarToast(e.message || 'No se pudo conectar con el servidor', 'error');
     });
@@ -592,6 +690,15 @@
     if (accs.length) cuerpo.accesorios = accs.join(', ');
     if (firmaHecha && lienzoFirma) cuerpo.firma = lienzoFirma.toDataURL('image/png');
 
+    // Presupuesto de la reparación (opcional al ingreso)
+    var repuestosN = parseInt($('new-repuestos').value, 10) || 0;
+    var obraN = parseInt($('new-mano-obra').value, 10) || 0;
+    if (repuestosN > 0) cuerpo.precio_repuestos = repuestosN;
+    if (obraN > 0) cuerpo.mano_obra = obraN;
+    if (repuestosN + obraN > 0) cuerpo.total = repuestosN + obraN;
+    var garantiaN = parseInt($('new-garantia').value, 10) || 0;
+    if (garantiaN > 0) cuerpo.garantia_dias = garantiaN;
+
     if (cuerpo.tecnico === '') delete cuerpo.tecnico;
     if (!cuerpo.fecha) delete cuerpo.fecha;
     if (!cuerpo.obs_recepcion) delete cuerpo.obs_recepcion;
@@ -607,8 +714,9 @@
         var codigoCreado = res.orden.codigo;
         window.mostrarToast('Orden ' + codigoCreado + ' creada para ' + res.orden.cliente, 'success');
 
-        // Limpiar formulario completo (datos + acta de recepción)
+        // Limpiar formulario completo (datos + acta de recepción + presupuesto)
         event.target.reset();
+        calcularTotalNueva();
         fotosNueva = [];
         renderFotosNueva();
         limpiarFirmaNueva();
@@ -686,6 +794,9 @@
 
   /* ---------------------------------------------- MODAL: DETALLE DE ORDEN */
   var ordenModalCodigo = '';
+  var lienzoFirmaEntrega = null;
+  var ctxFirmaEntrega = null;
+  var firmaEntregaHecha = false;
 
   function parDato(etiqueta, valor, ocuparFila) {
     var wrap = document.createElement('div');
@@ -733,11 +844,173 @@
       $('mo-firma-vacia').classList.remove('hidden');
     }
 
+    renderCobroModal(o);
+    renderEntregaModal(o);
+    cargarBitacora(codigo);
+
     cargarFotosOrden(codigo);
     $('modal-orden').classList.remove('hidden');
+    prepararLienzoFirmaEntrega(); // mide el lienzo ya visible
   }
 
   function cerrarModalOrden() { $('modal-orden').classList.add('hidden'); }
+
+  /* -------------------------------- COBRO / ENTREGA / BITÁCORA (MODAL) */
+  /** Devuelve el objeto de la orden abierta en el modal (o null). */
+  function ordenActualModal() {
+    var o = null;
+    ordenesCache.forEach(function (x) { if (x.codigo === ordenModalCodigo) o = x; });
+    return o;
+  }
+
+  /** Aplica cambios locales a la orden del modal (la tabla se refresca sola). */
+  function patchOrdenModal(cambios) {
+    ordenesCache.forEach(function (x) { if (x.codigo === ordenModalCodigo) Object.assign(x, cambios); });
+  }
+
+  /** Prepara el lienzo de firma de entrega (fondo blanco, trazo oscuro). */
+  function prepararLienzoFirmaEntrega() {
+    if (!lienzoFirmaEntrega) return;
+    var r = lienzoFirmaEntrega.getBoundingClientRect();
+    if (r.width < 10) return;
+    lienzoFirmaEntrega.width = Math.round(r.width);
+    lienzoFirmaEntrega.height = Math.round(r.height);
+    ctxFirmaEntrega = lienzoFirmaEntrega.getContext('2d');
+    ctxFirmaEntrega.fillStyle = '#ffffff';
+    ctxFirmaEntrega.fillRect(0, 0, lienzoFirmaEntrega.width, lienzoFirmaEntrega.height);
+    ctxFirmaEntrega.lineWidth = 2.5;
+    ctxFirmaEntrega.lineCap = 'round';
+    ctxFirmaEntrega.lineJoin = 'round';
+    ctxFirmaEntrega.strokeStyle = '#0f172a';
+    firmaEntregaHecha = false;
+  }
+
+  /** Firma táctil del recibo de entrega (dedo o mouse). */
+  function iniciarFirmaEntrega() {
+    lienzoFirmaEntrega = $('mo-firma-entrega');
+    if (!lienzoFirmaEntrega) return;
+    var dibujando = false;
+    function posicion(e) {
+      var r = lienzoFirmaEntrega.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    }
+    lienzoFirmaEntrega.addEventListener('pointerdown', function (e) {
+      e.preventDefault();
+      dibujando = true;
+      firmaEntregaHecha = true;
+      var p = posicion(e);
+      ctxFirmaEntrega.beginPath();
+      ctxFirmaEntrega.moveTo(p.x, p.y);
+      ctxFirmaEntrega.lineTo(p.x + 0.1, p.y + 0.1);
+      ctxFirmaEntrega.stroke();
+    });
+    lienzoFirmaEntrega.addEventListener('pointermove', function (e) {
+      if (!dibujando) return;
+      var p = posicion(e);
+      ctxFirmaEntrega.lineTo(p.x, p.y);
+      ctxFirmaEntrega.stroke();
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) {
+      lienzoFirmaEntrega.addEventListener(ev, function () { dibujando = false; });
+    });
+    $('btn-entrega-limpiar').addEventListener('click', function () {
+      prepararLienzoFirmaEntrega();
+    });
+  }
+
+  /** Pinta los montos de cobro de la orden abierta (total / abonado / saldo). */
+  function renderCobroModal(o) {
+    var cont = $('mo-cobro');
+    if (!cont) return;
+    cont.replaceChildren();
+    var total = parseInt(o.total, 10) || 0;
+    var abonado = parseInt(o.abono, 10) || 0;
+    var saldo = Math.max(0, total - abonado);
+    cont.appendChild(cajaMonto('Total', monto(total), 'text-white'));
+    cont.appendChild(cajaMonto('Abonado', monto(abonado), 'text-amber-400'));
+    cont.appendChild(cajaMonto('Saldo', monto(saldo), saldo > 0 ? 'text-red-400' : 'text-emerald-400'));
+
+    var fila = document.createElement('div');
+    fila.className = 'flex items-center justify-between gap-2';
+    fila.style.gridColumn = '1 / -1';
+    var izquierda = document.createElement('div');
+    izquierda.className = 'flex items-center gap-2';
+    izquierda.appendChild(chipPago(o.estado_pago));
+    if (o.metodo_pago) {
+      var mp = document.createElement('span');
+      mp.className = 'text-[10px] text-slate-500';
+      mp.textContent = '· ' + o.metodo_pago;
+      izquierda.appendChild(mp);
+    }
+    var derecha = document.createElement('span');
+    derecha.className = 'text-[10px] text-slate-500';
+    var gd = parseInt(o.garantia_dias, 10) || 0;
+    derecha.textContent = gd > 0 ? 'Garantía: ' + gd + ' días' : 'Sin garantía definida';
+    fila.appendChild(izquierda);
+    fila.appendChild(derecha);
+    cont.appendChild(fila);
+  }
+
+  /** Caja pequeña con etiqueta + valor para el bloque de cobro. */
+  function cajaMonto(etiqueta, valorTexto, colorValor) {
+    var d = document.createElement('div');
+    d.className = 'bg-slate-950 border border-slate-800 rounded-lg p-2 text-center';
+    var p1 = document.createElement('p');
+    p1.className = 'text-[10px] uppercase tracking-wider text-slate-500 font-bold';
+    p1.textContent = etiqueta;
+    var p2 = document.createElement('p');
+    p2.className = 'font-bold ' + colorValor;
+    p2.textContent = valorTexto;
+    d.appendChild(p1);
+    d.appendChild(p2);
+    return d;
+  }
+
+  /** Registra abono/cobro total (el estado de pago lo deriva la API). */
+  function guardarCobroModal(cobrarTodo) {
+    var o = ordenActualModal();
+    if (!o) return;
+    var total = parseInt(o.total, 10) || 0;
+    if (total <= 0) {
+      window.mostrarToast('Esta orden todavía no tiene valor de reparación', 'error');
+      return;
+    }
+    var abonoActual = parseInt(o.abono, 10) || 0;
+    var nuevoAbono;
+    if (cobrarTodo) {
+      nuevoAbono = total;
+    } else {
+      var extra = parseInt($('mo-abono').value, 10) || 0;
+      if (extra <= 0) { window.mostrarToast('Ingresa un monto de abono mayor a 0', 'error'); return; }
+      nuevoAbono = Math.min(total, abonoActual + extra);
+    }
+    var metodo = $('mo-metodo').value;
+    if (nuevoAbono >= total && !metodo) metodo = 'Efectivo'; // cierre sin medio elegido
+    var cuerpo = { codigo: ordenModalCodigo, abono: nuevoAbono };
+    if (metodo) cuerpo.metodo_pago = metodo;
+
+    var boton = cobrarTodo ? $('mo-btn-cobro-total') : $('mo-btn-cobro');
+    boton.disabled = true;
+    api('api/ordenes.php?action=update', { method: 'POST', body: cuerpo })
+      .then(function (res) {
+        boton.disabled = false;
+        if (!res.ok) { window.mostrarToast(res.error || 'No se pudo registrar el cobro', 'error'); return; }
+        patchOrdenModal({
+          abono: nuevoAbono,
+          estado_pago: nuevoAbono >= total ? 'Pagado' : 'Abonado',
+          metodo_pago: cuerpo.metodo_pago || o.metodo_pago
+        });
+        $('mo-abono').value = '';
+        renderCobroModal(ordenActualModal());
+        renderEntregaModal(ordenActualModal());
+        renderizarTablaAdmin();
+        window.mostrarToast('Cobro registrado: ' + monto(nuevoAbono) + ' de ' + monto(total), 'success');
+      })
+      .catch(function () {
+        boton.disabled = false;
+        window.mostrarToast('Error de conexión con el servidor', 'error');
+      });
+  }
 
   function cargarFotosOrden(codigo) {
     api('api/ordenes.php?action=fotos&codigo=' + encodeURIComponent(codigo)).then(function (res) {
@@ -817,6 +1090,202 @@
     });
   }
 
+  /** Muestra la entrega registrada o el formulario de cierre si corresponde. */
+  function renderEntregaModal(o) {
+    var info = $('mo-entrega-info');
+    var form = $('mo-entrega-form');
+    if (!info || !form) return;
+    info.replaceChildren();
+    if (o.fecha_entrega) {
+      form.classList.add('mo-oculto');
+      info.classList.remove('mo-oculto');
+      var linea1 = document.createElement('p');
+      linea1.className = 'font-semibold text-emerald-400';
+      linea1.textContent = 'Entregado el ' + String(o.fecha_entrega).slice(0, 16) + ' — retiró: ' + (o.entregado_a || '—');
+      var gd = parseInt(o.garantia_dias, 10) || 0;
+      var linea2 = document.createElement('p');
+      linea2.className = 'text-[11px] text-slate-500';
+      linea2.textContent = gd > 0 ? 'Garantía de ' + gd + ' días desde la entrega.' : 'Sin garantía registrada.';
+      info.appendChild(linea1);
+      info.appendChild(linea2);
+    } else if (o.estado === 'Listo para Retiro') {
+      info.classList.add('mo-oculto');
+      form.classList.remove('mo-oculto');
+      prepararLienzoFirmaEntrega();
+    } else {
+      form.classList.add('mo-oculto');
+      info.classList.remove('mo-oculto');
+      var aviso = document.createElement('p');
+      aviso.className = 'text-[11px] italic text-slate-500';
+      aviso.textContent = 'Disponible cuando la orden pase a "Listo para Retiro".';
+      info.appendChild(aviso);
+    }
+  }
+
+  /** Registra la entrega física: quién retira + su firma → recibo imprimible. */
+  function confirmarEntrega() {
+    var o = ordenActualModal();
+    if (!o || o.fecha_entrega) return;
+    var retira = $('mo-entregado-a').value.trim();
+    if (!retira) { window.mostrarToast('Indica quién retira el equipo', 'error'); return; }
+    if (saldoDe(o) > 0) {
+      window.mostrarToast('Hay saldo pendiente: registra primero el cobro completo', 'error');
+      return;
+    }
+    if (!firmaEntregaHecha) { window.mostrarToast('Pide la firma de quien retira el equipo', 'error'); return; }
+    var boton = $('mo-btn-entrega');
+    boton.disabled = true;
+    api('api/ordenes.php?action=update', {
+      method: 'POST',
+      body: {
+        codigo: ordenModalCodigo,
+        entregar: true,
+        entregado_a: retira,
+        firma_entrega: lienzoFirmaEntrega ? lienzoFirmaEntrega.toDataURL('image/png') : null
+      }
+    }).then(function (res) {
+      boton.disabled = false;
+      if (!res.ok) { window.mostrarToast(res.error || 'No se pudo registrar la entrega', 'error'); return; }
+      if (res.orden) patchOrdenModal(res.orden);
+      renderEntregaModal(ordenActualModal());
+      renderizarTablaAdmin();
+      window.mostrarToast('Orden ' + ordenModalCodigo + ' entregada', 'success');
+      imprimirRecibo(ordenActualModal());
+    }).catch(function () {
+      boton.disabled = false;
+      window.mostrarToast('Error de conexión con el servidor', 'error');
+    });
+  }
+
+  /** Lista la bitácora técnica de la orden abierta (más reciente primero). */
+  function cargarBitacora(codigo) {
+    var lista = $('mo-bitacora');
+    if (!lista) return;
+    lista.replaceChildren();
+    var cargando = document.createElement('li');
+    cargando.className = 'italic text-slate-500';
+    cargando.textContent = 'Cargando bitácora…';
+    lista.appendChild(cargando);
+    api('api/ordenes.php?action=bitacora&codigo=' + encodeURIComponent(codigo)).then(function (res) {
+      lista.replaceChildren();
+      if (!res.ok || !res.bitacora.length) {
+        var sinDatos = document.createElement('li');
+        sinDatos.className = 'italic text-slate-500';
+        sinDatos.textContent = 'Sin notas todavía.';
+        lista.appendChild(sinDatos);
+        return;
+      }
+      res.bitacora.forEach(function (e) {
+        var li = document.createElement('li');
+        var cabezal = document.createElement('p');
+        cabezal.className = 'text-[10px] font-semibold text-slate-500';
+        cabezal.textContent = e.creado_en + (e.tecnico ? ' · ' + e.tecnico : '');
+        var texto = document.createElement('p');
+        texto.className = 'text-slate-300';
+        texto.textContent = e.nota; // seguro (sin HTML)
+        li.appendChild(cabezal);
+        li.appendChild(texto);
+        lista.appendChild(li);
+      });
+    }).catch(function () {
+      lista.replaceChildren();
+      var error = document.createElement('li');
+      error.className = 'italic text-slate-500';
+      error.textContent = 'No se pudo cargar la bitácora.';
+      lista.appendChild(error);
+    });
+  }
+
+  /** Guarda una nota técnica en la bitácora de la orden abierta. */
+  function agregarNota() {
+    var input = $('mo-nota');
+    var texto = input.value.trim();
+    if (!texto) { window.mostrarToast('Escribe la nota primero', 'error'); return; }
+    var o = ordenActualModal();
+    var boton = $('mo-btn-nota');
+    boton.disabled = true;
+    api('api/ordenes.php?action=nota', {
+      method: 'POST',
+      body: { codigo: ordenModalCodigo, nota: texto, tecnico: o ? o.tecnico : '' }
+    }).then(function (res) {
+      boton.disabled = false;
+      if (!res.ok) { window.mostrarToast(res.error || 'No se pudo guardar la nota', 'error'); return; }
+      input.value = '';
+      cargarBitacora(ordenModalCodigo);
+      window.mostrarToast('Nota agregada a la bitácora', 'success');
+    }).catch(function () {
+      boton.disabled = false;
+      window.mostrarToast('Error de conexión con el servidor', 'error');
+    });
+  }
+
+  /** Escapa texto para incrustarlo en el HTML del recibo. */
+  function escapar(texto) {
+    return String(texto === null || texto === undefined ? '' : texto)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  /** Recibo de entrega imprimible (ventana nueva con estilos propios). */
+  function imprimirRecibo(o) {
+    if (!o) return;
+    var total = parseInt(o.total, 10) || 0;
+    var abonado = parseInt(o.abono, 10) || 0;
+    var saldo = Math.max(0, total - abonado);
+    var gd = parseInt(o.garantia_dias, 10) || 0;
+    var vence = '—';
+    if (gd > 0 && o.fecha_entrega) {
+      var f = new Date(String(o.fecha_entrega).replace(' ', 'T'));
+      if (!isNaN(f.getTime())) {
+        f.setDate(f.getDate() + gd);
+        vence = f.getFullYear() + '-' + String(f.getMonth() + 1).padStart(2, '0') + '-' + String(f.getDate()).padStart(2, '0');
+      }
+    }
+    var filaRecibo = function (etiqueta, valor) {
+      return '<tr><th>' + escapar(etiqueta) + '</th><td>' + valor + '</td></tr>';
+    };
+    var html =
+      '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Recibo ' + escapar(o.codigo) + '</title>' +
+      '<style>' +
+      'body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;max-width:420px;margin:24px auto;padding:0 12px;}' +
+      'h1{font-size:18px;margin:0;text-align:center;letter-spacing:1px;}' +
+      'p.sub{font-size:11px;color:#475569;text-align:center;margin:2px 0 14px;}' +
+      'table{width:100%;border-collapse:collapse;font-size:12px;}' +
+      'th{text-align:left;padding:6px 8px;background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;width:38%;font-weight:normal;}' +
+      'td{padding:6px 8px;border:1px solid #cbd5e1;font-weight:700;}' +
+      'img{max-height:70px;margin-top:10px;display:block;}' +
+      'p.nota{font-size:10px;color:#64748b;text-align:center;margin-top:14px;}' +
+      '</style></head><body>' +
+      '<h1>LUITECH — SERVICIO TÉCNICO</h1>' +
+      '<p class="sub">Recibo de entrega · Orden ' + escapar(o.codigo) + '</p>' +
+      '<table>' +
+      filaRecibo('Cliente', escapar(o.cliente)) +
+      filaRecibo('Equipo', escapar(o.equipo)) +
+      filaRecibo('Falla / servicio', escapar(o.falla)) +
+      filaRecibo('Fecha de ingreso', escapar(o.fecha_ingreso)) +
+      filaRecibo('Fecha de entrega', escapar(String(o.fecha_entrega || '—').slice(0, 16))) +
+      filaRecibo('Retirado por', escapar(o.entregado_a || '—')) +
+      filaRecibo('Total', escapar(monto(total))) +
+      filaRecibo('Abonado', escapar(monto(abonado))) +
+      filaRecibo('Saldo', escapar(monto(saldo))) +
+      filaRecibo('Garantía', gd > 0 ? escapar(gd + ' días (hasta ' + vence + ')') : 'Sin garantía') +
+      '</table>' +
+      (o.firma_entrega ? '<img src="' + escapar(o.firma_entrega) + '" alt="Firma de retiro">' : '') +
+      '<p class="nota">¡Gracias por confiar en Luitech! Conserve este recibo para hacer efectiva la garantía.</p>' +
+      '</body></html>';
+
+    var ventana = window.open('', '_blank', 'width=520,height=720');
+    if (!ventana) {
+      window.mostrarToast('Permite las ventanas emergentes para imprimir el recibo', 'error');
+      return;
+    }
+    ventana.document.open();
+    ventana.document.write(html);
+    ventana.document.close();
+    ventana.focus();
+    ventana.print();
+  }
+
   /* ------------------------------------------------------ CAMBIAR CLAVE */
   function abrirModalClave() {
     ['clave-actual','clave-nueva','clave-repetida'].forEach(function (i) { $(i).value = ''; });
@@ -869,6 +1338,22 @@
 
     // Botón que despliega / guarda el cuadro del patrón
     $('btn-patron-toggle').addEventListener('click', alternarPatron);
+
+    // Presupuesto: total calculado en vivo (repuestos + mano de obra)
+    ['new-repuestos', 'new-mano-obra'].forEach(function (id) {
+      $(id).addEventListener('input', calcularTotalNueva);
+    });
+
+    // Modal de detalle: cobro, entrega, recibo y bitácora
+    $('mo-btn-cobro').addEventListener('click', function () { guardarCobroModal(false); });
+    $('mo-btn-cobro-total').addEventListener('click', function () { guardarCobroModal(true); });
+    $('mo-btn-recibo').addEventListener('click', function () { imprimirRecibo(ordenActualModal()); });
+    $('mo-btn-entrega').addEventListener('click', confirmarEntrega);
+    $('mo-btn-nota').addEventListener('click', agregarNota);
+    $('mo-nota').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); agregarNota(); }
+    });
+    iniciarFirmaEntrega();
     $('new-pin').addEventListener('input', function () {
       this.value = this.value.replace(/\D/g, '');
     });

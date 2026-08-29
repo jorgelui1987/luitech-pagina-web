@@ -11,6 +11,8 @@
  *   fotos  (GET)                     Solo admin: fotos de respaldo de una orden
  *   subir_foto (POST multipart)      Solo admin: sube foto de respaldo
  *   borrar_foto (POST)               Solo admin: elimina una foto
+ *   nota   (POST)                    Solo admin: agrega una entrada a la bitácora
+ *   bitacora (GET)                   Solo admin: historial técnico de la orden
  */
 
 declare(strict_types=1);
@@ -57,10 +59,13 @@ function ruta_uploads(string $relativa): string
  * Valida y guarda un dataURL PNG (firma dibujada en canvas).
  * Devuelve la ruta relativa ('uploads/firmas/...') o null si no vino firma.
  */
-function guardar_firma_base64(?string $dataUrl, string $codigo): ?string
+function guardar_firma_base64(?string $dataUrl, string $codigo, string $etiqueta = 'ingreso'): ?string
 {
     if ($dataUrl === null || $dataUrl === '') {
         return null;
+    }
+    if (preg_match('/^[a-z_]{3,20}$/', $etiqueta) !== 1) {
+        $etiqueta = 'ingreso';
     }
     if (!preg_match('#^data:image/png;base64,([A-Za-z0-9+/=\r\n]+)$#', $dataUrl, $m)) {
         responder(['ok' => false, 'error' => 'Formato de firma inválido (se espera PNG base64)'], 400);
@@ -76,7 +81,7 @@ function guardar_firma_base64(?string $dataUrl, string $codigo): ?string
     if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
         responder(['ok' => false, 'error' => 'No se pudo crear la carpeta de firmas'], 500);
     }
-    $nombre = $codigo . '-ingreso-' . bin2hex(random_bytes(6)) . '.png';
+    $nombre = $codigo . '-' . $etiqueta . '-' . bin2hex(random_bytes(6)) . '.png';
     if (file_put_contents($dir . '/' . $nombre, $binarios) === false) {
         responder(['ok' => false, 'error' => 'No se pudo guardar la firma'], 500);
     }
@@ -125,7 +130,9 @@ switch ($action) {
         exigir_admin();
         $stmt = db()->query(
             'SELECT id, codigo, cliente, equipo, tipo, falla, estado, avance, tecnico, fecha_ingreso,
-                    pin_patron, accesorios, obs_recepcion, firma_ingreso
+                    pin_patron, accesorios, obs_recepcion, firma_ingreso,
+                    precio_repuestos, mano_obra, total, abono, estado_pago, metodo_pago, garantia_dias,
+                    fecha_entrega, entregado_a, firma_entrega
              FROM ordenes ORDER BY id DESC'
         );
         responder(['ok' => true, 'ordenes' => $stmt->fetchAll()]);
@@ -151,6 +158,15 @@ switch ($action) {
         $accs = campo_texto($d, 'accesorios', 255);
         $obs  = campo_texto($d, 'obs_recepcion', 250);
 
+        // Presupuesto (opcional al ingreso): repuestos + mano de obra = total
+        $repuestos = max(0, (int)($d['precio_repuestos'] ?? 0));
+        $manoObra  = max(0, (int)($d['mano_obra'] ?? 0));
+        $total     = max(0, (int)($d['total'] ?? 0));
+        if ($total === 0 && ($repuestos > 0 || $manoObra > 0)) {
+            $total = $repuestos + $manoObra;
+        }
+        $garantia = max(0, min(365, (int)($d['garantia_dias'] ?? 0)));
+
         if ($cliente === null || $equipo === null || $falla === null) {
             responder(['ok' => false, 'error' => 'Faltan campos obligatorios (cliente, equipo, falla)'], 400);
         }
@@ -175,11 +191,16 @@ switch ($action) {
 
             $stmt = db()->prepare(
                 'INSERT INTO ordenes (codigo, cliente, equipo, tipo, falla, estado, avance, tecnico,
-                                      pin_patron, accesorios, obs_recepcion, firma_ingreso, fecha_ingreso)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                                      pin_patron, accesorios, obs_recepcion, firma_ingreso, fecha_ingreso,
+                                      precio_repuestos, mano_obra, total, garantia_dias)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
             );
             $stmt->execute([$codigo, $cliente, $equipo, $tipo, $falla, $estadoIn, $avanceIn, $tecnico,
-                            $pin, $accs, $obs, $firmaRuta, $fecha]);
+                            $pin, $accs, $obs, $firmaRuta, $fecha, $repuestos, $manoObra, $total, $garantia]);
+
+            // Primera entrada de la bitácora: el ingreso del equipo al taller
+            db()->prepare('INSERT INTO orden_bitacora (orden_codigo, tecnico, nota, estado_nuevo) VALUES (?, ?, ?, ?)')
+                ->execute([$codigo, $tecnico, 'Orden ingresada al taller', $estadoIn]);
 
             responder(['ok' => true, 'orden' => [
                 'codigo' => $codigo, 'cliente' => $cliente, 'equipo' => $equipo,
@@ -187,6 +208,9 @@ switch ($action) {
                 'avance' => $avanceIn, 'tecnico' => $tecnico, 'fecha_ingreso' => $fecha,
                 'pin_patron' => $pin, 'accesorios' => $accs,
                 'obs_recepcion' => $obs, 'firma_ingreso' => $firmaRuta,
+                'precio_repuestos' => $repuestos, 'mano_obra' => $manoObra,
+                'total' => $total, 'abono' => 0, 'estado_pago' => 'Pendiente',
+                'garantia_dias' => $garantia,
             ]]);
         } catch (PDOException $e) {
             if ((int)$e->getCode() === 23000) {
@@ -212,10 +236,15 @@ switch ($action) {
         $set    = [];
         $params = [];
 
+        // Estado anterior (para dejar el cambio registrado en la bitácora)
+        $estadoAnterior = null;
         if (isset($d['estado'])) {
             if (!in_array($d['estado'], ESTADOS_VALIDOS, true)) {
                 responder(['ok' => false, 'error' => 'Estado inválido'], 400);
             }
+            $st = db()->prepare('SELECT estado FROM ordenes WHERE codigo = ?');
+            $st->execute([$codigo]);
+            $estadoAnterior = (string)($st->fetchColumn() ?: '');
             $set[]    = 'estado = ?';
             $params[] = $d['estado'];
         }
@@ -236,6 +265,54 @@ switch ($action) {
             $params[] = campo_texto($d, 'tecnico', 80) ?? 'Por Asignar';
         }
 
+        // --- Cobro de la reparación (repuestos, mano de obra, total, abonos) ---
+        if (isset($d['precio_repuestos'])) {
+            $set[]    = 'precio_repuestos = ?';
+            $params[] = max(0, (int)$d['precio_repuestos']);
+        }
+        if (isset($d['mano_obra'])) {
+            $set[]    = 'mano_obra = ?';
+            $params[] = max(0, (int)$d['mano_obra']);
+        }
+        if (isset($d['total'])) {
+            $set[]    = 'total = ?';
+            $params[] = max(0, (int)$d['total']);
+        }
+        if (isset($d['abono'])) {
+            $set[]    = 'abono = ?';
+            $params[] = max(0, (int)$d['abono']);
+        }
+        if (isset($d['garantia_dias'])) {
+            $set[]    = 'garantia_dias = ?';
+            $params[] = max(0, min(365, (int)$d['garantia_dias']));
+        }
+        if (isset($d['metodo_pago'])) {
+            $metodo = in_array($d['metodo_pago'], ['Efectivo', 'Debito', 'Credito', 'Transferencia'], true)
+                ? $d['metodo_pago'] : null;
+            $set[]    = 'metodo_pago = ?';
+            $params[] = $metodo;
+        }
+
+        // --- Entrega física del equipo: fecha, quién retira y su firma ---
+        if (!empty($d['entregar'])) {
+            $retira = campo_texto($d, 'entregado_a', 120);
+            if ($retira === null) {
+                responder(['ok' => false, 'error' => 'Indica quién retira el equipo'], 400);
+            }
+            $firmaEntrega = guardar_firma_base64(
+                isset($d['firma_entrega']) ? (string)$d['firma_entrega'] : null,
+                $codigo,
+                'entrega'
+            );
+            $set[]    = 'fecha_entrega = NOW()';
+            $set[]    = 'entregado_a = ?';
+            $params[] = $retira;
+            if ($firmaEntrega !== null) {
+                $set[]    = 'firma_entrega = ?';
+                $params[] = $firmaEntrega;
+            }
+        }
+
         if (!$set) {
             responder(['ok' => false, 'error' => 'Nada que actualizar'], 400);
         }
@@ -252,7 +329,34 @@ switch ($action) {
             }
         }
 
-        $stmt2 = db()->prepare('SELECT codigo, estado, avance, tecnico, falla FROM ordenes WHERE codigo = ?');
+        // El estado de pago se deriva de total/abono (nunca lo envía el cliente)
+        if (isset($d['total']) || isset($d['abono'])) {
+            $row = db()->prepare('SELECT total, abono FROM ordenes WHERE codigo = ?');
+            $row->execute([$codigo]);
+            $m = $row->fetch() ?: ['total' => 0, 'abono' => 0];
+            $t = (int)$m['total'];
+            $a = (int)$m['abono'];
+            $estadoPago = ($t > 0 && $a >= $t) ? 'Pagado' : ($a > 0 ? 'Abonado' : 'Pendiente');
+            db()->prepare('UPDATE ordenes SET estado_pago = ? WHERE codigo = ?')->execute([$estadoPago, $codigo]);
+        }
+
+        // Bitácora automática: cada cambio de estado queda registrado
+        if ($estadoAnterior !== null && isset($d['estado']) && $d['estado'] !== $estadoAnterior) {
+            db()->prepare('INSERT INTO orden_bitacora (orden_codigo, tecnico, nota, estado_nuevo) VALUES (?, ?, ?, ?)')
+                ->execute([
+                    $codigo,
+                    (string)($d['tecnico'] ?? ''),
+                    'Estado: ' . $estadoAnterior . ' → ' . $d['estado'],
+                    $d['estado'],
+                ]);
+        }
+
+        $stmt2 = db()->prepare(
+            'SELECT codigo, estado, avance, tecnico, falla, precio_repuestos, mano_obra,
+                    total, abono, estado_pago, metodo_pago, garantia_dias,
+                    fecha_entrega, entregado_a, firma_entrega
+             FROM ordenes WHERE codigo = ?'
+        );
         $stmt2->execute([$codigo]);
         responder(['ok' => true, 'orden' => $stmt2->fetch()]);
     }
@@ -273,9 +377,13 @@ switch ($action) {
         $stmtF = db()->prepare('SELECT archivo FROM orden_fotos WHERE orden_codigo = ?');
         $stmtF->execute([$codigo]);
         $archivosFotos = $stmtF->fetchAll(PDO::FETCH_COLUMN);
-        $stmtG = db()->prepare('SELECT firma_ingreso FROM ordenes WHERE codigo = ?');
+        $stmtG = db()->prepare('SELECT firma_ingreso, firma_entrega FROM ordenes WHERE codigo = ?');
         $stmtG->execute([$codigo]);
-        $firmaRuta = (string)($stmtG->fetchColumn() ?: '');
+        $firmas = $stmtG->fetch() ?: [];
+        $rutasFirmas = array_values(array_filter([
+            (string)($firmas['firma_ingreso'] ?? ''),
+            (string)($firmas['firma_entrega'] ?? ''),
+        ]));
 
         $stmt = db()->prepare('DELETE FROM ordenes WHERE codigo = ?');
         $stmt->execute([$codigo]);
@@ -293,8 +401,8 @@ switch ($action) {
         if (is_dir(base_uploads() . '/ordenes/' . $codigo)) {
             @rmdir(base_uploads() . '/ordenes/' . $codigo); // solo si quedó vacía
         }
-        if ($firmaRuta !== '') {
-            $abs = ruta_uploads($firmaRuta);
+        foreach ($rutasFirmas as $rel) {
+            $abs = ruta_uploads((string)$rel);
             if ($abs !== '' && is_file($abs)) {
                 @unlink($abs);
             }
@@ -407,6 +515,47 @@ switch ($action) {
             @unlink($abs);
         }
         responder(['ok' => true]);
+    }
+
+    /* ------------------------------------------------ BITÁCORA NOTA (POST) */
+    case 'nota': {
+        exigir_admin();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            responder(['ok' => false, 'error' => 'Método no permitido'], 405);
+        }
+        $d      = leer_cuerpo();
+        $codigo = strtoupper(trim((string)($d['codigo'] ?? '')));
+        if (!preg_match('/^LUH-\d{3,8}$/', $codigo)) {
+            responder(['ok' => false, 'error' => 'Código inválido'], 400);
+        }
+        $nota = campo_texto($d, 'nota', 500);
+        if ($nota === null) {
+            responder(['ok' => false, 'error' => 'La nota está vacía'], 400);
+        }
+        $existe = db()->prepare('SELECT 1 FROM ordenes WHERE codigo = ?');
+        $existe->execute([$codigo]);
+        if (!$existe->fetch()) {
+            responder(['ok' => false, 'error' => 'Orden no encontrada'], 404);
+        }
+        $tecnico = campo_texto($d, 'tecnico', 80) ?? '';
+        db()->prepare('INSERT INTO orden_bitacora (orden_codigo, tecnico, nota) VALUES (?, ?, ?)')
+            ->execute([$codigo, $tecnico, $nota]);
+        responder(['ok' => true]);
+    }
+
+    /* ------------------------------------------------ BITÁCORA GET (lista) */
+    case 'bitacora': {
+        exigir_admin();
+        $codigo = strtoupper(trim($_GET['codigo'] ?? ''));
+        if (!preg_match('/^LUH-\d{3,8}$/', $codigo)) {
+            responder(['ok' => false, 'error' => 'Código inválido'], 400);
+        }
+        $stmt = db()->prepare(
+            'SELECT id, tecnico, nota, estado_nuevo, creado_en
+             FROM orden_bitacora WHERE orden_codigo = ? ORDER BY id DESC LIMIT 200'
+        );
+        $stmt->execute([$codigo]);
+        responder(['ok' => true, 'bitacora' => $stmt->fetchAll()]);
     }
 
     default:
