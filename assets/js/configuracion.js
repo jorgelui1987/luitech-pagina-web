@@ -319,8 +319,9 @@
           }
         } else if (d.dispositivos_http === 404) {
           lineas.push('✗ MP no reconoce la API de Point para esta aplicación: agrega el producto "Point" en Tus integraciones');
+          if (d.dispositivos_body) lineas.push('   Respuesta MP: ' + d.dispositivos_body);
         } else {
-          lineas.push('✗ No se pudo listar los terminales (HTTP ' + d.dispositivos_http + ')');
+          lineas.push('✗ No se pudo listar los terminales (HTTP ' + d.dispositivos_http + ')' + (d.dispositivos_body ? ': ' + d.dispositivos_body : ''));
         }
       } else {
         lineas.push('— Prueba de conexión omitida (falta token o cURL)');

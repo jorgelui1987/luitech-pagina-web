@@ -323,6 +323,8 @@ switch ($action) {
             // Terminales Point que MP ve en esta cuenta (clave para el 404)
             [$codigoHttpD, $dispositivos] = mp_api('GET', '/point-integration-api/devices', null, $cfg['token']);
             $diag['dispositivos_http'] = $codigoHttpD;
+            $diag['dispositivos_body'] = ($codigoHttpD !== 200)
+                ? substr(json_encode($dispositivos, JSON_UNESCAPED_UNICODE), 0, 250) : '';
             $lista = [];
             $crudos = isset($dispositivos['results']) ? $dispositivos['results'] : $dispositivos;
             foreach ((is_array($crudos) ? $crudos : []) as $disp) {
