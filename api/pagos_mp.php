@@ -224,19 +224,34 @@ switch ($action) {
         if ($saldo < 1) {
             responder(['ok' => false, 'error' => 'Esta orden no tiene saldo pendiente'], 409);
         }
-        // Crea la orden de cobro en el terminal Point (API Orders /v1/orders,
-        // según schema oficial: el monto va en transactions.payments.amount
-        // como string entero sin decimales; config.point.terminal_id asigna el terminal)
-        $payload = [
-            'type'               => 'point',
-            'external_reference' => $codigo,
-            'description'        => mb_substr('Orden ' . $codigo . ' - ' . (string)$orden['cliente'], 0, 100),
-            'transactions'       => ['payments' => ['amount' => (string)$saldo]],
-            'config'             => ['point' => ['terminal_id' => $cfg['device']]],
+        // Crea la orden de cobro en el terminal Point (API Orders /v1/orders).
+        // La documentación de MP se contradice sobre el tipo de transactions.payments
+        // (parámetros: array / ejemplo: objeto; amount string vs número), así que se
+        // prueban las variantes y se usa la primera que Mercado Pago acepte.
+        $variantes = [
+            'array-entero' => ['payments' => [['amount' => (int)$saldo]]],
+            'array-texto'  => ['payments' => [['amount' => (string)$saldo]]],
+            'objeto-texto' => ['payments' => ['amount' => (string)$saldo]],
         ];
-        [$codigoHttp, $ordenMP] = mp_api('POST', '/v1/orders', $payload, $cfg['token'], 'luitech-' . $codigo . '-' . $saldo . '-' . time());
-        if ($codigoHttp >= 200 && $codigoHttp < 300 && !empty($ordenMP['id'])) {
-            responder(['ok' => true, 'order_id' => (string)$ordenMP['id'], 'monto' => $saldo]);
+        $codigoHttp = 0;
+        $ordenMP = [];
+        $usada = '';
+        foreach ($variantes as $nombre => $pagos) {
+            $payload = [
+                'type'               => 'point',
+                'external_reference' => $codigo,
+                'description'        => mb_substr('Orden ' . $codigo . ' - ' . (string)$orden['cliente'], 0, 100),
+                'transactions'       => $pagos,
+                'config'             => ['point' => ['terminal_id' => $cfg['device']]],
+            ];
+            [$codigoHttp, $ordenMP] = mp_api('POST', '/v1/orders', $payload, $cfg['token'], 'luitech-' . $codigo . '-' . $saldo . '-' . $nombre . '-' . time());
+            if ($codigoHttp >= 200 && $codigoHttp < 300 && !empty($ordenMP['id'])) {
+                responder(['ok' => true, 'order_id' => (string)$ordenMP['id'], 'monto' => $saldo, 'variante' => $nombre]);
+            }
+            if ($codigoHttp !== 400) {
+                break; // 403/409/401/etc: no es problema de formato, no reintentar variantes
+            }
+            $usada = $nombre;
         }
         // Motivo exacto del rechazo según Mercado Pago
         $detalle = '';
@@ -259,6 +274,9 @@ switch ($action) {
         }
         if ($detalle === '') {
             $detalle = substr(json_encode($ordenMP, JSON_UNESCAPED_UNICODE), 0, 300); // cuerpo completo si no hay campos conocidos
+        }
+        if ($usada !== '') {
+            $detalle .= ' | (variantes probadas, última: ' . $usada . ')';
         }
         responder(['ok' => false, 'error' => 'Mercado Pago rechazó el intento (HTTP ' . $codigoHttp . ')' . ($detalle !== '' ? ': ' . $detalle : '')], 502);
     }
