@@ -28,6 +28,7 @@ const CONFIG_CLAVES = [
     'empresa_pais'          => ['max' => 60],
     'empresa_telefono'      => ['max' => 40],
     'empresa_email'         => ['max' => 120],
+    'empresa_logo'          => ['max' => 255],
     'moneda'                => ['max' => 20],
     'moneda_simbolo'        => ['max' => 5],
     'zona_horaria'          => ['tz' => true],
@@ -116,6 +117,7 @@ switch ($action) {
         } else {
             $salida['webhook_mp'] = ''; // CLI: no hay host deducible
         }
+        $salida['db'] = DB_NAME . '@' . DB_HOST;
         responder(['ok' => true, 'config' => $salida]);
     }
 
@@ -228,7 +230,10 @@ switch ($action) {
                        ON DUPLICATE KEY UPDATE valor = VALUES(valor)')
             ->execute(['empresa_logo', $relativa]);
 
-        responder(['ok' => true, 'logo' => $relativa]);
+        // Verificación inmediata en la MISMA conexión + identificación de la BD
+        responder(['ok' => true, 'logo' => $relativa,
+                   'verificado' => config_valor(db(), 'empresa_logo', ''),
+                   'db' => DB_NAME . '@' . DB_HOST]);
     }
 
     case 'del_logo': {
