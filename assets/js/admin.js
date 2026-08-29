@@ -1005,6 +1005,7 @@
         renderEntregaModal(ordenActualModal());
         renderizarTablaAdmin();
         window.mostrarToast('Cobro registrado: ' + monto(nuevoAbono) + ' de ' + monto(total), 'success');
+        if (res.aviso) window.mostrarToast(res.aviso, 'error');
       })
       .catch(function () {
         boton.disabled = false;

@@ -88,6 +88,27 @@ function guardar_firma_base64(?string $dataUrl, string $codigo, string $etiqueta
     return 'uploads/firmas/' . $nombre;
 }
 
+/**
+ * Registra un ingreso en la caja diaria abierta (si la hay).
+ * Devuelve true si quedó registrado; false si no hay caja abierta.
+ * El cobro de la orden NUNCA se bloquea por esto: la caja es complementaria.
+ */
+function registrar_ingreso_caja(PDO $pdo, int $monto, string $concepto): bool
+{
+    if ($monto < 1) {
+        return false;
+    }
+    $sesion = $pdo->query(
+        "SELECT id FROM caja_sesiones WHERE estado = 'Abierta' ORDER BY id DESC LIMIT 1"
+    )->fetch();
+    if (!$sesion) {
+        return false;
+    }
+    $pdo->prepare('INSERT INTO movimientos_caja (sesion_id, tipo, concepto, monto) VALUES (?, ?, ?, ?)')
+        ->execute([(int)$sesion['id'], 'Ingreso', $concepto, $monto]);
+    return true;
+}
+
 $action = $_GET['action'] ?? '';
 
 switch ($action) {
@@ -238,6 +259,7 @@ switch ($action) {
 
         // Estado anterior (para dejar el cambio registrado en la bitácora)
         $estadoAnterior = null;
+        $abonoAnterior  = null;
         if (isset($d['estado'])) {
             if (!in_array($d['estado'], ESTADOS_VALIDOS, true)) {
                 responder(['ok' => false, 'error' => 'Estado inválido'], 400);
@@ -247,6 +269,12 @@ switch ($action) {
             $estadoAnterior = (string)($st->fetchColumn() ?: '');
             $set[]    = 'estado = ?';
             $params[] = $d['estado'];
+        }
+        // Abono previo (para derivar cuánto dinero nuevo entra a la caja)
+        if (isset($d['abono'])) {
+            $stA = db()->prepare('SELECT abono FROM ordenes WHERE codigo = ?');
+            $stA->execute([$codigo]);
+            $abonoAnterior = (int)($stA->fetchColumn() ?: 0);
         }
         if (isset($d['avance'])) {
             $set[]    = 'avance = ?';
@@ -340,6 +368,27 @@ switch ($action) {
             db()->prepare('UPDATE ordenes SET estado_pago = ? WHERE codigo = ?')->execute([$estadoPago, $codigo]);
         }
 
+        // Cada cobro (delta de abono) queda como ingreso en la caja diaria
+        $avisoCaja = null;
+        if (isset($d['abono']) && $abonoAnterior !== null) {
+            $delta = max(0, (int)$d['abono'] - $abonoAnterior);
+            if ($delta > 0) {
+                $info = db()->prepare('SELECT cliente, metodo_pago FROM ordenes WHERE codigo = ?');
+                $info->execute([$codigo]);
+                $infoRow = $info->fetch() ?: [];
+                $concepto = 'Cobro orden ' . $codigo;
+                if (!empty($infoRow['metodo_pago'])) {
+                    $concepto .= ' (' . $infoRow['metodo_pago'] . ')';
+                }
+                if (!empty($infoRow['cliente'])) {
+                    $concepto .= ' — ' . $infoRow['cliente'];
+                }
+                if (!registrar_ingreso_caja(db(), $delta, $concepto)) {
+                    $avisoCaja = 'Cobro registrado en la orden, pero no hay caja abierta: no se creó el movimiento de caja';
+                }
+            }
+        }
+
         // Bitácora automática: cada cambio de estado queda registrado
         if ($estadoAnterior !== null && isset($d['estado']) && $d['estado'] !== $estadoAnterior) {
             db()->prepare('INSERT INTO orden_bitacora (orden_codigo, tecnico, nota, estado_nuevo) VALUES (?, ?, ?, ?)')
@@ -358,7 +407,11 @@ switch ($action) {
              FROM ordenes WHERE codigo = ?'
         );
         $stmt2->execute([$codigo]);
-        responder(['ok' => true, 'orden' => $stmt2->fetch()]);
+        $respuesta = ['ok' => true, 'orden' => $stmt2->fetch()];
+        if ($avisoCaja !== null) {
+            $respuesta['aviso'] = $avisoCaja;
+        }
+        responder($respuesta);
     }
 
     /* ----------------------------------------------------------- DELETE */

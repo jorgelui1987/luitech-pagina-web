@@ -3,6 +3,9 @@
 > Diseño portátil del flujo "Nueva Orden de Trabajo" (fecha automática, PIN/patrón,
 > accesorios, fotos de respaldo comprimidas y firma del cliente) para replicar en
 > cualquier proyecto. Extraído de la implementación real de Luitech (commit 89c79c3).
+> Ampliado con: cobro de la reparación (repuestos + mano de obra, abonos/saldo),
+> bitácora técnica por orden, entrega con firma + recibo imprimible, integración
+> con la caja diaria y métricas del taller.
 
 ## 1. Concepto (independiente de tecnología)
 
@@ -56,6 +59,8 @@ CREATE TABLE order_files (
 | `photos?code=`  | GET          | código                      | lista de rutas            |
 | `delete_photo`  | POST JSON    | id                          | ok                        |
 | `update`        | POST JSON    | estado/avance/...           | orden                     |
+| `nota`          | POST JSON    | código + nota (≤500)        | ok                        |
+| `bitacora?code=`| GET          | código                      | bitácora técnica          |
 | `delete`        | POST         | código                      | ok + borra archivos       |
 
 ## 4. Fórmulas de los componentes
@@ -109,10 +114,11 @@ flujo JSON-para-texto / multipart-para-archivos.
 
 ```
 admin.html              → estructura del formulario + modal + estilos propios
-assets/js/admin.js      → firma, patrón, compresión de fotos, modal
-api/ordenes.php         → create/list/fotos/subir_foto/borrar_foto/delete
+assets/js/admin.js      → firma, patrón, compresión de fotos, modal, cobro/entrega/bitácora
+api/ordenes.php         → create/list/update/delete/nota/bitacora/fotos/subir_foto/borrar_foto
 api/config.php          → sesiones admin, JSON, PDO
+api/caja.php            → caja diaria (los cobros de órdenes ingresan aquí automáticamente)
 uploads/.htaccess       → escudo anti-ejecución
-database/migrate.php    → migración idempotente de columnas nuevas
+database/migrate.php    → migración idempotente (acta + cobro + bitácora)
 ```
 <!--FIN-->
