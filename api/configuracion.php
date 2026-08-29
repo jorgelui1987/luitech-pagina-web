@@ -175,8 +175,21 @@ switch ($action) {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
         $f = $_FILES['logo'] ?? null;
-        if (!is_array($f) || ($f['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        if (!is_array($f)) {
             responder(['ok' => false, 'error' => 'No se recibió ningún logo'], 400);
+        }
+        // Mensajes claros para cada código de error de subida de PHP
+        $codigoSubida = (int)($f['error'] ?? UPLOAD_ERR_NO_FILE);
+        if ($codigoSubida !== UPLOAD_ERR_OK) {
+            $mensajes = [
+                UPLOAD_ERR_INI_SIZE   => 'El logo supera el límite del servidor (máx. ' . ini_get('upload_max_filesize') . ')',
+                UPLOAD_ERR_FORM_SIZE  => 'El logo supera el límite del formulario',
+                UPLOAD_ERR_PARTIAL    => 'La subida se interrumpió a mitad de camino, intenta de nuevo',
+                UPLOAD_ERR_NO_FILE    => 'No se recibió ningún logo',
+                UPLOAD_ERR_NO_TMP_DIR => 'Falta la carpeta temporal del servidor',
+                UPLOAD_ERR_CANT_WRITE => 'El servidor no pudo escribir el archivo',
+            ];
+            responder(['ok' => false, 'error' => $mensajes[$codigoSubida] ?? ('Error de subida (código ' . $codigoSubida . ')')], 400);
         }
         if ($f['size'] <= 0 || $f['size'] > 2097152) {
             responder(['ok' => false, 'error' => 'El logo debe pesar entre 0 y 2 MB'], 400);

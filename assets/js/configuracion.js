@@ -86,18 +86,51 @@
       });
   }
 
-  /** Sube el logo (multipart; el servidor valida bytes reales de imagen). */
+  /** Redimensiona el logo en el navegador (máx. 600px, PNG) antes de enviarlo:
+   *  así siempre cabe en los límites de subida del servidor, sea cual sea su
+   *  tamaño original. Conserva la transparencia de los PNG. */
+  function procesarLogo(archivo) {
+    return new Promise(function (resolve, reject) {
+      var lector = new FileReader();
+      lector.onerror = function () { reject(new Error('No se pudo leer el archivo')); };
+      lector.onload = function () {
+        var img = new Image();
+        img.onload = function () {
+          var MAX = 600;
+          var escala = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
+          var ancho = Math.max(1, Math.round(img.naturalWidth * escala));
+          var alto = Math.max(1, Math.round(img.naturalHeight * escala));
+          var lienzo = document.createElement('canvas');
+          lienzo.width = ancho;
+          lienzo.height = alto;
+          lienzo.getContext('2d').drawImage(img, 0, 0, ancho, alto);
+          lienzo.toBlob(function (blob) {
+            if (blob) { resolve(blob); } else { reject(new Error('No se pudo procesar la imagen')); }
+          }, 'image/png');
+        };
+        img.onerror = function () { reject(new Error('El archivo no es una imagen válida')); };
+        img.src = lector.result;
+      };
+      lector.readAsDataURL(archivo);
+    });
+  }
+
+  /** Sube el logo ya redimensionado (el servidor valida bytes reales de imagen). */
   function subirLogo(archivo) {
     if (!archivo) return;
-    var fd = new FormData();
-    fd.append('logo', archivo);
-    fetch('api/configuracion.php?action=set_logo', {
-      method: 'POST', body: fd, credentials: 'same-origin'
-    }).then(function (r) { return r.json(); }).then(function (res) {
+    procesarLogo(archivo).then(function (blob) {
+      var fd = new FormData();
+      fd.append('logo', blob, 'logo.png');
+      return fetch('api/configuracion.php?action=set_logo', {
+        method: 'POST', body: fd, credentials: 'same-origin'
+      }).then(function (r) { return r.json(); });
+    }).then(function (res) {
       if (!res.ok) { window.mostrarToast(res.error || 'No se pudo subir el logo', 'error'); return; }
       window.mostrarToast('Logo actualizado', 'success');
       cargar();
-    }).catch(function () { window.mostrarToast('Error de conexión con el servidor', 'error'); });
+    }).catch(function (err) {
+      window.mostrarToast(err && err.message ? err.message : 'Error de conexión con el servidor', 'error');
+    });
   }
 
   function quitarLogo() {
