@@ -14,6 +14,14 @@
     if (logueado) cargar();
   }
 
+  /** Estado visible del logo (para que siempre sepas si cargó o por qué falló). */
+  function estadoLogo(texto, color) {
+    var estado = $('cfg-logo-estado');
+    if (!estado) return;
+    estado.textContent = texto;
+    estado.style.color = color || '#94a3b8';
+  }
+
   /** Llena todos los formularios con la configuración guardada. */
   function cargar() {
     api('api/configuracion.php?action=get_all').then(function (res) {
@@ -43,15 +51,10 @@
         $('cfg-logo-vacio').classList.remove('hidden');
       }
       // Indicador claro de si el logo quedó guardado en el servidor
-      var estado = $('cfg-logo-estado');
-      if (estado) {
-        if (cfg.empresa_logo) {
-          estado.textContent = '✓ Logo cargado: ' + String(cfg.empresa_logo).split('/').pop();
-          estado.style.color = '#34d399';
-        } else {
-          estado.textContent = '✗ Sin logo subido (la boleta saldrá sin logo)';
-          estado.style.color = '#f87171';
-        }
+      if (cfg.empresa_logo) {
+        estadoLogo('✓ Logo cargado: ' + String(cfg.empresa_logo).split('/').pop(), '#34d399');
+      } else {
+        estadoLogo('✗ Sin logo subido (la boleta saldrá sin logo)', '#f87171');
       }
       var webhook = $('cfg-mp-webhook');
       if (webhook) webhook.value = cfg.webhook_mp || '';
@@ -115,21 +118,48 @@
     });
   }
 
-  /** Sube el logo ya redimensionado (el servidor valida bytes reales de imagen). */
+  /** Sube el logo con dos estrategias y diagnóstico visible:
+   *  1) redimensiona en el navegador (max 600px PNG);
+   *  2) si el navegador no pudo procesarlo (SVG/HEIC/etc.), envía el original
+   *     y el servidor dirá si es válido. Todo queda anotado en pantalla. */
   function subirLogo(archivo) {
     if (!archivo) return;
-    procesarLogo(archivo).then(function (blob) {
+    var peso = Math.round(archivo.size / 1024);
+    estadoLogo('Subiendo: ' + archivo.name + ' (' + peso + ' KB' + (archivo.type ? ', ' + archivo.type : ', tipo desconocido') + ')…', '#fbbf24');
+
+    function terminadoOk() {
+      window.mostrarToast('Logo actualizado', 'success');
+      cargar(); // refresca indicador (verde) y vista previa
+    }
+    function terminadoError(mensaje) {
+      estadoLogo('✗ Error: ' + mensaje, '#f87171');
+      window.mostrarToast(mensaje, 'error');
+    }
+    function enviar(archivoOBlob, nombre) {
       var fd = new FormData();
-      fd.append('logo', blob, 'logo.png');
+      fd.append('logo', archivoOBlob, nombre);
       return fetch('api/configuracion.php?action=set_logo', {
         method: 'POST', body: fd, credentials: 'same-origin'
-      }).then(function (r) { return r.json(); });
+      }).then(function (r) { return r.json(); })
+        .catch(function () { throw new Error('Error de conexión con el servidor'); });
+    }
+
+    procesarLogo(archivo).then(function (blob) {
+      return enviar(blob, 'logo.png');
+    }).catch(function (errProceso) {
+      if (archivo.size <= 5 * 1024 * 1024) {
+        estadoLogo('Reintentando con el archivo original…', '#fbbf24');
+        return enviar(archivo, archivo.name || 'logo');
+      }
+      throw errProceso;
     }).then(function (res) {
-      if (!res.ok) { window.mostrarToast(res.error || 'No se pudo subir el logo', 'error'); return; }
-      window.mostrarToast('Logo actualizado', 'success');
-      cargar();
+      if (!res || !res.ok) {
+        terminadoError((res && res.error) || 'No se pudo subir el logo');
+        return;
+      }
+      terminadoOk();
     }).catch(function (err) {
-      window.mostrarToast(err && err.message ? err.message : 'Error de conexión con el servidor', 'error');
+      terminadoError(err && err.message ? err.message : 'Error de conexión con el servidor');
     });
   }
 

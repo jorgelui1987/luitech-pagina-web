@@ -191,8 +191,8 @@ switch ($action) {
             ];
             responder(['ok' => false, 'error' => $mensajes[$codigoSubida] ?? ('Error de subida (código ' . $codigoSubida . ')')], 400);
         }
-        if ($f['size'] <= 0 || $f['size'] > 2097152) {
-            responder(['ok' => false, 'error' => 'El logo debe pesar entre 0 y 2 MB'], 400);
+        if ($f['size'] <= 0 || $f['size'] > 5242880) {
+            responder(['ok' => false, 'error' => 'El logo debe pesar entre 0 y 5 MB'], 400);
         }
         if (!is_uploaded_file($f['tmp_name'])) {
             responder(['ok' => false, 'error' => 'Subida inválida'], 400);
@@ -200,7 +200,7 @@ switch ($action) {
         $mime = (new finfo(FILEINFO_MIME_TYPE))->file($f['tmp_name']);
         $extPermitidas = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
         if (!isset($extPermitidas[$mime]) || @getimagesize($f['tmp_name']) === false) {
-            responder(['ok' => false, 'error' => 'El logo debe ser una imagen JPG, PNG o WebP'], 400);
+            responder(['ok' => false, 'error' => 'El archivo no es una imagen válida (tipo detectado: ' . ($mime ?: 'desconocido') . '). Formatos aceptados: JPG, PNG o WebP'], 400);
         }
 
         $baseReal = realpath(__DIR__ . '/../uploads');
