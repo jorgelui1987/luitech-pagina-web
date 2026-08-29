@@ -2,7 +2,8 @@
 /**
  * LUITECH - Respaldo completo del sistema (solo administrador).
  * GET ?action=descargar
- * Genera un ZIP con:
+ * Genera un ZIP construido en PHP puro (SIN depender de la extensión
+ * ZipArchive del servidor) con:
  *   1) respaldo-luitech.sql  -> todas las tablas con estructura y datos
  *   2) carpeta uploads/      -> firmas, fotos, logo
  * Además guarda una copia en /backups/ (carpeta protegida, se conservan
@@ -21,14 +22,73 @@ if (!es_admin()) {
     exit;
 }
 
-if (!class_exists('ZipArchive')) {
-    http_response_code(500);
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode(['ok' => false, 'error' => 'El servidor no tiene la extensión ZIP (ZipArchive)'], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-
 @set_time_limit(300);
+
+/** Escritor de ZIP en PHP puro (almacenado/deflate): funciona en cualquier
+ *  hosting aunque no tenga la extensión ZipArchive habilitada. */
+class ZiperSimple
+{
+    private $locales  = '';
+    private $central  = '';
+    private $offset   = 0;
+    private $cantidad = 0;
+
+    public function agregar(string $nombre, string $contenido): void
+    {
+        $metodo = 0;
+        $datos  = $contenido;
+        if (function_exists('gzdeflate')) {
+            $defl = @gzdeflate($contenido, 6);
+            if (is_string($defl) && strlen($defl) < strlen($contenido)) {
+                $datos  = $defl;
+                $metodo = 8;
+            }
+        }
+        [$hora, $fecha] = self::fechaDos();
+        $crc = pack('V', crc32($contenido));
+        $inicioLocal = $this->offset;
+
+        // Cabecera local (30 bytes): firma, versión, flags, método, hora, fecha,
+        // crc, tamaño comprimido, tamaño original, largo nombre, largo extra
+        $this->locales .= pack('VvvvvvVVVvv', 0x04034b50, 20, 0, $metodo, $hora, $fecha, $crc,
+                strlen($datos), strlen($contenido), strlen($nombre), 0)
+            . $nombre . $datos;
+
+        // Entrada del directorio central (46 bytes): igual + quién lo hizo,
+        // largo comentario, disco inicial, atributos y offset de la cabecera local
+        $this->central .= pack('VvvvvvvVVVvvvvvVV', 0x02014b50, 20, 20, 0, $metodo, $hora, $fecha, $crc,
+                strlen($datos), strlen($contenido), strlen($nombre), 0, 0, 0, 0, 0, $inicioLocal)
+            . $nombre;
+
+        $this->offset = $inicioLocal + 30 + strlen($nombre) + strlen($datos);
+        $this->cantidad++;
+    }
+
+    public function agregarArchivo(string $rutaAbsoluta, string $nombreEnZip): void
+    {
+        $contenido = @file_get_contents($rutaAbsoluta);
+        if (is_string($contenido)) {
+            $this->agregar($nombreEnZip, $contenido);
+        }
+    }
+
+    public function terminar(): string
+    {
+        return $this->locales
+            . $this->central
+            . pack('VvvvvVVv', 0x06054b50, 0, 0, $this->cantidad, $this->cantidad,
+                   strlen($this->central), $this->offset, 0);
+    }
+
+    /** Fecha/hora en el formato DOS que usa el ZIP. */
+    private static function fechaDos(): array
+    {
+        return [
+            ((int)date('G') << 11) | ((int)date('i') << 5) | intdiv((int)date('s'), 2),
+            (((int)date('Y') - 1980) << 9) | ((int)date('n') << 5) | (int)date('j'),
+        ];
+    }
+}
 
 /** Respuesta de error en JSON (para que el navegador/JS la entienda). */
 function respaldo_error(string $mensaje, int $codigo): void
@@ -66,7 +126,7 @@ foreach ($tablas as $tabla) {
 }
 $sql .= "SET FOREIGN_KEY_CHECKS = 1;\n";
 
-/* ---------- 2) ZIP: respaldo.sql + carpeta uploads/ -------------------- */
+/* ---------- 2) ZIP construido en PHP puro (sin extensiones) ------------ */
 $dirBackups = __DIR__ . '/../backups';
 if (!is_dir($dirBackups) && !mkdir($dirBackups, 0755, true) && !is_dir($dirBackups)) {
     respaldo_error('No se pudo crear la carpeta backups', 500);
@@ -74,11 +134,8 @@ if (!is_dir($dirBackups) && !mkdir($dirBackups, 0755, true) && !is_dir($dirBacku
 $nombreZip = 'respaldo-luitech-' . date('Y-m-d-Hi') . '.zip';
 $rutaZip   = $dirBackups . '/' . $nombreZip;
 
-$zip = new ZipArchive();
-if ($zip->open($rutaZip, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-    respaldo_error('No se pudo crear el archivo ZIP', 500);
-}
-$zip->addFromString('respaldo-luitech.sql', $sql);
+$zip = new ZiperSimple();
+$zip->agregar('respaldo-luitech.sql', $sql);
 
 $raizUploads = realpath(__DIR__ . '/../uploads');
 if ($raizUploads !== false) {
@@ -89,10 +146,13 @@ if ($raizUploads !== false) {
     foreach ($iterador as $archivo) {
         $ruta     = (string)$archivo;
         $relativa = 'uploads/' . ltrim(substr($ruta, strlen($raizUploads)), '/\\');
-        $zip->addFile($ruta, str_replace('\\', '/', $relativa));
+        $zip->agregarArchivo($ruta, str_replace('\\', '/', $relativa));
     }
 }
-$zip->close();
+file_put_contents($rutaZip, $zip->terminar());
+if (!is_file($rutaZip)) {
+    respaldo_error('No se pudo guardar el archivo ZIP', 500);
+}
 
 /* ---------- 3) Conservar solo las últimas 10 copias -------------------- */
 $copias = glob($dirBackups . '/respaldo-luitech-*.zip');
