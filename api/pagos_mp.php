@@ -202,7 +202,7 @@ switch ($action) {
         [$codigoHttp, $intent] = mp_api('POST', $rutaIntent, [
             'amount'          => $saldo,
             'description'     => 'Orden ' . $codigo,
-            'payment'         => ['transaction_amount' => $saldo, 'payment_method_reference' => 'MPE'],
+            'payment'         => ['installments' => 1, 'type' => 'debit_card'],
             'additional_info' => ['external_reference' => $codigo, 'print_on_terminal' => true],
         ], $cfg['token']);
         if ($codigoHttp >= 200 && $codigoHttp < 300 && !empty($intent['id'])) {
