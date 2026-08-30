@@ -182,6 +182,42 @@ function auto_entregar_si_pagada(PDO $pdo, string $codigo): ?array
     return ['auto' => true, 'entregado_a' => $entregadoA, 'comision' => $comision];
 }
 
+/* ==========================================================================
+ * PROVEEDORES Y COMPRAS DE MERCADERÍA (tablas auto-reparables)
+ * ========================================================================== */
+
+/** Garantiza las tablas de proveedores/compras y la columna proveedor_id en
+ *  productos (mismo espíritu que preparar_configuraciones: para hostings que
+ *  no ejecutan database/migrate.php). */
+function preparar_proveedores(PDO $pdo): void
+{
+    $pdo->exec("CREATE TABLE IF NOT EXISTS proveedores (
+        id              INT UNSIGNED     AUTO_INCREMENT PRIMARY KEY,
+        nombre          VARCHAR(120)     NOT NULL,
+        rut             VARCHAR(12)      NULL,
+        telefono        VARCHAR(40)      NULL,
+        nota            VARCHAR(255)     NULL,
+        activo          TINYINT(1)       NOT NULL DEFAULT 1,
+        creado_en       TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS entradas_stock (
+        id              INT UNSIGNED     AUTO_INCREMENT PRIMARY KEY,
+        proveedor_id    INT UNSIGNED     NOT NULL,
+        producto_id     INT UNSIGNED     NOT NULL,
+        cantidad        INT UNSIGNED     NOT NULL DEFAULT 1,
+        costo_unitario  INT UNSIGNED     NOT NULL DEFAULT 0,
+        total           INT UNSIGNED     NOT NULL DEFAULT 0,
+        pagada_caja     TINYINT(1)       NOT NULL DEFAULT 1,
+        nota            VARCHAR(255)     NULL,
+        fecha           TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_ent_prov (proveedor_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $col = $pdo->query("SHOW COLUMNS FROM productos LIKE 'proveedor_id'")->fetch(PDO::FETCH_ASSOC);
+    if (!$col) {
+        $pdo->exec("ALTER TABLE productos ADD COLUMN proveedor_id INT UNSIGNED NULL AFTER proveedor");
+    }
+}
+
 /** Texto del cuerpo (trim + longitud máxima). */
 function campo_texto(array $fuente, string $clave, int $max = 255): ?string
 {

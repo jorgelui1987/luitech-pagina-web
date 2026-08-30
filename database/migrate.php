@@ -371,6 +371,38 @@ if (!$colProv) {
     echo "[migrate] productos.proveedor agregado\n";
 }
 
+// --- Proveedores y compras de mercadería ----------------------------------
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS proveedores (
+        id              INT UNSIGNED     AUTO_INCREMENT PRIMARY KEY,
+        nombre          VARCHAR(120)     NOT NULL,
+        rut             VARCHAR(12)      NULL,
+        telefono        VARCHAR(40)      NULL,
+        nota            VARCHAR(255)     NULL,
+        activo          TINYINT(1)       NOT NULL DEFAULT 1,
+        creado_en       TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+");
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS entradas_stock (
+        id              INT UNSIGNED     AUTO_INCREMENT PRIMARY KEY,
+        proveedor_id    INT UNSIGNED     NOT NULL,
+        producto_id     INT UNSIGNED     NOT NULL,
+        cantidad        INT UNSIGNED     NOT NULL DEFAULT 1,
+        costo_unitario  INT UNSIGNED     NOT NULL DEFAULT 0,
+        total           INT UNSIGNED     NOT NULL DEFAULT 0,
+        pagada_caja     TINYINT(1)       NOT NULL DEFAULT 1,
+        nota            VARCHAR(255)     NULL,
+        fecha           TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_ent_prov (proveedor_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+");
+$colProvId = $pdo->query("SHOW COLUMNS FROM productos LIKE 'proveedor_id'")->fetch(PDO::FETCH_ASSOC);
+if (!$colProvId) {
+    $pdo->exec("ALTER TABLE productos ADD COLUMN proveedor_id INT UNSIGNED NULL AFTER proveedor");
+    echo "[migrate] productos.proveedor_id agregado\n";
+}
+
 // --- Gastos del negocio ---------------------------------------------------
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS gastos (

@@ -33,6 +33,7 @@
             </div>
             <nav class="flex items-center gap-3 text-xs font-semibold">
                 <a href="pos.html" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 px-3 py-1.5 rounded-lg"><i class="fa-solid fa-cash-register mr-1"></i>Ir al POS</a>
+                <a href="proveedores.html" class="bg-amber-500 hover:bg-amber-400 text-slate-950 px-3 py-1.5 rounded-lg"><i class="fa-solid fa-truck-field mr-1"></i>Proveedores</a>
                 <a href="admin.html" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-lg">Panel</a>
             </nav>
         </header>
@@ -45,7 +46,7 @@
                 <input type="text" id="p-codigo" placeholder="Código*" maxlength="30" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
                 <input type="text" id="p-nombre" placeholder="Nombre*" maxlength="120" class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
                 <input type="text" id="p-cat" placeholder="Categoría" maxlength="60" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
-                <input type="text" id="p-prov" placeholder="Proveedor" maxlength="120" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                <select id="p-prov" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500"><option value="">— Proveedor —</option></select>
                 <input type="number" id="p-costo" min="0" placeholder="Costo $" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
                 <input type="number" id="p-venta" min="0" placeholder="Venta $*" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
                 <input type="number" id="p-stock" min="0" placeholder="Stock" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">

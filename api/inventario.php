@@ -14,6 +14,7 @@ require __DIR__ . '/config.php';
 
 iniciar_respuesta_json();
 exigir_admin();
+preparar_proveedores(db()); // tablas de proveedores auto-reparables
 
 $action = $_GET['action'] ?? '';
 
@@ -41,6 +42,10 @@ function leer_producto(array $d): array
     if (isset($d['proveedor'])) {
         $out['proveedor'] = trim(mb_substr((string)$d['proveedor'], 0, 120)) ?: null;
     }
+    if (isset($d['proveedor_id'])) {
+        $pid = (int)$d['proveedor_id'];
+        $out['proveedor_id'] = ($pid > 0) ? $pid : null;
+    }
     foreach (['precio_costo', 'precio_venta', 'stock', 'stock_minimo'] as $campoNumerico) {
         if (array_key_exists($campoNumerico, $d)) {
             $out[$campoNumerico] = max(0, (int)$d[$campoNumerico]);
@@ -56,9 +61,13 @@ switch ($action) {
 
     case 'list':
         $stmt = db()->query(
-            'SELECT id, codigo, nombre, categoria, proveedor, precio_costo, precio_venta,
-                    stock, stock_minimo, controlar_stock
-             FROM productos WHERE activo = 1 ORDER BY nombre'
+            'SELECT pr.id, pr.codigo, pr.nombre, pr.categoria, pr.proveedor, pr.proveedor_id,
+                    COALESCE(pv.nombre, pr.proveedor) AS proveedor_nombre,
+                    pr.precio_costo, pr.precio_venta,
+                    pr.stock, pr.stock_minimo, pr.controlar_stock
+             FROM productos pr
+             LEFT JOIN proveedores pv ON pv.id = pr.proveedor_id
+             WHERE pr.activo = 1 ORDER BY pr.nombre'
         );
         $productos = $stmt->fetchAll();
         foreach ($productos as &$p) {
@@ -76,8 +85,8 @@ switch ($action) {
         if (!isset($d['codigo'], $d['nombre'])) {
             responder(['ok' => false, 'error' => 'Código y Nombre son obligatorios'], 400);
         }
-        $sql = 'INSERT INTO productos (codigo, nombre, categoria, proveedor, precio_costo, precio_venta, stock, stock_minimo, controlar_stock)
-                VALUES (:codigo, :nombre, :categoria, :proveedor, :costo, :venta, :stock, :minimo, :ctrl)';
+        $sql = 'INSERT INTO productos (codigo, nombre, categoria, proveedor, proveedor_id, precio_costo, precio_venta, stock, stock_minimo, controlar_stock)
+                VALUES (:codigo, :nombre, :categoria, :proveedor, :proveedor_id, :costo, :venta, :stock, :minimo, :ctrl)';
         $st = db()->prepare($sql);
         try {
             $st->execute([
@@ -85,6 +94,7 @@ switch ($action) {
                 ':nombre' => $d['nombre'],
                 ':categoria'   => $d['categoria']   ?? 'Repuesto',
                 ':proveedor'   => $d['proveedor']   ?? null,
+                ':proveedor_id' => $d['proveedor_id'] ?? null,
                 ':costo'       => $d['precio_costo'] ?? 0,
                 ':venta'       => $d['precio_venta'] ?? 0,
                 ':stock'       => $d['stock']         ?? 0,
