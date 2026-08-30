@@ -60,7 +60,8 @@ switch ($action) {
         $productos = $stmt->fetchAll();
         foreach ($productos as &$p) {
             $p['stock_bajo'] = ((int)$p['controlar_stock'] === 1 && (int)$p['stock'] <= (int)$p['stock_minimo']) ? 1 : 0;
-            unset($p['controlar_stock']);
+            // controlar_stock SE MANTIENE en la respuesta: el inventario y el POS
+            // lo necesitan para distinguir productos físicos (con stock) de servicios
         }
         responder(['ok' => true, 'productos' => $productos]);
 
