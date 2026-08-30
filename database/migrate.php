@@ -402,6 +402,15 @@ if (!$colProvId) {
     $pdo->exec("ALTER TABLE productos ADD COLUMN proveedor_id INT UNSIGNED NULL AFTER proveedor");
     echo "[migrate] productos.proveedor_id agregado\n";
 }
+// Compatibilidad: la tabla proveedores del diseño original puede existir sin
+// rut/notas (tenía contacto/email). Agrega las columnas que falten.
+foreach (['rut' => "VARCHAR(12) NULL AFTER nombre", 'notas' => "VARCHAR(255) NULL AFTER telefono"] as $colPv => $tipoPv) {
+    $tienePv = $pdo->query("SHOW COLUMNS FROM proveedores LIKE '" . $colPv . "'")->fetch(PDO::FETCH_ASSOC);
+    if (!$tienePv) {
+        $pdo->exec("ALTER TABLE proveedores ADD COLUMN " . $colPv . " " . $tipoPv);
+        echo "[migrate] proveedores." . $colPv . " agregado\n";
+    }
+}
 
 // --- Gastos del negocio ---------------------------------------------------
 $pdo->exec("

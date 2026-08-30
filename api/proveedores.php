@@ -44,7 +44,7 @@ function leer_proveedor(array $d): array
         $out['telefono'] = trim(mb_substr((string)$d['telefono'], 0, 40)) ?: null;
     }
     if (isset($d['nota'])) {
-        $out['nota'] = trim(mb_substr((string)$d['nota'], 0, 255)) ?: null;
+        $out['notas'] = trim(mb_substr((string)$d['nota'], 0, 255)) ?: null;
     }
     return $out;
 }
@@ -53,7 +53,7 @@ switch ($action) {
 
     case 'list':
         $stmt = db()->query(
-            'SELECT p.id, p.nombre, p.rut, p.telefono, p.nota,
+            'SELECT p.id, p.nombre, p.rut, p.telefono, p.notas,
                     (SELECT COUNT(*) FROM entradas_stock c WHERE c.proveedor_id = p.id) AS compras_total,
                     (SELECT COALESCE(SUM(c.total),0) FROM entradas_stock c WHERE c.proveedor_id = p.id) AS monto_comprado,
                     (SELECT MAX(c.fecha) FROM entradas_stock c WHERE c.proveedor_id = p.id) AS ultima_compra

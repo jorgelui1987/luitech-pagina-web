@@ -100,7 +100,7 @@
     $('form-titulo').innerHTML = '<i class="fa-solid fa-pen mr-1"></i>Editando: ' + p.nombre;
     $('pv-id').value = p.id; $('pv-nombre').value = p.nombre;
     $('pv-rut').value = p.rut || ''; $('pv-telefono').value = p.telefono || '';
-    $('pv-nota').value = p.nota || '';
+    $('pv-nota').value = p.notas || '';
     $('btn-prov-cancelar').classList.remove('hidden');
   }
 
