@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS ordenes (
     equipo         VARCHAR(120)      NOT NULL,
     tipo           ENUM('Celular','PC/Notebook','Otro') NOT NULL DEFAULT 'Celular',
     falla          TEXT              NOT NULL,
-    estado         ENUM('Ingresado','En Diagnóstico','En Reparación','Listo para Retiro')
+    estado         ENUM('Ingresado','En Diagnóstico','En Reparación','Listo para Retiro','Entregado')
                                      NOT NULL DEFAULT 'Ingresado',
     avance         TINYINT UNSIGNED  NOT NULL DEFAULT 10,
     tecnico        VARCHAR(80)       NOT NULL DEFAULT 'Por Asignar',

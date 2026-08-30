@@ -1121,6 +1121,11 @@
         renderEntregaModal(ordenActualModal());
         renderizarTablaAdmin();
         window.mostrarToast('Cobro registrado: ' + monto(nuevoAbono) + ' de ' + monto(total), 'success');
+        if (res.auto_entregada) {
+          patchOrdenModal({ estado: 'Entregado', avance: 100, entregado_a: res.orden.entregado_a, fecha_entrega: res.orden.fecha_entrega });
+          window.mostrarToast('Pago completo: equipo ENTREGADO automáticamente + comisión generada', 'success');
+        }
+        if (res.comision) window.mostrarToast('Comisión de ' + res.comision.tecnico + ': ' + monto(res.comision.monto), 'success');
         if (res.aviso) window.mostrarToast(res.aviso, 'error');
       })
       .catch(function () {
@@ -1257,6 +1262,7 @@
       body: {
         codigo: ordenModalCodigo,
         entregar: true,
+        estado: 'Entregado',
         entregado_a: retira,
         firma_entrega: lienzoFirmaEntrega ? lienzoFirmaEntrega.toDataURL('image/png') : null
       }

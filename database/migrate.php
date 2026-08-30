@@ -356,6 +356,13 @@ if ($colMedioVenta && strpos($colMedioVenta['Type'], 'Mercado Pago') === false) 
     echo "[migrate] ventas.medio_pago ahora acepta Mercado Pago\n";
 }
 
+// --- Estado "Entregado" en el ENUM de ordenes (entrega con o sin firma) ----
+$colEstado = $pdo->query("SHOW COLUMNS FROM ordenes LIKE 'estado'")->fetch(PDO::FETCH_ASSOC);
+if ($colEstado && strpos($colEstado['Type'], 'Entregado') === false) {
+    $pdo->exec("ALTER TABLE ordenes MODIFY COLUMN estado ENUM('Ingresado','En Diagnóstico','En Reparación','Listo para Retiro','Entregado') NOT NULL DEFAULT 'Ingresado'");
+    echo "[migrate] ordenes.estado ahora acepta Entregado\n";
+}
+
 // --- Gastos del negocio ---------------------------------------------------
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS gastos (

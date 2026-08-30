@@ -29,6 +29,7 @@ define('DB_USER', env_var('LUITECH_DB_USER', 'DB_USERNAME', 'DB_USER') ?? 'root'
 define('DB_PASS', env_var('LUITECH_DB_PASS', 'DB_PASSWORD', 'DB_PASS') ?? '');
 
 const ADMIN_USER_MIN_LEN = 3;
+const COMISION_PISO = 5000; // piso mínimo de comisión por reparación (Modelo B)
 
 // --- Encabezados comunes para endpoints JSON --------------------------
 function iniciar_respuesta_json(): void
@@ -111,6 +112,74 @@ function leer_cuerpo(): array
         return is_array($json) ? $json : [];
     }
     return $_POST ?: [];
+}
+
+/* ==========================================================================
+ * ÓRDENES: comisión del técnico (Modelo B) y entrega automática al pago completo
+ * ========================================================================== */
+
+/** Genera la comisión del técnico para una orden (Modelo B: % del margen neto
+ *  real con piso mínimo). Idempotente: si la orden ya tiene comisión, no duplica.
+ *  Devuelve ['tecnico','monto','base_margen','porcentaje'] o null si no corresponde. */
+function generar_comision_orden(PDO $pdo, string $codigo): ?array
+{
+    $rowO = $pdo->prepare('SELECT tecnico_id, total, costo_repuesto FROM ordenes WHERE codigo = ? LIMIT 1');
+    $rowO->execute([$codigo]);
+    $oFila = $rowO->fetch();
+    if (!$oFila || (int)$oFila['tecnico_id'] <= 0 || (int)$oFila['total'] <= 0) {
+        return null;
+    }
+    $yaExiste = $pdo->prepare('SELECT id FROM comisiones WHERE orden_codigo = ? LIMIT 1');
+    $yaExiste->execute([$codigo]);
+    if ($yaExiste->fetch()) {
+        return null;
+    }
+    $stTec = $pdo->prepare('SELECT nombre, porcentaje_comision FROM tecnicos WHERE id = ? LIMIT 1');
+    $stTec->execute([(int)$oFila['tecnico_id']]);
+    $tecnicoCom = $stTec->fetch();
+    if (!$tecnicoCom) {
+        return null;
+    }
+    $tasaIva     = (int)(config_valor($pdo, 'iva_porcentaje', '19'));
+    $netoCobrado = (int)round((int)$oFila['total'] * 100 / (100 + max(0, $tasaIva)));
+    $costoNeto   = (int)round((int)$oFila['costo_repuesto'] * 100 / (100 + max(0, $tasaIva)));
+    $baseMargen  = max(0, $netoCobrado - $costoNeto);
+    if ($baseMargen <= 0) {
+        return null;
+    }
+    $pctCom   = max(0, min(100, (int)$tecnicoCom['porcentaje_comision']));
+    $montoCom = max(COMISION_PISO, (int)round($baseMargen * $pctCom / 100));
+    $pdo->prepare('INSERT INTO comisiones (orden_codigo, tecnico_id, tecnico_nombre, base_margen, porcentaje, monto) VALUES (?, ?, ?, ?, ?, ?)')
+        ->execute([$codigo, (int)$oFila['tecnico_id'], (string)$tecnicoCom['nombre'], $baseMargen, $pctCom, $montoCom]);
+    $pdo->prepare('INSERT INTO orden_bitacora (orden_codigo, tecnico, nota) VALUES (?, ?, ?)')
+        ->execute([$codigo, (string)$tecnicoCom['nombre'], 'Comisión generada: $' . $montoCom . ' (' . $pctCom . '% del margen $' . $baseMargen . ')']);
+    return ['tecnico' => (string)$tecnicoCom['nombre'], 'monto' => $montoCom, 'base_margen' => $baseMargen, 'porcentaje' => $pctCom];
+}
+
+/** Entrega automática: cuando la orden queda PAGADA por completo y aún no está
+ *  entregada, la pasa a Entregado (sin firma) y genera la comisión del técnico.
+ *  Devuelve ['auto'=>true,'entregado_a','comision'] o null si no corresponde. */
+function auto_entregar_si_pagada(PDO $pdo, string $codigo): ?array
+{
+    $st = $pdo->prepare('SELECT estado, total, abono, cliente, tecnico FROM ordenes WHERE codigo = ? LIMIT 1');
+    $st->execute([$codigo]);
+    $o = $st->fetch();
+    if (!$o) {
+        return null;
+    }
+    if ((int)$o['total'] <= 0 || (int)$o['abono'] < (int)$o['total']) {
+        return null; // aún no está pagada por completo
+    }
+    if ($o['estado'] === 'Entregado') {
+        return null; // ya estaba entregada
+    }
+    $entregadoA = ($o['cliente'] !== null && $o['cliente'] !== '') ? $o['cliente'] : 'Cliente';
+    $pdo->prepare("UPDATE ordenes SET estado = 'Entregado', avance = 100, fecha_entrega = NOW(), entregado_a = ? WHERE codigo = ?")
+        ->execute([$entregadoA, $codigo]);
+    $pdo->prepare('INSERT INTO orden_bitacora (orden_codigo, tecnico, nota, estado_nuevo) VALUES (?, ?, ?, ?)')
+        ->execute([$codigo, (string)($o['tecnico'] ?? ''), 'Pago completo: entrega automática del equipo', 'Entregado']);
+    $comision = generar_comision_orden($pdo, $codigo);
+    return ['auto' => true, 'entregado_a' => $entregadoA, 'comision' => $comision];
 }
 
 /** Texto del cuerpo (trim + longitud máxima). */

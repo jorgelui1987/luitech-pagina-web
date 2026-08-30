@@ -23,14 +23,14 @@ aplicar_zona_horaria();
 
 iniciar_respuesta_json();
 
-const ESTADOS_VALIDOS = ['Ingresado', 'En Diagnóstico', 'En Reparación', 'Listo para Retiro'];
+const ESTADOS_VALIDOS = ['Ingresado', 'En Diagnóstico', 'En Reparación', 'Listo para Retiro', 'Entregado'];
 
 /** Porcentaje estándar de avance al cambiar de estado (el tracker público
  *  enciende sus etapas según el estado; sin esto quedarían desincronizados). */
-const AVANCE_POR_ESTADO = ['Ingresado' => 10, 'En Diagnóstico' => 30, 'En Reparación' => 60, 'Listo para Retiro' => 100];
+const AVANCE_POR_ESTADO = ['Ingresado' => 10, 'En Diagnóstico' => 30, 'En Reparación' => 60, 'Listo para Retiro' => 100, 'Entregado' => 100];
 
-/** Piso mínimo de comisión por reparación entregada (incentivo en márgenes chicos). */
-const COMISION_PISO = 5000;
+/** Piso mínimo de comisión por reparación entregada (incentivo en márgenes chicos).
+ *  Definido en api/config.php como COMISION_PISO (compartido con Mercado Pago). */
 
 /* ---------------------------------------------------------------------
  * Archivos del acta de recepción (fotos de respaldo y firma del cliente)
@@ -413,6 +413,7 @@ switch ($action) {
         }
 
         // El estado de pago se deriva de total/abono (nunca lo envía el cliente)
+        $estadoPago = null;
         if (isset($d['total']) || isset($d['abono'])) {
             $row = db()->prepare('SELECT total, abono FROM ordenes WHERE codigo = ?');
             $row->execute([$codigo]);
@@ -423,37 +424,24 @@ switch ($action) {
             db()->prepare('UPDATE ordenes SET estado_pago = ? WHERE codigo = ?')->execute([$estadoPago, $codigo]);
         }
 
-        // --- Comisión del técnico: se genera UNA VEZ, al entregar la orden ---
-        // Modelo B: % sobre el margen real (neto cobrado - costo neto repuesto),
-        // con piso mínimo para incentivar en márgenes chicos. Idempotente.
+        // --- Entrega automática: pago completo → estado Entregado + comisión ---
+        // Al quedar Pagada (por abono manual, Point o QR) el sistema entrega el
+        // equipo solo, sin requerir la firma, y genera la comisión del técnico.
+        $autoEntregada = false;
         $comisionGenerada = null;
+        if ($estadoPago === 'Pagado') {
+            $auto = auto_entregar_si_pagada(db(), $codigo);
+            if ($auto !== null) {
+                $autoEntregada = true;
+                $comisionGenerada = $auto['comision'];
+            }
+        }
+
+        // --- Comisión del técnico (entrega manual con firma): idempotente ---
         if (!empty($d['entregar'])) {
-            $rowO = db()->prepare('SELECT tecnico_id, total, costo_repuesto FROM ordenes WHERE codigo = ?');
-            $rowO->execute([$codigo]);
-            $oFila = $rowO->fetch();
-            if ($oFila && (int)$oFila['tecnico_id'] > 0 && (int)$oFila['total'] > 0) {
-                $yaExiste = db()->prepare('SELECT id FROM comisiones WHERE orden_codigo = ? LIMIT 1');
-                $yaExiste->execute([$codigo]);
-                if (!$yaExiste->fetch()) {
-                    $stTec = db()->prepare('SELECT nombre, porcentaje_comision FROM tecnicos WHERE id = ? LIMIT 1');
-                    $stTec->execute([(int)$oFila['tecnico_id']]);
-                    $tecnicoCom = $stTec->fetch();
-                    if ($tecnicoCom) {
-                        $tasaIva     = (int)(config_valor(db(), 'iva_porcentaje', '19'));
-                        $netoCobrado = (int)round((int)$oFila['total'] * 100 / (100 + max(0, $tasaIva)));
-                        $costoNeto   = (int)round((int)$oFila['costo_repuesto'] * 100 / (100 + max(0, $tasaIva)));
-                        $baseMargen  = max(0, $netoCobrado - $costoNeto);
-                        if ($baseMargen > 0) {
-                            $pctCom   = max(0, min(100, (int)$tecnicoCom['porcentaje_comision']));
-                            $montoCom = max(COMISION_PISO, (int)round($baseMargen * $pctCom / 100));
-                            db()->prepare('INSERT INTO comisiones (orden_codigo, tecnico_id, tecnico_nombre, base_margen, porcentaje, monto) VALUES (?, ?, ?, ?, ?, ?)')
-                                ->execute([$codigo, (int)$oFila['tecnico_id'], (string)$tecnicoCom['nombre'], $baseMargen, $pctCom, $montoCom]);
-                            db()->prepare('INSERT INTO orden_bitacora (orden_codigo, tecnico, nota) VALUES (?, ?, ?)')
-                                ->execute([$codigo, (string)$tecnicoCom['nombre'], 'Comisión generada: $' . $montoCom . ' (' . $pctCom . '% del margen $' . $baseMargen . ')']);
-                            $comisionGenerada = ['tecnico' => (string)$tecnicoCom['nombre'], 'monto' => $montoCom, 'base_margen' => $baseMargen, 'porcentaje' => $pctCom];
-                        }
-                    }
-                }
+            $comisionManual = generar_comision_orden(db(), $codigo);
+            if ($comisionManual !== null) {
+                $comisionGenerada = $comisionManual;
             }
         }
 
@@ -502,6 +490,9 @@ switch ($action) {
         }
         if ($comisionGenerada !== null) {
             $respuesta['comision'] = $comisionGenerada;
+        }
+        if ($autoEntregada) {
+            $respuesta['auto_entregada'] = true;
         }
         responder($respuesta);
     }

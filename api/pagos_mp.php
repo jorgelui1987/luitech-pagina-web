@@ -169,6 +169,8 @@ function mp_aplicar_pago_orden(PDO $pdo, string $codigo, int $monto, string $pag
     }
     $pdo->prepare('INSERT INTO orden_bitacora (orden_codigo, tecnico, nota) VALUES (?, ?, ?)')
         ->execute([$codigo, 'Mercado Pago', 'Pago vía Mercado Pago: $' . ($nuevoAbono - $abonoActual) . ' [MP ' . $pagoId . ']']);
+    // Pago completo → entrega automática del equipo (con comisión del técnico)
+    auto_entregar_si_pagada($pdo, $codigo);
 }
 
 switch ($action) {
