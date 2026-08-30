@@ -187,16 +187,25 @@ switch ($action) {
     }
 
     case 'catalogo_list': {
+        // Búsqueda por palabras: cada palabra escrita debe estar presente
+        // (modelo, pieza o proveedor). Ej: "pantalla iphone 15" -> solo
+        // pantallas del iPhone 15; "iphone 15" -> todas las piezas de ese modelo.
         $q = trim((string)($_GET['q'] ?? ''));
         $sql = 'SELECT c.id, c.modelo, c.pieza, c.precio, c.disponible, c.actualizado_en,
                        p.nombre AS proveedor_nombre
                 FROM catalogo_proveedores c
                 JOIN proveedores p ON p.id = c.proveedor_id';
         $params = [];
-        if ($q !== '') {
-            $sql .= ' WHERE c.modelo LIKE ? OR c.pieza LIKE ?';
-            $params[] = '%' . $q . '%';
-            $params[] = '%' . $q . '%';
+        $conds = [];
+        foreach (preg_split('/\s+/', mb_strtolower($q)) as $palabra) {
+            if ($palabra === '') continue;
+            $conds[] = '(LOWER(c.modelo) LIKE ? OR LOWER(c.pieza) LIKE ? OR LOWER(p.nombre) LIKE ?)';
+            $params[] = '%' . $palabra . '%';
+            $params[] = '%' . $palabra . '%';
+            $params[] = '%' . $palabra . '%';
+        }
+        if (count($conds) > 0) {
+            $sql .= ' WHERE ' . implode(' AND ', $conds);
         }
         $sql .= ' ORDER BY c.disponible DESC, c.precio ASC, c.modelo ASC LIMIT 300';
         $stmt = db()->prepare($sql);
