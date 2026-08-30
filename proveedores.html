@@ -83,6 +83,36 @@
             </div>
             <p class="nota mt-2">Registrar una compra <b>suma el stock</b> del producto, actualiza su <b>costo</b> y, si marcas "Descontar de la caja", registra el <b>Egreso</b> en la caja abierta.</p>
         </section>
+
+        <section class="sec">
+            <h2><i class="fa-solid fa-book mr-1"></i>Catálogo de precios de proveedores (cotiza al instante)</h2>
+            <input type="hidden" id="cat-id">
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-2.5 text-xs">
+                <select id="cat-prov" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500"><option value="">— Proveedor —</option></select>
+                <input type="text" id="cat-modelo" placeholder="Modelo del equipo* (ej: Samsung A54)" maxlength="80" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                <input type="text" id="cat-pieza" placeholder="Pieza* (ej: Pantalla, Batería)" maxlength="60" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                <input type="number" id="cat-precio" min="0" placeholder="Precio proveedor $*" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                <label class="flex items-center gap-2 text-slate-400"><input type="checkbox" id="cat-disp" checked class="accent-emerald-500">Disponible</label>
+                <button type="button" id="btn-cat-cancelar" class="hidden bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold rounded-lg py-2">Cancelar</button>
+                <button type="button" id="btn-cat" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg py-2 col-span-2 md:col-span-3"><i class="fa-solid fa-plus mr-1"></i>Agregar al catálogo</button>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 mt-4 text-xs">
+                <input type="text" id="cat-buscar" placeholder="Buscar modelo o pieza (ej: A54, pantalla)..." class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-cyan-500 flex-1" style="min-width:200px">
+                <label class="lb mb-0" for="cat-margen">Margen:</label>
+                <input type="number" id="cat-margen" min="0" max="500" value="40" class="inp" style="width:70px">%
+                <button type="button" id="btn-cat-margen" class="bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold rounded-lg px-3 py-1.5">Guardar margen</button>
+                <span id="cat-estado" class="font-bold text-cyan-400 ml-auto"></span>
+            </div>
+            <div class="overflow-x-auto mt-2">
+                <table class="w-full text-left text-xs" style="min-width:720px">
+                    <thead class="text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-800">
+                        <tr><th class="p-2">Pieza</th><th class="p-2">Modelo</th><th class="p-2">Proveedor</th><th class="p-2 text-right">Costo prov.</th><th class="p-2 text-right">Precio sugerido</th><th class="p-2 text-center">Disp.</th><th class="p-2 text-center">Actualizado</th><th class="p-2 text-center">Acciones</th></tr>
+                    </thead>
+                    <tbody id="cat-body"></tbody>
+                </table>
+            </div>
+            <p class="nota mt-2">Precio sugerido = costo del proveedor + margen %. Carga el listado que te manda el proveedor y cotiza al cliente <b>sin preguntarle nada por WhatsApp</b>.</p>
+        </section>
     </main>
 
     <script src="assets/js/common.js?v=mp4" defer></script>

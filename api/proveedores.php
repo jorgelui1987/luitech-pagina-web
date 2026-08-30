@@ -186,6 +186,65 @@ switch ($action) {
         responder(['ok' => true, 'compras' => $compras, 'total' => $total]);
     }
 
+    case 'catalogo_list': {
+        $q = trim((string)($_GET['q'] ?? ''));
+        $sql = 'SELECT c.id, c.modelo, c.pieza, c.precio, c.disponible, c.actualizado_en,
+                       p.nombre AS proveedor_nombre
+                FROM catalogo_proveedores c
+                JOIN proveedores p ON p.id = c.proveedor_id';
+        $params = [];
+        if ($q !== '') {
+            $sql .= ' WHERE c.modelo LIKE ? OR c.pieza LIKE ?';
+            $params[] = '%' . $q . '%';
+            $params[] = '%' . $q . '%';
+        }
+        $sql .= ' ORDER BY c.disponible DESC, c.precio ASC, c.modelo ASC LIMIT 300';
+        $stmt = db()->prepare($sql);
+        $stmt->execute($params);
+        responder(['ok' => true, 'catalogo' => $stmt->fetchAll()]);
+    }
+
+    case 'catalogo_save': {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            responder(['ok' => false, 'error' => 'Método no permitido'], 405);
+        }
+        $d        = leer_cuerpo();
+        $id       = (int)($d['id'] ?? 0);
+        $proveedorId = (int)($d['proveedor_id'] ?? 0);
+        $modelo   = campo_texto($d, 'modelo', 80);
+        $pieza    = campo_texto($d, 'pieza', 60);
+        $precio   = max(0, (int)($d['precio'] ?? 0));
+        $disponible = !empty($d['disponible']);
+        if ($proveedorId <= 0 || $modelo === null || $pieza === null || $precio < 1) {
+            responder(['ok' => false, 'error' => 'Proveedor, modelo, pieza y precio son obligatorios'], 400);
+        }
+        $stP = db()->prepare('SELECT nombre FROM proveedores WHERE id = ? AND activo = 1 LIMIT 1');
+        $stP->execute([$proveedorId]);
+        if ($stP->fetchColumn() === false) {
+            responder(['ok' => false, 'error' => 'El proveedor no existe'], 400);
+        }
+        if ($id > 0) {
+            db()->prepare('UPDATE catalogo_proveedores SET proveedor_id = ?, modelo = ?, pieza = ?, precio = ?, disponible = ?, actualizado_en = NOW() WHERE id = ?')
+                ->execute([$proveedorId, $modelo, $pieza, $precio, $disponible ? 1 : 0, $id]);
+            responder(['ok' => true, 'id' => $id]);
+        }
+        db()->prepare('INSERT INTO catalogo_proveedores (proveedor_id, modelo, pieza, precio, disponible) VALUES (?, ?, ?, ?, ?)')
+            ->execute([$proveedorId, $modelo, $pieza, $precio, $disponible ? 1 : 0]);
+        responder(['ok' => true, 'id' => (int)db()->lastInsertId()]);
+    }
+
+    case 'catalogo_delete': {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            responder(['ok' => false, 'error' => 'Método no permitido'], 405);
+        }
+        $id = (int)(leer_cuerpo()['id'] ?? 0);
+        if ($id <= 0) {
+            responder(['ok' => false, 'error' => 'ID inválido'], 400);
+        }
+        db()->prepare('DELETE FROM catalogo_proveedores WHERE id = ?')->execute([$id]);
+        responder(['ok' => true]);
+    }
+
     default:
         responder(['ok' => false, 'error' => 'Acción desconocida'], 400);
 }

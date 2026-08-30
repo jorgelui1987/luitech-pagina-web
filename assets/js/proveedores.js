@@ -21,10 +21,58 @@
     p.classList.toggle('hidden', partes.length === 0);
   }
 
+  // Diagnóstico visible de la carga de datos del formulario de compra
+  var estadoPartes = { prov: '', prod: '' };
+  function refrescarEstadoCompras() {
+    var p = $('compras-estado');
+    if (!p) return;
+    var partes = [];
+    if (estadoPartes.prov) partes.push(estadoPartes.prov);
+    if (estadoPartes.prod) partes.push(estadoPartes.prod);
+    p.textContent = partes.join('   ·   ');
+    p.classList.toggle('hidden', partes.length === 0);
+  }
+
+  /* --------------------------------------------------------- CATÁLOGO */
+  var catMargen = 40;
+  var catEditando = 0;
+
+  function limpiarFormCat() {
+    catEditando = 0;
+    $('cat-id').value = '';
+    $('cat-modelo').value = ''; $('cat-pieza').value = '';
+    $('cat-precio').value = ''; $('cat-disp').checked = true;
+    $('btn-cat').innerHTML = '<i class="fa-solid fa-plus mr-1"></i>Agregar al catálogo';
+    $('btn-cat-cancelar').classList.add('hidden');
+    $('btn-cat').disabled = false;
+  }
+
+  function editarCatalogoItem(c) {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    catEditando = c.id;
+    $('cat-id').value = c.id;
+    $('cat-prov').value = String(c.proveedor_id || '');
+    $('cat-modelo').value = c.modelo; $('cat-pieza').value = c.pieza;
+    $('cat-precio').value = c.precio; $('cat-disp').checked = c.disponible === 1 || c.disponible === '1';
+    $('btn-cat').innerHTML = '<i class="fa-solid fa-floppy-disk mr-1"></i>Guardar cambios';
+    $('btn-cat-cancelar').classList.remove('hidden');
+  }
+
+  function eliminarCatalogo(c) {
+    if (!confirm('¿Eliminar "' + c.pieza + ' ' + c.modelo + '" del catálogo de ' + c.proveedor_nombre + '?')) return;
+    api('api/proveedores.php?action=catalogo_delete', { method: 'POST', body: { id: c.id } })
+      .then(function (res) {
+        if (!res.ok) { window.mostrarToast(res.error || 'No se pudo eliminar', 'error'); return; }
+        window.mostrarToast('Item eliminado del catálogo', 'success');
+        if (catEditando === c.id) limpiarFormCat();
+        cargarCatalogo();
+      }).catch(function () {});
+  }
+
   function mostrarVista(logueado) {
     $('view-nologin').classList.toggle('hidden', logueado);
     $('view-prov').classList.toggle('hidden', !logueado);
-    if (logueado) { cargarProveedores(); cargarProductos(); cargarCompras(); }
+    if (logueado) { cargarProveedores(); cargarProductos(); cargarCompras(); cargarMargen(); }
   }
 
   /* -------------------------------------------------- PROVEEDORES (CRUD) */
@@ -35,10 +83,11 @@
       tbody.replaceChildren();
 
       // Selects dependientes: formulario de compra y filtro del historial
-      var selCompra = $('c-prov'), selFiltro = $('fil-prov');
-      var compraActual = selCompra.value, filtroActual = selFiltro.value;
+      var selCompra = $('c-prov'), selFiltro = $('fil-prov'), selCat = $('cat-prov');
+      var compraActual = selCompra.value, filtroActual = selFiltro.value, catActual = selCat.value;
       selCompra.replaceChildren(new Option('Proveedor*', ''));
       selFiltro.replaceChildren(new Option('Todos los proveedores', ''));
+      selCat.replaceChildren(new Option('— Proveedor —', ''));
 
       if (!res.proveedores.length) {
         var trv = document.createElement('tr');
@@ -53,6 +102,7 @@
       res.proveedores.forEach(function (p) {
         selCompra.add(new Option(p.nombre, String(p.id)));
         selFiltro.add(new Option(p.nombre, String(p.id)));
+        selCat.add(new Option(p.nombre, String(p.id)));
 
         var tr = document.createElement('tr');
         tr.className = 'border-b border-slate-800/40 hover:bg-slate-800/30';
@@ -97,6 +147,7 @@
 
       selCompra.value = compraActual;
       selFiltro.value = filtroActual;
+      selCat.value = catActual;
       estadoPartes.prov = '✓ ' + res.proveedores.length + ' proveedor(es)';
       refrescarEstadoCompras();
     }).catch(function (err) {
@@ -253,12 +304,141 @@
     }).catch(function () {});
   }
 
+  /* ------------------------------------------------- CATÁLOGO (carga/operación) */
+  function cargarMargen() {
+    api('api/configuracion.php?action=get_all').then(function (res) {
+      if (!res.ok) return;
+      catMargen = parseInt((res.config || {}).catalogo_margen, 10);
+      if (isNaN(catMargen) || catMargen < 0) catMargen = 40;
+      $('cat-margen').value = catMargen;
+      cargarCatalogo();
+    }).catch(function () { cargarCatalogo(); });
+  }
+
+  function guardarMargen() {
+    var m = parseInt($('cat-margen').value, 10) || 0;
+    api('api/configuracion.php?action=set_many', { method: 'POST', body: { catalogo_margen: m } })
+      .then(function (res) {
+        if (!res.ok) { window.mostrarToast(res.error || 'No se pudo guardar el margen', 'error'); return; }
+        catMargen = m;
+        window.mostrarToast('Margen de catálogo: ' + m + '%', 'success');
+        cargarCatalogo();
+      }).catch(function () { window.mostrarToast('Error de conexión con el servidor', 'error'); });
+  }
+
+  function guardarCatalogo() {
+    var proveedorId = parseInt($('cat-prov').value, 10) || 0;
+    var modelo = $('cat-modelo').value.trim();
+    var pieza = $('cat-pieza').value.trim();
+    var precio = parseInt($('cat-precio').value, 10) || 0;
+    if (!proveedorId || !modelo || !pieza || precio < 1) {
+      window.mostrarToast('Proveedor, modelo, pieza y precio son obligatorios', 'error');
+      return;
+    }
+    var cuerpo = {
+      proveedor_id: proveedorId, modelo: modelo, pieza: pieza,
+      precio: precio, disponible: $('cat-disp').checked
+    };
+    if (catEditando) cuerpo.id = catEditando;
+
+    var boton = $('btn-cat');
+    boton.disabled = true;
+    api('api/proveedores.php?action=catalogo_save', { method: 'POST', body: cuerpo })
+      .then(function (res) {
+        boton.disabled = false;
+        if (!res.ok) { window.mostrarToast(res.error || 'No se pudo guardar', 'error'); return; }
+        window.mostrarToast(catEditando ? 'Item del catálogo actualizado' : 'Item agregado al catálogo', 'success');
+        limpiarFormCat();
+        cargarCatalogo();
+      }).catch(function () {
+        boton.disabled = false;
+        window.mostrarToast('Error de conexión con el servidor', 'error');
+      });
+  }
+
+  function cargarCatalogo() {
+    var q = $('cat-buscar').value.trim();
+    api('api/proveedores.php?action=catalogo_list' + (q ? '&q=' + encodeURIComponent(q) : ''))
+      .then(function (res) {
+        if (!res.ok) return;
+        var tbody = $('cat-body');
+        tbody.replaceChildren();
+        $('cat-estado').textContent = res.catalogo.length > 0 ? res.catalogo.length + ' items' : '';
+
+        if (!res.catalogo.length) {
+          var trv = document.createElement('tr');
+          var tdv = document.createElement('td');
+          tdv.colSpan = 8;
+          tdv.className = 'p-4 text-center italic text-slate-500';
+          tdv.textContent = q ? 'Sin resultados para "' + q + '".' : 'El catálogo está vacío: agrega los precios de tus proveedores.';
+          trv.appendChild(tdv);
+          tbody.appendChild(trv);
+          return;
+        }
+
+        res.catalogo.forEach(function (c) {
+          var tr = document.createElement('tr');
+          tr.className = 'border-b border-slate-800/40 hover:bg-slate-800/30';
+
+          function td(texto, clase) {
+            var c2 = document.createElement('td');
+            c2.className = clase || 'p-2 text-slate-300';
+            c2.textContent = texto;
+            return c2;
+          }
+
+          var sugerido = Math.round(c.precio * (1 + catMargen / 100));
+          tr.appendChild(td(c.pieza, 'p-2 font-bold text-white'));
+          tr.appendChild(td(c.modelo, 'p-2 text-cyan-400 font-semibold'));
+          tr.appendChild(td(c.proveedor_nombre, 'p-2 text-slate-400'));
+          tr.appendChild(td(fmt(c.precio), 'p-2 text-right text-slate-400'));
+          tr.appendChild(td(fmt(sugerido), 'p-2 text-right text-emerald-400 font-bold'));
+
+          var tdDisp = document.createElement('td');
+          tdDisp.className = 'p-2 text-center';
+          var chip = document.createElement('span');
+          chip.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold border ' +
+            (c.disponible ? 'bg-emerald-950 text-emerald-400 border-emerald-800' : 'bg-red-950 text-red-400 border-red-900');
+          chip.textContent = c.disponible ? 'Disponible' : 'No disp.';
+          tdDisp.appendChild(chip);
+          tr.appendChild(tdDisp);
+
+          tr.appendChild(td(c.actualizado_en ? c.actualizado_en.slice(0, 10) : '—', 'p-2 text-center text-slate-500'));
+
+          var tdAcc = document.createElement('td');
+          tdAcc.className = 'p-2 text-center whitespace-nowrap';
+          var btnEd = document.createElement('button');
+          btnEd.type = 'button'; btnEd.title = 'Editar';
+          btnEd.innerHTML = '<i class="fa-solid fa-pen pointer-events-none"></i>';
+          btnEd.className = 'w-7 h-7 rounded-lg bg-slate-800 hover:bg-cyan-600 text-slate-300 hover:text-white mx-0.5 transition-all';
+          btnEd.addEventListener('click', function () { editarCatalogoItem(c); });
+          var btnEl = document.createElement('button');
+          btnEl.type = 'button'; btnEl.title = 'Eliminar';
+          btnEl.innerHTML = '<i class="fa-solid fa-trash-can pointer-events-none"></i>';
+          btnEl.className = 'w-7 h-7 rounded-lg bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-900/60 mx-0.5 transition-all';
+          btnEl.addEventListener('click', function () { eliminarCatalogo(c); });
+          tdAcc.appendChild(btnEd); tdAcc.appendChild(btnEl);
+          tr.appendChild(tdAcc);
+
+          tbody.appendChild(tr);
+        });
+      }).catch(function () {});
+  }
+
   /* ----------------------------------------------------------- ARRANQUE */
   document.addEventListener('DOMContentLoaded', function () {
     $('btn-prov-guardar').addEventListener('click', guardarProveedor);
     $('btn-prov-cancelar').addEventListener('click', limpiarFormProv);
     $('btn-compra').addEventListener('click', registrarCompra);
     $('fil-prov').addEventListener('change', cargarCompras);
+    $('btn-cat').addEventListener('click', guardarCatalogo);
+    $('btn-cat-cancelar').addEventListener('click', limpiarFormCat);
+    $('btn-cat-margen').addEventListener('click', guardarMargen);
+    var busquedaTimer = null;
+    $('cat-buscar').addEventListener('input', function () {
+      clearTimeout(busquedaTimer);
+      busquedaTimer = setTimeout(cargarCatalogo, 300);
+    });
 
     api('api/auth.php?action=me').then(function (res) {
       mostrarVista(!!(res && res.logueado));

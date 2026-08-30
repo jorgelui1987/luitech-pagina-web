@@ -371,6 +371,21 @@ if (!$colProv) {
     echo "[migrate] productos.proveedor agregado\n";
 }
 
+// --- Catálogo de precios de proveedores (cotización instantánea) ----------
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS catalogo_proveedores (
+        id              INT UNSIGNED     AUTO_INCREMENT PRIMARY KEY,
+        proveedor_id    INT UNSIGNED     NOT NULL,
+        modelo          VARCHAR(80)      NOT NULL,
+        pieza           VARCHAR(60)      NOT NULL,
+        precio          INT UNSIGNED     NOT NULL DEFAULT 0,
+        disponible      TINYINT(1)       NOT NULL DEFAULT 1,
+        actualizado_en  TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_cat_prov (proveedor_id),
+        INDEX idx_cat_modelo (modelo)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+");
+
 // --- Proveedores y compras de mercadería ----------------------------------
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS proveedores (
