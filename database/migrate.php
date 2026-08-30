@@ -1,6 +1,6 @@
 <?php
 /**
- * Migración automática e idempotente al arranque del contenedor.
+ * MigraciÃ³n automÃ¡tica e idempotente al arranque del contenedor.
  * Crea las tablas si no existen y siembra datos iniciales (INSERT IGNORE),
  * usando las variables de entorno DB_* definidas en el panel (Dokploy).
  */
@@ -47,11 +47,11 @@ $pdo->exec("
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 ");
 
-// Admin inicial (usuario admin · clave luitech2026 — cambiar tras primer login)
+// Admin inicial (usuario admin Â· clave luitech2026 â€” cambiar tras primer login)
 $pdo->prepare('INSERT IGNORE INTO usuarios_admin (usuario, password_hash, nombre) VALUES (?, ?, ?)')
     ->execute(['admin', '$2y$10$dexr0Src7HyB4oAmWadqw.SH3DfipUA9iVmFXtYgkUY/TcHk5U8Qm', 'Administrador Luitech']);
 
-// --- Tabla de órdenes ---------------------------------------------------
+// --- Tabla de Ã³rdenes ---------------------------------------------------
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS ordenes (
         id             INT UNSIGNED      AUTO_INCREMENT PRIMARY KEY,
@@ -60,7 +60,7 @@ $pdo->exec("
         equipo         VARCHAR(120)      NOT NULL,
         tipo           ENUM('Celular','PC/Notebook','Otro') NOT NULL DEFAULT 'Celular',
         falla          TEXT              NOT NULL,
-        estado         ENUM('Ingresado','En Diagnóstico','En Reparación','Listo para Retiro')
+        estado         ENUM('Ingresado','En DiagnÃ³stico','En ReparaciÃ³n','Listo para Retiro')
                                          NOT NULL DEFAULT 'Ingresado',
         avance         TINYINT UNSIGNED  NOT NULL DEFAULT 10,
         tecnico        VARCHAR(80)       NOT NULL DEFAULT 'Por Asignar',
@@ -78,8 +78,8 @@ $ordenStmt = $pdo->prepare(
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
 );
 
-// --- Acta de recepción: columnas nuevas en ordenes (idempotente) --------
-// PIN/patrón, accesorios, observaciones y firma del cliente al ingreso.
+// --- Acta de recepciÃ³n: columnas nuevas en ordenes (idempotente) --------
+// PIN/patrÃ³n, accesorios, observaciones y firma del cliente al ingreso.
 $columnasExistentes = $pdo->query('SHOW COLUMNS FROM ordenes')->fetchAll(PDO::FETCH_COLUMN);
 $migracionColumnas = [
     'pin_patron'    => 'ALTER TABLE ordenes ADD COLUMN pin_patron VARCHAR(50) NULL AFTER tecnico',
@@ -95,8 +95,8 @@ foreach ($migracionColumnas as $columna => $sql) {
 }
 
 // --- Cobro y cierre de la orden (idempotente) ----------------------------
-// Valor de la reparación (repuestos + mano de obra), pagos, garantía y
-// datos de la entrega física (fecha, quién retira, su firma).
+// Valor de la reparaciÃ³n (repuestos + mano de obra), pagos, garantÃ­a y
+// datos de la entrega fÃ­sica (fecha, quiÃ©n retira, su firma).
 $migracionCobro = [
     'precio_repuestos' => 'ALTER TABLE ordenes ADD COLUMN precio_repuestos INT UNSIGNED NOT NULL DEFAULT 0 AFTER firma_ingreso',
     'mano_obra'        => 'ALTER TABLE ordenes ADD COLUMN mano_obra INT UNSIGNED NOT NULL DEFAULT 0 AFTER precio_repuestos',
@@ -116,7 +116,7 @@ foreach ($migracionCobro as $columna => $sql) {
     }
 }
 
-// --- Bitácora de reparación (historial técnico por orden) -----------------
+// --- BitÃ¡cora de reparaciÃ³n (historial tÃ©cnico por orden) -----------------
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS orden_bitacora (
         id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -130,7 +130,7 @@ $pdo->exec("
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 ");
 
-// --- Técnicos y comisiones (modelo de negocio del taller) ----------------
+// --- TÃ©cnicos y comisiones (modelo de negocio del taller) ----------------
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS tecnicos (
         id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -186,11 +186,11 @@ $pdo->exec("
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 ");
 $semillas = [
-    ['LUH-1024', 'Carlos Mendoza',    'iPhone 13 Pro',          'Celular',     'Cambio de Pantalla OLED',          'Listo para Retiro', 100, 'Sebastián R.', '2026-07-16'],
-    ['LUH-1025', 'María Paz Rojas',   'Notebook Asus ROG',      'PC/Notebook', 'Mantenimiento térmico y limpieza', 'En Reparación',      60, 'Alexis M.',    '2026-07-16'],
-    ['LUH-1026', 'Juan Pablo Cortés', 'Samsung S22 Ultra',      'Celular',     'Cambio de puerto de carga',        'En Diagnóstico',     30, 'Sebastián R.', '2026-07-17'],
-    ['LUH-1027', 'Valentina Silva',   'PC de Escritorio Gamer', 'PC/Notebook', 'Instalación de Sistema y SSD',     'Listo para Retiro', 100, 'Alexis M.',    '2026-07-15'],
-    ['LUH-1028', 'Pedro Aguilera',    'Xiaomi Redmi Note 11',   'Celular',     'Cambio de batería',                'Ingresado',          10, 'Por Asignar',  '2026-07-17'],
+    ['LUH-1024', 'Carlos Mendoza',    'iPhone 13 Pro',          'Celular',     'Cambio de Pantalla OLED',          'Listo para Retiro', 100, 'SebastiÃ¡n R.', '2026-07-16'],
+    ['LUH-1025', 'MarÃ­a Paz Rojas',   'Notebook Asus ROG',      'PC/Notebook', 'Mantenimiento tÃ©rmico y limpieza', 'En ReparaciÃ³n',      60, 'Alexis M.',    '2026-07-16'],
+    ['LUH-1026', 'Juan Pablo CortÃ©s', 'Samsung S22 Ultra',      'Celular',     'Cambio de puerto de carga',        'En DiagnÃ³stico',     30, 'SebastiÃ¡n R.', '2026-07-17'],
+    ['LUH-1027', 'Valentina Silva',   'PC de Escritorio Gamer', 'PC/Notebook', 'InstalaciÃ³n de Sistema y SSD',     'Listo para Retiro', 100, 'Alexis M.',    '2026-07-15'],
+    ['LUH-1028', 'Pedro Aguilera',    'Xiaomi Redmi Note 11',   'Celular',     'Cambio de baterÃ­a',                'Ingresado',          10, 'Por Asignar',  '2026-07-17'],
 ];
 foreach ($semillas as $s) {
     $ordenStmt->execute($s);
@@ -248,12 +248,12 @@ $prodStmt = $pdo->prepare(
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
 );
 $productosSemilla = [
-    ['CT-GNRL',  'Cristal templado genérico',            'Accesorios', 1200, 3000, 25, 5, 1],
+    ['CT-GNRL',  'Cristal templado genÃ©rico',            'Accesorios', 1200, 3000, 25, 5, 1],
     ['FUN-SIL',  'Funda silicona variada',               'Accesorios', 2500, 5000, 20, 4, 1],
     ['CAR-USBC', 'Cargador USB-C 20W',                   'Accesorios', 4500, 9000, 10, 2, 1],
     ['CAB-LGTN', 'Cable Lightning 1m',                   'Accesorios', 3800, 7000, 12, 3, 1],
     ['MIC-HIDRO','Mica hidrogel (instalada)',            'Servicios',  1000, 6000,  0, 0, 0],
-    ['MAN-EXPR', 'Mantención express celular',           'Servicios',     0,12000,  0, 0, 0],
+    ['MAN-EXPR', 'MantenciÃ³n express celular',           'Servicios',     0,12000,  0, 0, 0],
 ];
 foreach ($productosSemilla as $p) {
     $prodStmt->execute($p);
@@ -300,9 +300,9 @@ $pdo->exec("
 $pdo->prepare("INSERT IGNORE INTO configuraciones (clave, valor) VALUES ('iva_porcentaje', '19')")
     ->execute();
 
-// Semillas de configuración general (INSERT IGNORE: no pisa lo guardado)
+// Semillas de configuraciÃ³n general (INSERT IGNORE: no pisa lo guardado)
 $configSemillas = [
-    'empresa_nombre'        => 'Luitech Servicio Técnico',
+    'empresa_nombre'        => 'Luitech Servicio TÃ©cnico',
     'empresa_rut'           => '',
     'empresa_giro'          => '',
     'empresa_direccion'     => "B.O'Higgins 564, La Serena",
@@ -314,7 +314,7 @@ $configSemillas = [
     'moneda_simbolo'        => '$',
     'zona_horaria'          => 'America/Santiago',
     'garantia_dias_default' => '30',
-    'terminos_texto'        => '¡Gracias por confiar en Luitech! Conserve este comprobante para hacer efectiva la garantía.',
+    'terminos_texto'        => 'Â¡Gracias por confiar en Luitech! Conserve este comprobante para hacer efectiva la garantÃ­a.',
     'dte_habilitado'        => '0',
     'dte_proveedor'         => '',
     'dte_api_key'           => '',
@@ -329,8 +329,8 @@ foreach ($configSemillas as $claveCfg => $valorCfg) {
 }
 
 // --- IVA por venta (desglose fiscal congelado al momento de cobrar) -------
-// En Chile el precio al público incluye el IVA: neto = total / (1 + tasa).
-// Cada venta guarda la tasa usada, así el historial no cambia si la ley cambia.
+// En Chile el precio al pÃºblico incluye el IVA: neto = total / (1 + tasa).
+// Cada venta guarda la tasa usada, asÃ­ el historial no cambia si la ley cambia.
 $columnasVentas = $pdo->query('SHOW COLUMNS FROM ventas')->fetchAll(PDO::FETCH_COLUMN);
 $migracionVentasIva = [
     'cliente_rut' => 'ALTER TABLE ventas ADD COLUMN cliente_rut VARCHAR(12) NULL AFTER cliente',
@@ -360,7 +360,7 @@ if ($colMedioVenta && strpos($colMedioVenta['Type'], 'Mercado Pago') === false) 
 // --- Estado "Entregado" en el ENUM de ordenes (entrega con o sin firma) ----
 $colEstado = $pdo->query("SHOW COLUMNS FROM ordenes LIKE 'estado'")->fetch(PDO::FETCH_ASSOC);
 if ($colEstado && strpos($colEstado['Type'], 'Entregado') === false) {
-    $pdo->exec("ALTER TABLE ordenes MODIFY COLUMN estado ENUM('Ingresado','En Diagnóstico','En Reparación','Listo para Retiro','Entregado') NOT NULL DEFAULT 'Ingresado'");
+    $pdo->exec("ALTER TABLE ordenes MODIFY COLUMN estado ENUM('Ingresado','En DiagnÃ³stico','En ReparaciÃ³n','Listo para Retiro','Entregado') NOT NULL DEFAULT 'Ingresado'");
     echo "[migrate] ordenes.estado ahora acepta Entregado\n";
 }
 
@@ -371,7 +371,7 @@ if (!$colProv) {
     echo "[migrate] productos.proveedor agregado\n";
 }
 
-// --- Catálogo de precios de proveedores (cotización instantánea) ----------
+// --- CatÃ¡logo de precios de proveedores (cotizaciÃ³n instantÃ¡nea) ----------
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS catalogo_proveedores (
         id              INT UNSIGNED     AUTO_INCREMENT PRIMARY KEY,
@@ -386,7 +386,7 @@ $pdo->exec("
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 ");
 
-// --- Proveedores y compras de mercadería ----------------------------------
+// --- Proveedores y compras de mercaderÃ­a ----------------------------------
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS proveedores (
         id              INT UNSIGNED     AUTO_INCREMENT PRIMARY KEY,
@@ -417,8 +417,8 @@ if (!$colProvId) {
     $pdo->exec("ALTER TABLE productos ADD COLUMN proveedor_id INT UNSIGNED NULL AFTER proveedor");
     echo "[migrate] productos.proveedor_id agregado\n";
 }
-// Compatibilidad: la tabla proveedores del diseño original puede existir sin
-// rut/notas/activo (tenía contacto/email). Agrega las columnas que falten.
+// Compatibilidad: la tabla proveedores del diseÃ±o original puede existir sin
+// rut/notas/activo (tenÃ­a contacto/email). Agrega las columnas que falten.
 foreach ([
     'rut' => "VARCHAR(12) NULL AFTER nombre",
     'notas' => "VARCHAR(255) NULL AFTER telefono",
@@ -436,11 +436,12 @@ $pdo->exec("
     CREATE TABLE IF NOT EXISTS clientes (
         id          INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
         nombre      VARCHAR(120)  NOT NULL,
-        rut         VARCHAR(12)   NULL,
+        rut         VARCHAR(15)   NULL,
         telefono    VARCHAR(40)   NULL,
         email       VARCHAR(120)  NULL,
         notas       VARCHAR(255)  NULL,
         activo      TINYINT(1)    NOT NULL DEFAULT 1,
+        direccion   VARCHAR(160)  NULL,
         creado_en   TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 ");
@@ -448,6 +449,24 @@ $colClienteId = $pdo->query("SHOW COLUMNS FROM ordenes LIKE 'cliente_id'")->fetc
 if (!$colClienteId) {
     $pdo->exec("ALTER TABLE ordenes ADD COLUMN cliente_id INT UNSIGNED NULL AFTER cliente");
     echo "[migrate] ordenes.cliente_id agregado\n";
+}
+// Compatibilidad: la tabla clientes del diseÃ±o original puede existir sin
+// notas/activo. Agrega las columnas que falten.
+foreach ([
+    'notas' => "VARCHAR(255) NULL AFTER email",
+    'activo' => "TINYINT(1) NOT NULL DEFAULT 1 AFTER notas",
+] as $colCli => $tipoCli) {
+    $tieneCli = $pdo->query("SHOW COLUMNS FROM clientes LIKE '" . $colCli . "'")->fetch(PDO::FETCH_ASSOC);
+    if (!$tieneCli) {
+        $pdo->exec("ALTER TABLE clientes ADD COLUMN " . $colCli . " " . $tipoCli);
+        echo "[migrate] clientes." . $colCli . " agregado\n";
+    }
+}
+// El diseño original tenía rut NOT NULL: clientes sin RUT no podían crearse
+$colRutCli = $pdo->query("SHOW COLUMNS FROM clientes LIKE 'rut'")->fetch(PDO::FETCH_ASSOC);
+if ($colRutCli && $colRutCli['Null'] === 'NO') {
+    $pdo->exec("ALTER TABLE clientes MODIFY rut VARCHAR(15) NULL");
+    echo "[migrate] clientes.rut ahora acepta clientes sin RUT\n";
 }
 
 // --- Gastos del negocio ---------------------------------------------------
@@ -471,5 +490,5 @@ $pdo->prepare("INSERT IGNORE INTO gastos (concepto, categoria, monto, fecha) VAL
 
 
 $ordenes = (int)$pdo->query('SELECT COUNT(*) FROM ordenes')->fetchColumn();
-echo "[migrate] Esquema verificado. Órdenes en BD: {$ordenes}\n";
+echo "[migrate] Esquema verificado. Ã“rdenes en BD: {$ordenes}\n";
 
