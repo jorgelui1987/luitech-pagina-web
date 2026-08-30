@@ -233,6 +233,59 @@ switch ($action) {
         responder(['ok' => true, 'id' => (int)db()->lastInsertId()]);
     }
 
+    case 'catalogo_importar': {
+        // Importa un listado pegado por el dueño: items con {modelo, pieza, precio}.
+        // Upsert por proveedor+modelo+pieza (actualiza precio de los existentes,
+        // inserta los nuevos) y opcionalmente marca "No disponible" lo que no vino.
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            responder(['ok' => false, 'error' => 'Método no permitido'], 405);
+        }
+        $d = leer_cuerpo();
+        $proveedorId = (int)($d['proveedor_id'] ?? 0);
+        $items = (isset($d['items']) && is_array($d['items'])) ? $d['items'] : [];
+        $marcarNoDisp = !empty($d['marcar_no_disp']);
+        if ($proveedorId <= 0 || count($items) === 0) {
+            responder(['ok' => false, 'error' => 'Proveedor y lista de items son obligatorios'], 400);
+        }
+        $stP = db()->prepare('SELECT nombre FROM proveedores WHERE id = ? AND activo = 1 LIMIT 1');
+        $stP->execute([$proveedorId]);
+        if ($stP->fetchColumn() === false) {
+            responder(['ok' => false, 'error' => 'El proveedor no existe'], 400);
+        }
+        db()->beginTransaction();
+        try {
+            if ($marcarNoDisp) {
+                db()->prepare('UPDATE catalogo_proveedores SET disponible = 0 WHERE proveedor_id = ?')
+                    ->execute([$proveedorId]);
+            }
+            $stSel = db()->prepare('SELECT id FROM catalogo_proveedores WHERE proveedor_id = ? AND LOWER(modelo) = LOWER(?) AND LOWER(pieza) = LOWER(?) LIMIT 1');
+            $stIns = db()->prepare('INSERT INTO catalogo_proveedores (proveedor_id, modelo, pieza, precio, disponible) VALUES (?, ?, ?, ?, 1)');
+            $stUpd = db()->prepare('UPDATE catalogo_proveedores SET precio = ?, disponible = 1, actualizado_en = NOW() WHERE id = ?');
+            $insertados = 0; $actualizados = 0;
+            foreach ($items as $it) {
+                if (!is_array($it)) continue;
+                $modelo = mb_substr(trim((string)($it['modelo'] ?? '')), 0, 80);
+                $pieza  = mb_substr(trim((string)($it['pieza'] ?? '')), 0, 60);
+                $precio = max(0, (int)($it['precio'] ?? 0));
+                if ($modelo === '' || $pieza === '' || $precio < 1) continue;
+                $stSel->execute([$proveedorId, $modelo, $pieza]);
+                $existe = $stSel->fetchColumn();
+                if ($existe) {
+                    $stUpd->execute([$precio, (int)$existe]);
+                    $actualizados++;
+                } else {
+                    $stIns->execute([$proveedorId, $modelo, $pieza, $precio]);
+                    $insertados++;
+                }
+            }
+            db()->commit();
+            responder(['ok' => true, 'insertados' => $insertados, 'actualizados' => $actualizados]);
+        } catch (PDOException $e) {
+            db()->rollBack();
+            responder(['ok' => false, 'error' => 'No se pudo importar el listado'], 500);
+        }
+    }
+
     case 'catalogo_delete': {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);

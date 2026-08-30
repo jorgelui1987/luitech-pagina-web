@@ -83,11 +83,12 @@
       tbody.replaceChildren();
 
       // Selects dependientes: formulario de compra y filtro del historial
-      var selCompra = $('c-prov'), selFiltro = $('fil-prov'), selCat = $('cat-prov');
-      var compraActual = selCompra.value, filtroActual = selFiltro.value, catActual = selCat.value;
+      var selCompra = $('c-prov'), selFiltro = $('fil-prov'), selCat = $('cat-prov'), selImp = $('imp-prov');
+      var compraActual = selCompra.value, filtroActual = selFiltro.value, catActual = selCat.value, impActual = selImp.value;
       selCompra.replaceChildren(new Option('Proveedor*', ''));
       selFiltro.replaceChildren(new Option('Todos los proveedores', ''));
       selCat.replaceChildren(new Option('— Proveedor —', ''));
+      selImp.replaceChildren(new Option('— Proveedor —', ''));
 
       if (!res.proveedores.length) {
         var trv = document.createElement('tr');
@@ -103,6 +104,7 @@
         selCompra.add(new Option(p.nombre, String(p.id)));
         selFiltro.add(new Option(p.nombre, String(p.id)));
         selCat.add(new Option(p.nombre, String(p.id)));
+        selImp.add(new Option(p.nombre, String(p.id)));
 
         var tr = document.createElement('tr');
         tr.className = 'border-b border-slate-800/40 hover:bg-slate-800/30';
@@ -148,6 +150,7 @@
       selCompra.value = compraActual;
       selFiltro.value = filtroActual;
       selCat.value = catActual;
+      selImp.value = impActual;
       estadoPartes.prov = '✓ ' + res.proveedores.length + ' proveedor(es)';
       refrescarEstadoCompras();
     }).catch(function (err) {
@@ -425,6 +428,89 @@
       }).catch(function () {});
   }
 
+  /* ------------------------------------------------- IMPORTAR LISTADO */
+  var impItems = [];
+
+  function parsearListado(texto) {
+    var piezas = ['pantalla','lcd','oled','bateria','batería','tapa trasera','tapa','flex','conector','camara','cámara','vidrio','mica','cargador','parlante','altavoz','microfono','micrófono','pin de carga','pin'];
+    var items = []; var saltadas = 0;
+    texto.split(/\r?\n/).forEach(function (linea) {
+      var l = linea.trim();
+      if (l.length < 4) return;
+      var low = l.toLowerCase();
+      var mPrecio = l.match(/([\d][\d.,]{2,})\s*[.\-–]?\s*$/);
+      if (!mPrecio) { saltadas++; return; }
+      var precio = parseInt(mPrecio[1].replace(/[.\s,]/g, ''), 10);
+      if (!precio || precio < 100) { saltadas++; return; }
+      var desc = l.slice(0, mPrecio.index).replace(/^[\s\-–•*·>#]+/, '').replace(/[\s\-–•*·:]+$/, '').trim();
+      if (desc.length < 3) { saltadas++; return; }
+      var pieza = 'Repuesto'; var modelo = desc;
+      for (var i = 0; i < piezas.length; i++) {
+        var idx = low.indexOf(piezas[i]);
+        if (idx !== -1) {
+          pieza = piezas[i].charAt(0).toUpperCase() + piezas[i].slice(1);
+          modelo = (desc.slice(0, idx) + ' ' + desc.slice(idx + piezas[i].length)).replace(/\s+/g, ' ').trim();
+          break;
+        }
+      }
+      if (modelo.length < 2) modelo = desc;
+      items.push({ modelo: modelo, pieza: pieza, precio: precio });
+    });
+    return { items: items, saltadas: saltadas };
+  }
+
+  function analizarListado() {
+    var provId = parseInt($('imp-prov').value, 10) || 0;
+    if (!provId) { window.mostrarToast('Elige el proveedor primero', 'error'); return; }
+    var r = parsearListado($('imp-texto').value);
+    impItems = r.items;
+    var prev = $('imp-preview');
+    prev.classList.remove('hidden');
+    var tb = $('imp-body');
+    tb.replaceChildren();
+    if (!impItems.length) {
+      $('imp-resumen').textContent = '✗ No se pudo leer ningún item con precio (' + r.saltadas + ' líneas saltadas). Revisa el formato: una línea por item, precio al final.';
+      $('btn-imp-confirmar').classList.add('hidden');
+      return;
+    }
+    impItems.slice(0, 40).forEach(function (it) {
+      var tr = document.createElement('tr');
+      tr.className = 'border-b border-slate-800/40';
+      [it.pieza, it.modelo, fmt(it.precio)].forEach(function (t, i) {
+        var c2 = document.createElement('td');
+        c2.className = 'p-1.5 ' + (i === 2 ? 'text-right text-amber-400 font-bold' : 'text-slate-300');
+        c2.textContent = t;
+        tr.appendChild(c2);
+      });
+      tb.appendChild(tr);
+    });
+    $('imp-resumen').textContent = '✓ ' + impItems.length + ' items listos para importar' +
+      (impItems.length > 40 ? ' (mostrando los primeros 40)' : '') +
+      (r.saltadas ? ' · ' + r.saltadas + ' líneas saltadas (sin precio)' : '');
+    $('btn-imp-confirmar').classList.remove('hidden');
+  }
+
+  function confirmarImportacion() {
+    var provId = parseInt($('imp-prov').value, 10) || 0;
+    if (!provId || !impItems.length) return;
+    var boton = $('btn-imp-confirmar');
+    boton.disabled = true;
+    api('api/proveedores.php?action=catalogo_importar', {
+      method: 'POST',
+      body: { proveedor_id: provId, items: impItems, marcar_no_disp: $('imp-nodisp').checked }
+    }).then(function (res) {
+      boton.disabled = false;
+      if (!res.ok) { window.mostrarToast(res.error || 'No se pudo importar', 'error'); return; }
+      window.mostrarToast('Importación: ' + res.insertados + ' nuevos, ' + res.actualizados + ' actualizados', 'success');
+      $('imp-preview').classList.add('hidden');
+      $('imp-texto').value = '';
+      cargarCatalogo();
+    }).catch(function () {
+      boton.disabled = false;
+      window.mostrarToast('Error de conexión con el servidor', 'error');
+    });
+  }
+
   /* ----------------------------------------------------------- ARRANQUE */
   document.addEventListener('DOMContentLoaded', function () {
     $('btn-prov-guardar').addEventListener('click', guardarProveedor);
@@ -434,6 +520,8 @@
     $('btn-cat').addEventListener('click', guardarCatalogo);
     $('btn-cat-cancelar').addEventListener('click', limpiarFormCat);
     $('btn-cat-margen').addEventListener('click', guardarMargen);
+    $('btn-imp-prev').addEventListener('click', analizarListado);
+    $('btn-imp-confirmar').addEventListener('click', confirmarImportacion);
     var busquedaTimer = null;
     $('cat-buscar').addEventListener('input', function () {
       clearTimeout(busquedaTimer);

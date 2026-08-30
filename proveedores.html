@@ -112,10 +112,29 @@
                 </table>
             </div>
             <p class="nota mt-2">Precio sugerido = costo del proveedor + margen %. Carga el listado que te manda el proveedor y cotiza al cliente <b>sin preguntarle nada por WhatsApp</b>.</p>
+            <div class="border-t border-slate-800 pt-3 mt-3">
+                <h3 class="text-xs font-bold text-slate-300 mb-2"><i class="fa-solid fa-file-import mr-1"></i>Importar listado del proveedor (pega el texto)</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs items-center">
+                    <select id="imp-prov" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500"><option value="">— Proveedor —</option></select>
+                    <label class="flex items-center gap-2 text-slate-400"><input type="checkbox" id="imp-nodisp" checked class="accent-amber-500">Marcar "No disponible" lo que no venga en el listado</label>
+                    <button type="button" id="btn-imp-prev" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg py-2"><i class="fa-solid fa-magnifying-glass-chart mr-1"></i>Analizar listado</button>
+                </div>
+                <textarea id="imp-texto" rows="7" placeholder="Pega aquí el listado, una línea por item. Ej:&#10;Pantalla Samsung A54 - $25.000&#10;Bateria iPhone 11 $18.000&#10;Tapa trasera Xiaomi Redmi Note 12 $12.000" class="w-full mt-2 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white text-xs font-mono focus:outline-none focus:border-amber-500"></textarea>
+                <div id="imp-preview" class="hidden mt-2">
+                    <p id="imp-resumen" class="text-xs font-bold text-cyan-400 mb-1"></p>
+                    <div class="overflow-x-auto max-h-56 overflow-y-auto border border-slate-800 rounded-lg">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-900/80 text-[10px] uppercase text-slate-500"><tr><th class="p-2">Pieza</th><th class="p-2">Modelo</th><th class="p-2 text-right">Precio</th></tr></thead>
+                            <tbody id="imp-body"></tbody>
+                        </table>
+                    </div>
+                    <button type="button" id="btn-imp-confirmar" class="mt-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg py-2 px-4 text-xs"><i class="fa-solid fa-check mr-1"></i>Confirmar importación</button>
+                </div>
+            </div>
         </section>
     </main>
 
-    <script src="assets/js/common.js?v=mp4" defer></script>
-    <script src="assets/js/proveedores.js?v=mp4" defer></script>
+    <script src="assets/js/common.js?v=mp5" defer></script>
+    <script src="assets/js/proveedores.js?v=mp5" defer></script>
 </body>
 </html>
