@@ -733,6 +733,12 @@
     var costoRepN = parseInt($('new-costo-repuesto').value, 10) || 0;
     if (costoRepN > 0) cuerpo.costo_repuesto = costoRepN;
 
+    // Aviso: repuestos sin costo real → ganancia y comisión del técnico infladas
+    if (repuestosN > 0 && costoRepN === 0 &&
+        !window.confirm('Repuestos por ' + monto(repuestosN) + ' sin "Costo real del repuesto".\n\nLa ganancia de la orden y la comisión del técnico se calcularian INFLADAS.\n\nAceptar = guardar de todos modos (podras definirla en el detalle de la orden)\nCancelar = completar el campo ahora')) {
+      return; // el usuario vuelve al formulario para registrar el costo
+    }
+
     if (cuerpo.tecnico === '') delete cuerpo.tecnico;
     if (!cuerpo.fecha) delete cuerpo.fecha;
     if (!cuerpo.obs_recepcion) delete cuerpo.obs_recepcion;
@@ -955,6 +961,31 @@
     });
   }
 
+  /** Enlace ✏️ para definir/corregir el costo real del repuesto de la orden abierta. */
+  function enlaceEditarCosto() {
+    var enlace = document.createElement('button');
+    enlace.type = 'button';
+    enlace.className = 'text-[10px] text-cyan-400 underline hover:text-cyan-300 whitespace-nowrap';
+    enlace.textContent = '✏️ definir';
+    enlace.addEventListener('click', function () {
+      var o = ordenActualModal();
+      if (!o) return;
+      var actual = parseInt(o.costo_repuesto, 10) || 0;
+      var valor = window.prompt('Costo real del repuesto ($):\n(lo que te costo la pieza al proveedor — dato interno, el cliente no lo ve)', actual || '');
+      if (valor === null) return;
+      var nuevo = parseInt(String(valor).replace(/[^\d]/g, ''), 10) || 0;
+      api('api/ordenes.php?action=update', { method: 'POST', body: { codigo: ordenModalCodigo, costo_repuesto: nuevo } })
+        .then(function (res) {
+          if (!res.ok) { window.mostrarToast(res.error || 'No se pudo guardar el costo', 'error'); return; }
+          patchOrdenModal({ costo_repuesto: nuevo });
+          window.mostrarToast('Costo real del repuesto actualizado', 'success');
+          renderCobroModal(ordenActualModal());
+        })
+        .catch(function () { window.mostrarToast('Error de conexión con el servidor', 'error'); });
+    });
+    return enlace;
+  }
+
   /** Pinta los montos de cobro de la orden abierta (total / abonado / saldo). */
   function renderCobroModal(o) {
     var cont = $('mo-cobro');
@@ -987,14 +1018,28 @@
     fila.appendChild(derecha);
     cont.appendChild(fila);
 
-    // Costo real del repuesto y margen bruto (si se registró)
-    if ((parseInt(o.costo_repuesto, 10) || 0) > 0) {
-      var margenBruto = Math.max(0, total - (parseInt(o.costo_repuesto, 10) || 0));
+    // Costo real del repuesto y margen bruto (con aviso y editor si falta)
+    var repCobrados = parseInt(o.precio_repuestos, 10) || 0;
+    var costoRep = parseInt(o.costo_repuesto, 10) || 0;
+    if (costoRep > 0) {
+      var margenBruto = Math.max(0, total - costoRep);
       var lineaCosto = document.createElement('div');
-      lineaCosto.className = 'text-[10px] text-slate-500';
+      lineaCosto.className = 'text-[10px] text-slate-500 flex items-center justify-between gap-2';
       lineaCosto.style.gridColumn = '1 / -1';
-      lineaCosto.textContent = 'Costo repuesto: ' + monto(o.costo_repuesto) + ' · Margen bruto: ' + monto(margenBruto);
+      var textoCosto = document.createElement('span');
+      textoCosto.textContent = 'Costo repuesto: ' + monto(costoRep) + ' · Margen bruto: ' + monto(margenBruto);
+      lineaCosto.appendChild(textoCosto);
+      lineaCosto.appendChild(enlaceEditarCosto());
       cont.appendChild(lineaCosto);
+    } else if (repCobrados > 0) {
+      var avisoCosto = document.createElement('div');
+      avisoCosto.className = 'text-[10px] text-amber-400 flex items-center justify-between gap-2';
+      avisoCosto.style.gridColumn = '1 / -1';
+      var textoAviso = document.createElement('span');
+      textoAviso.textContent = '⚠ Repuestos sin costo real: la comisión se calcularia sobre todo el margen.';
+      avisoCosto.appendChild(textoAviso);
+      avisoCosto.appendChild(enlaceEditarCosto());
+      cont.appendChild(avisoCosto);
     }
 
     // Botón de Mercado Pago: visible solo si hay saldo y MP está habilitado;
