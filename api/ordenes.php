@@ -22,6 +22,7 @@ require __DIR__ . '/config.php';
 aplicar_zona_horaria();
 
 iniciar_respuesta_json();
+preparar_clientes(db()); // tabla de clientes auto-reparable
 
 const ESTADOS_VALIDOS = ['Ingresado', 'En Diagnóstico', 'En Reparación', 'Listo para Retiro', 'Entregado'];
 
@@ -159,7 +160,7 @@ switch ($action) {
     case 'list': {
         exigir_admin();
         $stmt = db()->query(
-            'SELECT id, codigo, cliente, equipo, tipo, falla, estado, avance, tecnico, fecha_ingreso,
+            'SELECT id, codigo, cliente, cliente_id, equipo, tipo, falla, estado, avance, tecnico, fecha_ingreso,
                     pin_patron, accesorios, obs_recepcion, firma_ingreso,
                     precio_repuestos, mano_obra, total, abono, estado_pago, metodo_pago, garantia_dias,
                     fecha_entrega, entregado_a, firma_entrega, tecnico_id, costo_repuesto
@@ -247,6 +248,22 @@ switch ($action) {
             // Primera entrada de la bitácora: el ingreso del equipo al taller
             db()->prepare('INSERT INTO orden_bitacora (orden_codigo, tecnico, nota, estado_nuevo) VALUES (?, ?, ?, ?)')
                 ->execute([$codigo, $tecnico, 'Orden ingresada al taller', $estadoIn]);
+
+            // Vincula (o crea) el cliente en el registro de clientes
+            $clienteId = (int)($d['cliente_id'] ?? 0);
+            if ($clienteId > 0) {
+                $stV = db()->prepare('SELECT id FROM clientes WHERE id = ? AND activo = 1 LIMIT 1');
+                $stV->execute([$clienteId]);
+                if ($stV->fetchColumn() === false) $clienteId = 0;
+            }
+            if ($clienteId <= 0) {
+                $clienteId = cliente_id_por_nombre(db(), $cliente);
+                if ($clienteId <= 0) {
+                    db()->prepare('INSERT INTO clientes (nombre) VALUES (?)')->execute([$cliente]);
+                    $clienteId = (int)db()->lastInsertId();
+                }
+            }
+            db()->prepare('UPDATE ordenes SET cliente_id = ? WHERE codigo = ?')->execute([$clienteId, $codigo]);
 
             responder(['ok' => true, 'orden' => [
                 'codigo' => $codigo, 'cliente' => $cliente, 'equipo' => $equipo,

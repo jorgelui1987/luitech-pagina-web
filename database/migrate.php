@@ -431,6 +431,25 @@ foreach ([
     }
 }
 
+// --- Clientes: registro, ficha e historial --------------------------------
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS clientes (
+        id          INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+        nombre      VARCHAR(120)  NOT NULL,
+        rut         VARCHAR(12)   NULL,
+        telefono    VARCHAR(40)   NULL,
+        email       VARCHAR(120)  NULL,
+        notas       VARCHAR(255)  NULL,
+        activo      TINYINT(1)    NOT NULL DEFAULT 1,
+        creado_en   TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+");
+$colClienteId = $pdo->query("SHOW COLUMNS FROM ordenes LIKE 'cliente_id'")->fetch(PDO::FETCH_ASSOC);
+if (!$colClienteId) {
+    $pdo->exec("ALTER TABLE ordenes ADD COLUMN cliente_id INT UNSIGNED NULL AFTER cliente");
+    echo "[migrate] ordenes.cliente_id agregado\n";
+}
+
 // --- Gastos del negocio ---------------------------------------------------
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS gastos (

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clientes | Luitech</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+    <link rel="stylesheet" href="assets/css/styles.css?v=mp6">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+    <div id="toast-container" class="fixed top-4 right-4 z-[9999] flex flex-col gap-3 px-4 w-full sm:w-auto items-end pointer-events-none"></div>
+
+    <div id="view-nologin" class="hidden min-h-screen flex items-center justify-center p-6 text-center">
+        <div class="bg-slate-950 border border-slate-800 rounded-2xl p-8">
+            <i class="fa-solid fa-lock text-amber-400 text-3xl mb-4"></i>
+            <h1 class="font-extrabold text-white text-lg">Sesión requerida</h1>
+            <a href="admin.html" class="inline-block mt-5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-sm">Ir al Login</a>
+        </div>
+    </div>
+
+    <main id="view-cli" class="hidden max-w-5xl mx-auto px-4 py-6 space-y-5">
+        <header class="flex flex-wrap justify-between items-center gap-3 bg-slate-950 border border-slate-800 rounded-2xl px-5 py-4">
+            <div class="flex items-center gap-3">
+                <img src="assets/img/logo-luitech.png" alt="" width="36" height="36" class="h-9 w-9 rounded-lg object-cover">
+                <span class="text-xl font-black bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500">CLIENTES</span>
+            </div>
+            <nav class="flex items-center gap-3 text-xs font-semibold">
+                <a href="proveedores.html" class="bg-amber-500 hover:bg-amber-400 text-slate-950 px-3 py-1.5 rounded-lg"><i class="fa-solid fa-truck-field mr-1"></i>Proveedores</a>
+                <a href="admin.html" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-lg">Panel</a>
+            </nav>
+        </header>
+
+        <!-- SECCION-CLIENTES -->
+        <section class="sec">
+            <h2 id="form-titulo" class="text-sm font-bold text-cyan-400 mb-3"><i class="fa-solid fa-plus mr-1"></i>Nuevo cliente</h2>
+            <input type="hidden" id="cl-id">
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-2.5 text-xs">
+                <input type="text" id="cl-nombre" placeholder="Nombre*" maxlength="120" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                <input type="text" id="cl-rut" placeholder="RUT" maxlength="12" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                <input type="text" id="cl-telefono" placeholder="Teléfono" maxlength="40" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                <input type="text" id="cl-email" placeholder="Email" maxlength="120" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                <input type="text" id="cl-notas" placeholder="Nota (opcional)" maxlength="255" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                <button type="button" id="btn-cl-guardar" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg py-2">Guardar cliente</button>
+                <button type="button" id="btn-cl-cancelar" class="hidden bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold rounded-lg py-2">Cancelar</button>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 mt-4 text-xs">
+                <label class="lb mb-0" for="cl-buscar">Buscar cliente:</label>
+                <input type="text" id="cl-buscar" placeholder="Nombre..." class="inp" style="width:auto">
+                <span id="cl-estado" class="font-bold text-cyan-400 ml-auto"></span>
+            </div>
+            <div class="overflow-x-auto mt-2">
+                <table class="w-full text-left text-xs" style="min-width:640px">
+                    <thead class="text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-800">
+                        <tr><th class="p-2">Cliente</th><th class="p-2">RUT</th><th class="p-2">Teléfono</th><th class="p-2 text-center">Órdenes</th><th class="p-2 text-right">Total</th><th class="p-2 text-center">Última</th><th class="p-2 text-center">Acciones</th></tr>
+                    </thead>
+                    <tbody id="cl-body"></tbody>
+                </table>
+            </div>
+        </section>
+        <!-- SECCION-FICHA -->
+        <section id="ficha-section" class="sec hidden">
+            <h2 id="ficha-titulo" class="text-sm font-bold text-emerald-400 mb-3"><i class="fa-solid fa-folder-open mr-1"></i>Ficha del cliente</h2>
+            <div class="flex flex-wrap gap-3 text-xs mb-3">
+                <span class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">Órdenes: <b id="ficha-ordenes" class="text-cyan-400">0</b></span>
+                <span class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2">Total en reparaciones: <b id="ficha-gastado" class="text-emerald-400">$ 0</b></span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs" style="min-width:620px">
+                    <thead class="text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-800">
+                        <tr><th class="p-2">Código</th><th class="p-2">Equipo</th><th class="p-2">Estado</th><th class="p-2 text-right">Total</th><th class="p-2 text-center">Ingreso</th></tr>
+                    </thead>
+                    <tbody id="ficha-body"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script src="assets/js/common.js?v=mp6" defer></script>
+    <script src="assets/js/clientes.js?v=mp6" defer></script>
+</body>
+</html>

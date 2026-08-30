@@ -16,7 +16,7 @@
     $('view-login').classList.toggle('hidden', logueado);
     $('view-panel').classList.toggle('hidden', !logueado);
     if (logueado && nombre) $('admin-nombre').textContent = nombre;
-    if (logueado) cargarTecnicos();
+    if (logueado) { cargarTecnicos(); cargarClientesLista(); }
     if (!logueado) $('usuario').focus();
   }
 
@@ -566,25 +566,59 @@
   }
 
   function renderizarTablaAdmin() {
-    var tbody = $('admin-table-body');
-    tbody.replaceChildren();
-
     api('api/ordenes.php?action=list').then(function (res) {
       if (!res.ok) {
         if (res.error === 'No autorizado') { mostrarVista(false); return; }
         throw new Error(res.error || 'Error al cargar órdenes');
       }
-
-      if (!res.ordenes.length) {
-        var vacio = celda('Aún no hay órdenes registradas. Crea la primera con el formulario superior.', 'p-6 text-center text-slate-500 italic');
-        vacio.colSpan = 10;
-        tbody.appendChild(vacio);
-        return;
-      }
-
       ordenesCache = res.ordenes;
+      renderResumen(ordenesCache);
+      renderFilasOrdenes();
+    }).catch(function (e) {
+      window.mostrarToast(e.message || 'No se pudo conectar con el servidor', 'error');
+    });
+  }
 
-      res.ordenes.forEach(function (o) {
+  /** Aplica los filtros del buscador sobre la lista cacheada de órdenes. */
+  function ordenesFiltradas() {
+    var q = ($('buscar-orden') ? $('buscar-orden').value.trim().toLowerCase() : '');
+    var estado = ($('filtro-estado-orden') ? $('filtro-estado-orden').value : '');
+    var mes = ($('filtro-mes-orden') ? $('filtro-mes-orden').value : '');
+    var palabras = q ? q.split(/\s+/) : [];
+    return (ordenesCache || []).filter(function (o) {
+      if (estado && o.estado !== estado) return false;
+      if (mes && (o.fecha_ingreso || '').slice(0, 7) !== mes) return false;
+      if (palabras.length) {
+        var texto = (o.codigo + ' ' + o.cliente + ' ' + o.equipo + ' ' + o.falla + ' ' +
+                     (o.cliente_rut || '') + ' ' + (o.tecnico || '')).toLowerCase();
+        for (var i = 0; i < palabras.length; i++) {
+          if (texto.indexOf(palabras[i]) === -1) return false;
+        }
+      }
+      return true;
+    });
+  }
+
+  /** Pinta las filas de la tabla aplicando los filtros activos. */
+  function renderFilasOrdenes() {
+    var tbody = $('admin-table-body');
+    tbody.replaceChildren();
+    var lista = ordenesFiltradas();
+
+    if (!(ordenesCache || []).length) {
+      var vacio = celda('Aún no hay órdenes registradas. Crea la primera con el formulario superior.', 'p-6 text-center text-slate-500 italic');
+      vacio.colSpan = 10;
+      tbody.appendChild(vacio);
+      return;
+    }
+    if (!lista.length) {
+      var sinRes = celda('Sin resultados para la búsqueda (prueba con menos palabras o cambia los filtros).', 'p-6 text-center text-slate-500 italic');
+      sinRes.colSpan = 10;
+      tbody.appendChild(sinRes);
+      return;
+    }
+
+    lista.forEach(function (o) {
         var tr = document.createElement('tr');
         tr.className = 'hover:bg-slate-800/30 transition-colors border-b border-slate-800/40';
 
@@ -644,11 +678,6 @@
 
         tbody.appendChild(tr);
       });
-
-      renderResumen(res.ordenes);
-    }).catch(function (e) {
-      window.mostrarToast(e.message || 'No se pudo conectar con el servidor', 'error');
-    });
   }
 
   /* ------------------------------------------------------- ACCIONES CRUD */
@@ -680,6 +709,19 @@
       .catch(function () {
         window.mostrarToast('Error de conexión con el servidor', 'error');
       });
+  }
+
+  /** Carga los nombres de clientes registrados en el autocompletado de Nueva Orden. */
+  function cargarClientesLista() {
+    api('api/clientes.php?action=list').then(function (res) {
+      if (!res.ok) return;
+      var dl = $('lista-clientes');
+      if (!dl) return;
+      dl.replaceChildren();
+      (res.clientes || []).forEach(function (c) {
+        dl.appendChild(new Option(c.nombre));
+      });
+    }).catch(function () {});
   }
 
   /** Carga los técnicos activos en el selector de Nueva Orden. */
@@ -1591,6 +1633,9 @@
     $('form-nueva-orden').addEventListener('submit', agregarOrden);
     $('btn-logout').addEventListener('click', cerrarSesion);
     $('btn-recargar').addEventListener('click', renderizarTablaAdmin);
+    $('buscar-orden').addEventListener('input', renderFilasOrdenes);
+    $('filtro-estado-orden').addEventListener('change', renderFilasOrdenes);
+    $('filtro-mes-orden').addEventListener('change', renderFilasOrdenes);
     $('btn-simular').addEventListener('click', simularAvanceOrden);
 
     // Acta de recepción: firma táctil, fotos y accesorios

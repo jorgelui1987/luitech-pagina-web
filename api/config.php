@@ -183,12 +183,44 @@ function auto_entregar_si_pagada(PDO $pdo, string $codigo): ?array
 }
 
 /* ==========================================================================
- * PROVEEDORES Y COMPRAS DE MERCADERÍA (tablas auto-reparables)
+ * CLIENTES: registro, ficha e historial (creación auto-reparable)
  * ========================================================================== */
+
+/** Garantiza la tabla de clientes y la columna cliente_id en ordenes
+ *  (mismo espíritu que preparar_proveedores: hostings sin migrate). */
+function preparar_clientes(PDO $pdo): void
+{
+    $pdo->exec("CREATE TABLE IF NOT EXISTS clientes (
+        id          INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+        nombre      VARCHAR(120)  NOT NULL,
+        rut         VARCHAR(12)   NULL,
+        telefono    VARCHAR(40)   NULL,
+        email       VARCHAR(120)  NULL,
+        notas       VARCHAR(255)  NULL,
+        activo      TINYINT(1)    NOT NULL DEFAULT 1,
+        creado_en   TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $col = $pdo->query("SHOW COLUMNS FROM ordenes LIKE 'cliente_id'")->fetch(PDO::FETCH_ASSOC);
+    if (!$col) {
+        $pdo->exec("ALTER TABLE ordenes ADD COLUMN cliente_id INT UNSIGNED NULL AFTER cliente");
+    }
+}
+
+/** Busca un cliente activo por nombre exacto (sin tildes ni mayúsculas). */
+function cliente_id_por_nombre(PDO $pdo, string $nombre): int
+{
+    $st = $pdo->prepare('SELECT id FROM clientes WHERE LOWER(nombre) = LOWER(?) AND activo = 1 LIMIT 1');
+    $st->execute([trim($nombre)]);
+    return (int)($st->fetchColumn() ?: 0);
+}
 
 /** Garantiza las tablas de proveedores/compras y la columna proveedor_id en
  *  productos (mismo espíritu que preparar_configuraciones: para hostings que
  *  no ejecutan database/migrate.php). */
+/* ==========================================================================
+ * PROVEEDORES Y COMPRAS DE MERCADERÍA (tablas auto-reparables)
+ * ========================================================================== */
+
 function preparar_proveedores(PDO $pdo): void
 {
     $pdo->exec("CREATE TABLE IF NOT EXISTS proveedores (
