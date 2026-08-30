@@ -2,11 +2,13 @@
 Options -Indexes
 
 # Un solo dominio canónico: todo entra por https://www.tallerluitech.fun
+# Nota: NO se fuerza HTTPS aqui — este hosting entrega el SSL por proxy y la
+# variable %HTTPS siempre queda "off", lo que causaba un bucle infinito.
+# Por eso tambien la redireccion es 302 (temporal, no queda en cache).
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteCond %{HTTPS} off [OR]
     RewriteCond %{HTTP_HOST} !^www\. [NC]
-    RewriteRule ^ https://www.tallerluitech.fun%{REQUEST_URI} [R=301,L]
+    RewriteRule ^ https://www.tallerluitech.fun%{REQUEST_URI} [R=302,L]
 </IfModule>
 
 <IfModule mod_headers.c>
