@@ -56,7 +56,9 @@ switch ($action) {
         $stmt = db()->query(
             'SELECT t.id, t.nombre, t.rut, t.telefono, t.porcentaje_comision,
                     (SELECT COUNT(*) FROM comisiones c WHERE c.tecnico_id = t.id AND c.estado = "Pendiente") AS comisiones_pendientes,
-                    (SELECT COALESCE(SUM(c.monto),0) FROM comisiones c WHERE c.tecnico_id = t.id AND c.estado = "Pendiente") AS monto_pendiente
+                    (SELECT COALESCE(SUM(c.monto),0) FROM comisiones c WHERE c.tecnico_id = t.id AND c.estado = "Pendiente") AS monto_pendiente,
+                    (SELECT COUNT(*) FROM comisiones c WHERE c.tecnico_id = t.id AND c.estado = "Pagada") AS comisiones_pagadas,
+                    (SELECT COALESCE(SUM(c.monto),0) FROM comisiones c WHERE c.tecnico_id = t.id AND c.estado = "Pagada") AS monto_pagado
              FROM tecnicos t
              WHERE t.activo = 1
              ORDER BY t.nombre'
@@ -124,12 +126,17 @@ switch ($action) {
         $stmt->execute($params);
         $comisiones = $stmt->fetchAll();
         $pendienteTotal = 0;
+        $pagadoTotal = 0;
         foreach ($comisiones as $c) {
             if ($c['estado'] === 'Pendiente') {
                 $pendienteTotal += (int)$c['monto'];
             }
+            if ($c['estado'] === 'Pagada') {
+                $pagadoTotal += (int)$c['monto'];
+            }
         }
-        responder(['ok' => true, 'comisiones' => $comisiones, 'pendiente_total' => $pendienteTotal]);
+        responder(['ok' => true, 'comisiones' => $comisiones,
+                   'pendiente_total' => $pendienteTotal, 'pagado_total' => $pagadoTotal]);
     }
 
     case 'pagar_comision': {

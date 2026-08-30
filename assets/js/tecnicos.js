@@ -25,7 +25,7 @@
       if (!res.tecnicos.length) {
         var trv = document.createElement('tr');
         var tdv = document.createElement('td');
-        tdv.colSpan = 5;
+        tdv.colSpan = 6;
         tdv.className = 'p-4 text-center italic text-slate-500';
         tdv.textContent = 'Aún no hay técnicos. Agrega el primero con el formulario superior.';
         trv.appendChild(tdv);
@@ -55,6 +55,15 @@
           : '—';
         tdPen.className += (parseInt(t.comisiones_pendientes, 10) > 0 ? ' text-amber-400 font-bold' : ' text-slate-600');
         tr.appendChild(tdPen);
+
+        // Total pagado histórico al técnico (comisiones en estado Pagada)
+        var tdPag = document.createElement('td');
+        tdPag.className = 'p-2 text-right';
+        tdPag.textContent = (parseInt(t.comisiones_pagadas, 10) > 0)
+          ? fmt(t.monto_pagado) + ' (' + t.comisiones_pagadas + ')'
+          : '—';
+        tdPag.className += (parseInt(t.comisiones_pagadas, 10) > 0 ? ' text-emerald-400 font-bold' : ' text-slate-600');
+        tr.appendChild(tdPag);
 
         var tdAcc = document.createElement('td');
         tdAcc.className = 'p-2 text-center';
@@ -146,9 +155,10 @@
       var tbody = $('com-body');
       tbody.replaceChildren();
 
-      $('com-total').textContent = res.pendiente_total > 0
-        ? 'Pendiente de pagar: ' + fmt(res.pendiente_total)
-        : '';
+      $('com-total').textContent = [
+        (res.pendiente_total > 0 ? 'Pendiente: ' + fmt(res.pendiente_total) : ''),
+        (res.pagado_total > 0 ? 'Pagado: ' + fmt(res.pagado_total) : '')
+      ].filter(Boolean).join('  ·  ');
 
       if (!res.comisiones.length) {
         var trv = document.createElement('tr');
@@ -184,6 +194,14 @@
         chip.className = 'chip-est ' + (c.estado === 'Pendiente' ? 'pendiente' : 'pagada');
         chip.textContent = c.estado;
         tdEst.appendChild(chip);
+        if (c.estado === 'Pagada' && c.fecha_pagada) {
+          var f = new Date(String(c.fecha_pagada).replace(' ', 'T'));
+          var cuando = isNaN(f.getTime()) ? c.fecha_pagada : f.toLocaleDateString('es-CL');
+          var fch = document.createElement('div');
+          fch.className = 'text-[9px] text-slate-500 mt-0.5';
+          fch.textContent = 'pagada el ' + cuando;
+          tdEst.appendChild(fch);
+        }
         tr.appendChild(tdEst);
 
         var tdAcc = document.createElement('td');

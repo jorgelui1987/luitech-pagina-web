@@ -73,7 +73,7 @@
                 <div class="overflow-x-auto mt-4">
                     <table class="w-full text-left text-xs" style="min-width:560px">
                         <thead class="text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-800">
-                            <tr><th class="p-2">Técnico</th><th class="p-2">RUT</th><th class="p-2 text-center">%</th><th class="p-2 text-right">Comisión pendiente</th><th class="p-2 text-center">Acciones</th></tr>
+                            <tr><th class="p-2">Técnico</th><th class="p-2">RUT</th><th class="p-2 text-center">%</th><th class="p-2 text-right">Comisión pendiente</th><th class="p-2 text-right">Pagado (histórico)</th><th class="p-2 text-center">Acciones</th></tr>
                         </thead>
                         <tbody id="tec-body"></tbody>
                     </table>
@@ -85,9 +85,9 @@
                 <div class="flex flex-wrap items-center gap-2 mb-3 text-xs">
                     <label class="lb mb-0" for="fil-estado">Estado:</label>
                     <select id="fil-estado" class="inp" style="width:auto">
+                        <option value="" selected>Todas</option>
                         <option value="Pendiente">Pendientes</option>
                         <option value="Pagada">Pagadas</option>
-                        <option value="">Todas</option>
                     </select>
                     <span id="com-total" class="font-bold text-amber-400 ml-auto"></span>
                 </div>
