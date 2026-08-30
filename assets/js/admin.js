@@ -91,11 +91,10 @@
     return chip;
   }
 
-  /** Total en vivo del presupuesto de la nueva orden (repuestos + mano de obra). */
+  /** Total en vivo del presupuesto de la nueva orden (= precio al cliente). */
   function calcularTotalNueva() {
-    var repuestos = parseInt($('new-repuestos').value, 10) || 0;
-    var obra = parseInt($('new-mano-obra').value, 10) || 0;
-    $('new-total').value = monto(repuestos + obra);
+    var precio = parseInt($('new-precio').value, 10) || 0;
+    $('new-total').value = monto(precio);
   }
 
   function selectEstado(codigo, actual) {
@@ -722,20 +721,17 @@
     if (accs.length) cuerpo.accesorios = accs.join(', ');
     if (firmaHecha && lienzoFirma) cuerpo.firma = lienzoFirma.toDataURL('image/png');
 
-    // Presupuesto de la reparación (opcional al ingreso)
-    var repuestosN = parseInt($('new-repuestos').value, 10) || 0;
-    var obraN = parseInt($('new-mano-obra').value, 10) || 0;
-    if (repuestosN > 0) cuerpo.precio_repuestos = repuestosN;
-    if (obraN > 0) cuerpo.mano_obra = obraN;
-    if (repuestosN + obraN > 0) cuerpo.total = repuestosN + obraN;
+    // Presupuesto de la reparación (opcional al ingreso): precio todo incluido
+    var precioN = parseInt($('new-precio').value, 10) || 0;
+    if (precioN > 0) cuerpo.total = precioN;
     var garantiaN = parseInt($('new-garantia').value, 10) || 0;
     if (garantiaN > 0) cuerpo.garantia_dias = garantiaN;
     var costoRepN = parseInt($('new-costo-repuesto').value, 10) || 0;
     if (costoRepN > 0) cuerpo.costo_repuesto = costoRepN;
 
-    // Aviso: repuestos sin costo real → ganancia y comisión del técnico infladas
-    if (repuestosN > 0 && costoRepN === 0 &&
-        !window.confirm('Repuestos por ' + monto(repuestosN) + ' sin "Costo real del repuesto".\n\nLa ganancia de la orden y la comisión del técnico se calcularian INFLADAS.\n\nAceptar = guardar de todos modos (podras definirla en el detalle de la orden)\nCancelar = completar el campo ahora')) {
+    // Aviso: precio sin costo real → ganancia y comisión del técnico infladas
+    if (precioN > 0 && costoRepN === 0 &&
+        !window.confirm('Precio de ' + monto(precioN) + ' sin "Costo real del repuesto".\n\nLa ganancia de la orden y la comisión del técnico se calcularian INFLADAS.\n\nAceptar = guardar de todos modos (podras definirla en el detalle de la orden)\nCancelar = completar el campo ahora')) {
       return; // el usuario vuelve al formulario para registrar el costo
     }
 
@@ -1019,7 +1015,6 @@
     cont.appendChild(fila);
 
     // Costo real del repuesto y margen bruto (con aviso y editor si falta)
-    var repCobrados = parseInt(o.precio_repuestos, 10) || 0;
     var costoRep = parseInt(o.costo_repuesto, 10) || 0;
     if (costoRep > 0) {
       var margenBruto = Math.max(0, total - costoRep);
@@ -1031,12 +1026,12 @@
       lineaCosto.appendChild(textoCosto);
       lineaCosto.appendChild(enlaceEditarCosto());
       cont.appendChild(lineaCosto);
-    } else if (repCobrados > 0) {
+    } else if (total > 0) {
       var avisoCosto = document.createElement('div');
       avisoCosto.className = 'text-[10px] text-amber-400 flex items-center justify-between gap-2';
       avisoCosto.style.gridColumn = '1 / -1';
       var textoAviso = document.createElement('span');
-      textoAviso.textContent = '⚠ Repuestos sin costo real: la comisión se calcularia sobre todo el margen.';
+      textoAviso.textContent = '⚠ Sin costo real del repuesto: la comisión se calcularía sobre todo el margen.';
       avisoCosto.appendChild(textoAviso);
       avisoCosto.appendChild(enlaceEditarCosto());
       cont.appendChild(avisoCosto);
@@ -1587,8 +1582,8 @@
     // Botón que despliega / guarda el cuadro del patrón
     $('btn-patron-toggle').addEventListener('click', alternarPatron);
 
-    // Presupuesto: total calculado en vivo (repuestos + mano de obra)
-    ['new-repuestos', 'new-mano-obra'].forEach(function (id) {
+    // Presupuesto: total calculado en vivo (= precio al cliente)
+    ['new-precio'].forEach(function (id) {
       $(id).addEventListener('input', calcularTotalNueva);
     });
 
