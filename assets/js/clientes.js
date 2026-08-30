@@ -63,6 +63,11 @@
 
         var tdAcc = document.createElement('td');
         tdAcc.className = 'p-2 text-center whitespace-nowrap';
+        var btnOr = document.createElement('button');
+        btnOr.type = 'button'; btnOr.title = 'Crear orden para este cliente';
+        btnOr.innerHTML = '<i class="fa-solid fa-file-invoice pointer-events-none"></i>';
+        btnOr.className = 'w-8 h-8 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white mx-0.5 transition-all';
+        btnOr.addEventListener('click', function () { irANuevaOrden(c.nombre); });
         var btnF = document.createElement('button');
         btnF.type = 'button'; btnF.title = 'Ver ficha e historial';
         btnF.innerHTML = '<i class="fa-solid fa-folder-open pointer-events-none"></i>';
@@ -90,6 +95,7 @@
     $('form-titulo').innerHTML = '<i class="fa-solid fa-plus mr-1"></i>Nuevo cliente';
     ['cl-id','cl-nombre','cl-rut','cl-telefono','cl-email','cl-notas'].forEach(function (i) { $(i).value = ''; });
     $('btn-cl-cancelar').classList.add('hidden');
+    $('btn-cl-orden').classList.add('hidden');
     $('btn-cl-guardar').disabled = false;
   }
 
@@ -124,7 +130,8 @@
       boton.disabled = false;
       if (!res.ok) { window.mostrarToast(res.error || 'Error al guardar', 'error'); return; }
       window.mostrarToast(id ? 'Cliente actualizado' : 'Cliente "' + cuerpo.nombre + '" creado', 'success');
-      limpiarFormCliente();
+      $('btn-cl-orden-nombre').textContent = cuerpo.nombre;
+      $('btn-cl-orden').classList.remove('hidden');
       cargarClientes();
     }).catch(function () {
       boton.disabled = false;
@@ -140,6 +147,12 @@
         window.mostrarToast('"' + c.nombre + '" eliminado', 'success');
         cargarClientes();
       }).catch(function () {});
+  }
+
+  /** Guarda el nombre del cliente y abre el Panel directo en Nueva Orden. */
+  function irANuevaOrden(nombre) {
+    try { sessionStorage.setItem('luitech-cliente-orden', nombre); } catch (e) {}
+    window.location.href = 'admin.html#nueva-orden';
   }
 
   /* ----------------------------------------------------------- FICHA */
@@ -188,6 +201,9 @@
   document.addEventListener('DOMContentLoaded', function () {
     $('btn-cl-guardar').addEventListener('click', guardarCliente);
     $('btn-cl-cancelar').addEventListener('click', limpiarFormCliente);
+    $('btn-cl-orden').addEventListener('click', function () {
+      irANuevaOrden($('btn-cl-orden-nombre').textContent);
+    });
     var timer = null;
     $('cl-buscar').addEventListener('input', function () {
       clearTimeout(timer);

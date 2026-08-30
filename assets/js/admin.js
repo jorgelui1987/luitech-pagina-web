@@ -16,7 +16,7 @@
     $('view-login').classList.toggle('hidden', logueado);
     $('view-panel').classList.toggle('hidden', !logueado);
     if (logueado && nombre) $('admin-nombre').textContent = nombre;
-    if (logueado) { cargarTecnicos(); cargarClientesLista(); }
+    if (logueado) { cargarTecnicos(); cargarClientesLista(); aplicarClientePendiente(); }
     if (!logueado) $('usuario').focus();
   }
 
@@ -709,6 +709,24 @@
       .catch(function () {
         window.mostrarToast('Error de conexión con el servidor', 'error');
       });
+  }
+
+  /** Si se viene desde la página de Clientes ("Crear orden para X"),
+   *  pre-llena el cliente y baja al formulario de Nueva Orden. */
+  function aplicarClientePendiente() {
+    var nombre = '';
+    try { nombre = sessionStorage.getItem('luitech-cliente-orden') || ''; } catch (e) { return; }
+    if (!nombre) return;
+    try { sessionStorage.removeItem('luitech-cliente-orden'); } catch (e) {}
+    var input = $('new-cliente');
+    if (input) input.value = nombre;
+    var seccion = $('nueva-orden');
+    if (seccion) {
+      seccion.scrollIntoView({ behavior: 'smooth' });
+      seccion.style.borderColor = '#22d3ee';
+      setTimeout(function () { seccion.style.borderColor = ''; }, 3000);
+    }
+    if (input) input.focus();
   }
 
   /** Carga los nombres de clientes registrados en el autocompletado de Nueva Orden. */
