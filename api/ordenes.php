@@ -497,6 +497,49 @@ switch ($action) {
         responder($respuesta);
     }
 
+    /* ------------------------------------------------- EGRESO REPUESTO */
+    case 'egreso_repuesto': {
+        // Registra el Egreso de la compra de la pieza en la caja abierta.
+        // Idempotente: un solo egreso de compra por orden (se detecta por la
+        // marca [EGRESO-REPUESTO codigo] en la bitácora).
+        exigir_admin();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            responder(['ok' => false, 'error' => 'Método no permitido'], 405);
+        }
+        $codigo = strtoupper(trim((string)(leer_cuerpo()['codigo'] ?? '')));
+        if (!preg_match('/^LUH-\d{3,8}$/', $codigo)) {
+            responder(['ok' => false, 'error' => 'Código inválido'], 400);
+        }
+        $st = db()->prepare('SELECT costo_repuesto, cliente FROM ordenes WHERE codigo = ?');
+        $st->execute([$codigo]);
+        $orden = $st->fetch();
+        if (!$orden) {
+            responder(['ok' => false, 'error' => 'Orden no encontrada'], 404);
+        }
+        $monto = (int)$orden['costo_repuesto'];
+        if ($monto < 1) {
+            responder(['ok' => false, 'error' => 'La orden no tiene costo real de repuesto registrado'], 409);
+        }
+        $stM = db()->prepare("SELECT COUNT(*) FROM orden_bitacora WHERE nota LIKE ?");
+        $stM->execute(['%[EGRESO-REPUESTO ' . $codigo . ']%']);
+        if ((int)$stM->fetchColumn() > 0) {
+            responder(['ok' => true, 'ya' => true, 'monto' => $monto]);
+        }
+        $sesion = db()->query("SELECT id FROM caja_sesiones WHERE estado = 'Abierta' ORDER BY id DESC LIMIT 1")->fetch();
+        if (!$sesion) {
+            responder(['ok' => false, 'error' => 'No hay caja abierta: el egreso de la compra no se registró (ábrela y reintenta, o regístralo manualmente en Finanzas)'], 409);
+        }
+        $concepto = 'Compra repuesto orden ' . $codigo;
+        if (!empty($orden['cliente'])) {
+            $concepto .= ' — ' . $orden['cliente'];
+        }
+        db()->prepare('INSERT INTO movimientos_caja (sesion_id, tipo, concepto, monto) VALUES (?, ?, ?, ?)')
+            ->execute([(int)$sesion['id'], 'Egreso', $concepto, $monto]);
+        db()->prepare('INSERT INTO orden_bitacora (orden_codigo, tecnico, nota) VALUES (?, ?, ?)')
+            ->execute([$codigo, 'Finanzas', 'Egreso por compra de repuesto: $' . $monto . ' [EGRESO-REPUESTO ' . $codigo . ']']);
+        responder(['ok' => true, 'monto' => $monto]);
+    }
+
     /* ----------------------------------------------------------- DELETE */
     case 'delete': {
         exigir_admin();

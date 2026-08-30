@@ -750,6 +750,17 @@
         var codigoCreado = res.orden.codigo;
         window.mostrarToast('Orden ' + codigoCreado + ' creada para ' + res.orden.cliente, 'success');
 
+        // Egreso de la compra de la pieza (si se marcó la casilla y hay costo)
+        if (costoRepN > 0 && $('new-costo-egreso').checked) {
+          api('api/ordenes.php?action=egreso_repuesto', { method: 'POST', body: { codigo: codigoCreado } })
+            .then(function (re) {
+              if (!re.ok) { window.mostrarToast(re.error || 'No se pudo registrar el egreso de la compra', 'error'); return; }
+              window.mostrarToast(re.ya ? 'El egreso de la compra ya estaba registrado en la caja' : 'Egreso de compra registrado: ' + monto(re.monto), 'success');
+            }).catch(function () {});
+        } else if (costoRepN > 0 && !$('new-costo-egreso').checked) {
+          window.mostrarToast('Recuerda: la compra de la pieza (' + monto(costoRepN) + ') aún no está como Egreso en la caja', 'error');
+        }
+
         // Limpiar formulario completo (datos + acta de recepción + presupuesto)
         event.target.reset();
         calcularTotalNueva();
@@ -976,6 +987,16 @@
           patchOrdenModal({ costo_repuesto: nuevo });
           window.mostrarToast('Costo real del repuesto actualizado', 'success');
           renderCobroModal(ordenActualModal());
+          if (nuevo > 0 && window.confirm('¿Registrar también el egreso de la compra ($' + nuevo + ') en la caja?')) {
+            api('api/ordenes.php?action=egreso_repuesto', { method: 'POST', body: { codigo: ordenModalCodigo } })
+              .then(function (re) {
+                if (re.ok) {
+                  window.mostrarToast(re.ya ? 'El egreso de la compra ya estaba registrado en la caja' : 'Egreso de compra registrado: ' + monto(re.monto), 'success');
+                } else {
+                  window.mostrarToast(re.error || 'No se pudo registrar el egreso', 'error');
+                }
+              }).catch(function () { window.mostrarToast('Error de conexión con el servidor', 'error'); });
+          }
         })
         .catch(function () { window.mostrarToast('Error de conexión con el servidor', 'error'); });
     });
