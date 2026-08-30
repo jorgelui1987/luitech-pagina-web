@@ -217,11 +217,15 @@ function preparar_proveedores(PDO $pdo): void
         $pdo->exec("ALTER TABLE productos ADD COLUMN proveedor_id INT UNSIGNED NULL AFTER proveedor");
     }
     // Compatibilidad: la tabla proveedores del diseño original puede existir
-    // sin estas columnas (tenía contacto/email/notas). Agrega lo que falte.
-    foreach (['rut' => "VARCHAR(12) NULL AFTER nombre", 'notas' => "VARCHAR(255) NULL AFTER telefono"] as $col => $tipo) {
-        $tiene = $pdo->query("SHOW COLUMNS FROM proveedores LIKE '" . $col . "'")->fetch(PDO::FETCH_ASSOC);
+    // sin estas columnas (tenía contacto/email). Agrega lo que falte.
+    foreach ([
+        'rut' => "VARCHAR(12) NULL AFTER nombre",
+        'notas' => "VARCHAR(255) NULL AFTER telefono",
+        'activo' => "TINYINT(1) NOT NULL DEFAULT 1",
+    ] as $colPv => $tipoPv) {
+        $tiene = $pdo->query("SHOW COLUMNS FROM proveedores LIKE '" . $colPv . "'")->fetch(PDO::FETCH_ASSOC);
         if (!$tiene) {
-            $pdo->exec("ALTER TABLE proveedores ADD COLUMN " . $col . " " . $tipo);
+            $pdo->exec("ALTER TABLE proveedores ADD COLUMN " . $colPv . " " . $tipoPv);
         }
     }
 }
