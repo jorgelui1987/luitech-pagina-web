@@ -432,29 +432,68 @@
   var impItems = [];
 
   function parsearListado(texto) {
-    var piezas = ['pantalla','lcd','oled','bateria','batería','tapa trasera','tapa','flex','conector','camara','cámara','vidrio','mica','cargador','parlante','altavoz','microfono','micrófono','pin de carga','pin'];
+    var marcas = ['SAMSUNG','IPHONE','APPLE','HUAWEI','HONOR','XIAOMI','REDMI','POCO','MOTO','VIVO','OPPO','NOKIA','LG','ZTE','NUBIA','TECNO','TCL','REALME','INFINIX','SONY','NINTENDO','MACBOOK','IPAD','LENOVO'];
+    var piezasMap = {
+      'PANTALLA': 'Pantalla', 'PANTALLAS': 'Pantalla', 'BATERIAS': 'Batería', 'BATERIA': 'Batería',
+      'FLEX DE CARGA': 'Flex de carga', 'MAIN FLEX': 'Flex principal', 'FLEX LCD': 'Flex LCD',
+      'FLEX MICROFONO': 'Flex micrófono', 'FLEX VOLUMEN': 'Flex volumen', 'FLEX ENCENDIDO': 'Flex encendido',
+      'FLEX HUELLA': 'Flex huella', 'FLEX DE BATERIA': 'Flex de batería', 'HUELLA Y ENCENDIDO': 'Huella y encendido',
+      'CAMARA TRASERA': 'Cámara trasera', 'CAMARA DELANTERA': 'Cámara delantera', 'VIDRIO CAMARA': 'Vidrio de cámara',
+      'TAPAS': 'Tapa', 'CHASIS': 'Chasis', 'BANDEJA SIM': 'Bandeja SIM', 'HUELLA': 'Huella',
+      'ENCENDIDO': 'Encendido', 'AURICULAR': 'Auricular', 'DISCO ALTAVOZ': 'Disco altavoz',
+      'ANTENAS': 'Antena', 'CONECTOR FPC': 'Conector FPC', 'MOTOR CAMARA': 'Motor de cámara',
+      'HOME Y HUELLA': 'Home y huella', 'PUERTO HDMI': 'Puerto HDMI', 'PIN DE CARGA': 'Pin de carga',
+      'PIN': 'Pin de carga', 'TACTIL': 'Táctil', 'SELLO': 'Sello antipolvo', 'GLASS': 'Glass',
+      'CONSOLAS': 'Consola', 'CONSOLA': 'Consola'
+    };
+    var keysPiezas = Object.keys(piezasMap).sort(function (a, b) { return b.length - a.length; });
+    var esCalidad = /^(ORIGINAL|ORIG|CM|SM|OLED|INCELL|GLASS|BIG|SMALL|CON|SIN|MARCO|FLEX|AMARILLO|NEGRO|BLANCO|ROJO|AZUL|VERDE|PLUS|PRO|5G|4G|LITE|GAMA|ALTA|TABLET|DIAGNOSTICO)$/;
+
     var items = []; var saltadas = 0;
+    var marca = ''; var piezaCtx = 'Repuesto'; var extra = '';
+
     texto.split(/\r?\n/).forEach(function (linea) {
       var l = linea.trim();
-      if (l.length < 4) return;
-      var low = l.toLowerCase();
-      var mPrecio = l.match(/([\d][\d.,]{2,})\s*[.\-–]?\s*$/);
-      if (!mPrecio) { saltadas++; return; }
-      var precio = parseInt(mPrecio[1].replace(/[.\s,]/g, ''), 10);
-      if (!precio || precio < 100) { saltadas++; return; }
-      var desc = l.slice(0, mPrecio.index).replace(/^[\s\-–•*·>#]+/, '').replace(/[\s\-–•*·:]+$/, '').trim();
-      if (desc.length < 3) { saltadas++; return; }
-      var pieza = 'Repuesto'; var modelo = desc;
-      for (var i = 0; i < piezas.length; i++) {
-        var idx = low.indexOf(piezas[i]);
-        if (idx !== -1) {
-          pieza = piezas[i].charAt(0).toUpperCase() + piezas[i].slice(1);
-          modelo = (desc.slice(0, idx) + ' ' + desc.slice(idx + piezas[i].length)).replace(/\s+/g, ' ').trim();
-          break;
+      if (l === '') return;
+
+      // Encabezado de sección (sin $, en mayúsculas): define marca y pieza
+      if (l.indexOf('$') === -1) {
+        if (l.length <= 55 && /^[A-ZÁÉÍÓÚÑ0-9 ]+$/.test(l)) {
+          marcas.forEach(function (b) {
+            if (l.indexOf(b) !== -1) {
+              marca = (b === 'MOTO') ? 'Motorola' : ((b === 'LG' || b === 'IPAD') ? b : b.charAt(0) + b.slice(1).toLowerCase());
+            }
+          });
+          keysPiezas.forEach(function (k) {
+            if (l.indexOf(k) !== -1) { piezaCtx = piezasMap[k]; l = l.replace(k, ' '); }
+          });
+          var palabras = l.replace(marca.toUpperCase(), ' ').split(/\s+/).filter(function (w) {
+            return w !== '' && !esCalidad.test(w);
+          });
+          extra = palabras.join(' ');
         }
+        return;
       }
-      if (modelo.length < 2) modelo = desc;
-      items.push({ modelo: modelo, pieza: pieza, precio: precio });
+
+      // Línea de datos: puede traer VARIOS items separados por ")" (listas PDF)
+      l.split(/\)+/).forEach(function (chunk) {
+        chunk = chunk.trim();
+        if (chunk === '') return;
+        var mPrecio = chunk.match(/(\$?)\s*([\d][\d,\.]*)\s*\)*\s*$/);
+        if (!mPrecio) { saltadas++; return; }
+        var precio = parseInt(mPrecio[2].replace(/[.]/g, ''), 10);
+        if (!precio || precio < 100) { saltadas++; return; }
+        var desc = chunk.slice(0, mPrecio.index).replace(/^[\s\-–•*·>#]+/, '').replace(/[\s\-–•*·:]+$/, '').trim();
+        if (desc.length < 2) { saltadas++; return; }
+
+        var pieza = piezaCtx; var modelo = desc;
+        keysPiezas.forEach(function (k) {
+          if (desc.toUpperCase().indexOf(k) !== -1 && pieza === piezaCtx) { pieza = piezasMap[k]; }
+        });
+        modelo = (marca + ' ' + extra + ' ' + desc).replace(/\s+/g, ' ').trim();
+        if (modelo.length < 2) { saltadas++; return; }
+        items.push({ modelo: modelo, pieza: pieza, precio: precio });
+      });
     });
     return { items: items, saltadas: saltadas };
   }
