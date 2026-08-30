@@ -431,6 +431,60 @@
   /* ------------------------------------------------- IMPORTAR LISTADO */
   var impItems = [];
 
+  /** Lee un archivo .txt o .pdf y carga su texto en el importador.
+   *  Los PDF se extraen con pdf.js agrupando el texto por línea visual. */
+  function leerArchivoListado(e) {
+    var archivo = e.target.files[0];
+    if (!archivo) return;
+    if (/\.txt$/i.test(archivo.name)) {
+      var lectorTxt = new FileReader();
+      lectorTxt.onload = function () {
+        $('imp-texto').value = String(lectorTxt.result || '');
+        analizarListado();
+      };
+      lectorTxt.readAsText(archivo, 'utf-8');
+      return;
+    }
+    if (!/\.pdf$/i.test(archivo.name)) {
+      window.mostrarToast('Formato no soportado: usa PDF o TXT', 'error');
+      return;
+    }
+    if (!window.pdfjsLib) {
+      window.mostrarToast('El lector de PDF no cargó: revisa tu conexión e inténtalo de nuevo', 'error');
+      return;
+    }
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    var lector = new FileReader();
+    lector.onload = function () {
+      window.pdfjsLib.getDocument({ data: lector.result }).promise.then(function (pdf) {
+        var paginas = [];
+        for (var i = 1; i <= pdf.numPages; i++) {
+          paginas.push(pdf.getPage(i).then(function (pg) {
+            return pg.getTextContent().then(function (tc) {
+              var texto = ''; var ultimaY = null;
+              tc.items.forEach(function (it) {
+                var y = it.transform ? it.transform[5] : 0;
+                if (ultimaY !== null && Math.abs(y - ultimaY) > 2) texto += '\n';
+                texto += it.str + ' ';
+                ultimaY = y;
+              });
+              return texto;
+            });
+          }));
+        }
+        Promise.all(paginas).then(function (textos) {
+          $('imp-texto').value = textos.join('\n');
+          analizarListado();
+        }).catch(function () {
+          window.mostrarToast('No se pudo leer el PDF', 'error');
+        });
+      }).catch(function () {
+        window.mostrarToast('No se pudo abrir el PDF (¿está protegido con contraseña?)', 'error');
+      });
+    };
+    lector.readAsArrayBuffer(archivo);
+  }
+
   function parsearListado(texto) {
     var marcas = ['SAMSUNG','IPHONE','APPLE','HUAWEI','HONOR','XIAOMI','REDMI','POCO','MOTO','VIVO','OPPO','NOKIA','LG','ZTE','NUBIA','TECNO','TCL','REALME','INFINIX','SONY','NINTENDO','MACBOOK','IPAD','LENOVO'];
     var piezasMap = {
@@ -561,6 +615,7 @@
     $('btn-cat-margen').addEventListener('click', guardarMargen);
     $('btn-imp-prev').addEventListener('click', analizarListado);
     $('btn-imp-confirmar').addEventListener('click', confirmarImportacion);
+    $('imp-archivo').addEventListener('change', leerArchivoListado);
     var busquedaTimer = null;
     $('cat-buscar').addEventListener('input', function () {
       clearTimeout(busquedaTimer);

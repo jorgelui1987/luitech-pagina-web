@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="assets/css/styles.css?v=mp4">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen">
     <div id="toast-container" class="fixed top-4 right-4 z-[9999] flex flex-col gap-3 px-4 w-full sm:w-auto items-end pointer-events-none"></div>
@@ -120,6 +121,10 @@
                     <button type="button" id="btn-imp-prev" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg py-2"><i class="fa-solid fa-magnifying-glass-chart mr-1"></i>Analizar listado</button>
                 </div>
                 <textarea id="imp-texto" rows="7" placeholder="Pega aquí el listado, una línea por item. Ej:&#10;Pantalla Samsung A54 - $25.000&#10;Bateria iPhone 11 $18.000&#10;Tapa trasera Xiaomi Redmi Note 12 $12.000" class="w-full mt-2 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white text-xs font-mono focus:outline-none focus:border-amber-500"></textarea>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs items-center mt-2">
+                    <input type="file" id="imp-archivo" accept=".pdf,.txt" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-slate-300 text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-cyan-600 file:text-white file:font-bold col-span-1">
+                    <span class="text-slate-500 md:col-span-2">…o selecciona directamente el <b>PDF</b> que te mandó el proveedor: el sistema lee el listado solo.</span>
+                </div>
                 <div id="imp-preview" class="hidden mt-2">
                     <p id="imp-resumen" class="text-xs font-bold text-cyan-400 mb-1"></p>
                     <div class="overflow-x-auto max-h-56 overflow-y-auto border border-slate-800 rounded-lg">
