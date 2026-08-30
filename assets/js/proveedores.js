@@ -9,6 +9,18 @@
 
   function fmt(n) { return '$ ' + Math.max(0, Math.round(Number(n) || 0)).toLocaleString('es-CL'); }
 
+  // Diagnóstico visible de la carga de datos del formulario de compra
+  var estadoPartes = { prov: '', prod: '' };
+  function refrescarEstadoCompras() {
+    var p = $('compras-estado');
+    if (!p) return;
+    var partes = [];
+    if (estadoPartes.prov) partes.push(estadoPartes.prov);
+    if (estadoPartes.prod) partes.push(estadoPartes.prod);
+    p.textContent = partes.join('   ·   ');
+    p.classList.toggle('hidden', partes.length === 0);
+  }
+
   function mostrarVista(logueado) {
     $('view-nologin').classList.toggle('hidden', logueado);
     $('view-prov').classList.toggle('hidden', !logueado);
@@ -85,7 +97,12 @@
 
       selCompra.value = compraActual;
       selFiltro.value = filtroActual;
-    }).catch(function () {});
+      estadoPartes.prov = '✓ ' + res.proveedores.length + ' proveedor(es)';
+      refrescarEstadoCompras();
+    }).catch(function (err) {
+      estadoPartes.prov = '✗ Proveedores: ' + (err && err.message ? err.message : 'sin conexión');
+      refrescarEstadoCompras();
+    });
   }
 
   function limpiarFormProv() {
@@ -152,7 +169,12 @@
       res.productos.forEach(function (p) {
         sel.add(new Option(p.nombre + ' (stock: ' + (p.controlar_stock ? p.stock : 'servicio') + ')', String(p.id)));
       });
-    }).catch(function () {});
+      estadoPartes.prod = '✓ ' + res.productos.length + ' producto(s)';
+      refrescarEstadoCompras();
+    }).catch(function (err) {
+      estadoPartes.prod = '✗ Productos: ' + (err && err.message ? err.message : 'sin conexión');
+      refrescarEstadoCompras();
+    });
   }
 
   function registrarCompra() {
