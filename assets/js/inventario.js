@@ -17,7 +17,7 @@
 
   function limpiarFormulario() {
     $('form-titulo').innerHTML = '<i class="fa-solid fa-plus mr-1"></i>Nuevo producto';
-    ['p-id','p-codigo','p-nombre','p-cat','p-costo','p-venta','p-stock'].forEach(function (i) { $(i).value = ''; });
+    ['p-id','p-codigo','p-nombre','p-cat','p-prov','p-costo','p-venta','p-stock'].forEach(function (i) { $(i).value = ''; });
     $('p-min').value = '3';
     $('p-ctrl').checked = true;
     $('btn-cancelar').classList.add('hidden');
@@ -68,6 +68,7 @@
       tr.appendChild(td(p.codigo, 'p-3 font-mono font-bold text-cyan-400'));
       tr.appendChild(td(p.nombre, 'p-3 font-semibold text-white'));
       tr.appendChild(td(p.categoria));
+      tr.appendChild(td(p.proveedor || '—', 'p-3 text-slate-400'));
       tr.appendChild(td('$' + fmt(p.precio_costo), 'p-3 text-right text-slate-400'));
       tr.appendChild(td('$' + fmt(p.precio_venta), 'p-3 text-right text-emerald-400 font-bold'));
 
@@ -114,7 +115,8 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
     $('form-titulo').innerHTML = '<i class="fa-solid fa-pen mr-1"></i>Editando: ' + p.nombre;
     $('p-id').value = p.id; $('p-codigo').value = p.codigo; $('p-nombre').value = p.nombre;
-    $('p-cat').value = p.categoria; $('p-costo').value = p.precio_costo; $('p-venta').value = p.precio_venta;
+    $('p-cat').value = p.categoria; $('p-prov').value = p.proveedor || '';
+    $('p-costo').value = p.precio_costo; $('p-venta').value = p.precio_venta;
     $('p-stock').value = p.stock; $('p-min').value = (p.controlar_stock ? p.stock_minimo : 0) || 0;
     $('btn-cancelar').classList.remove('hidden');
   }
@@ -125,6 +127,7 @@
       codigo: $('p-codigo').value.trim().toUpperCase(),
       nombre: $('p-nombre').value.trim(),
       categoria: $('p-cat').value.trim() || 'Repuesto',
+      proveedor: $('p-prov').value.trim(),
       precio_costo: parseInt($('p-costo').value, 10) || 0,
       precio_venta: parseInt($('p-venta').value, 10) || 0,
       stock: parseInt($('p-stock').value, 10) || 0,

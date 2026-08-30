@@ -203,6 +203,7 @@ $pdo->exec("
         codigo          VARCHAR(30)      NOT NULL UNIQUE,
         nombre          VARCHAR(120)     NOT NULL,
         categoria       VARCHAR(60)      NOT NULL DEFAULT 'Repuesto',
+        proveedor       VARCHAR(120)     NULL,
         precio_costo    INT UNSIGNED     NOT NULL DEFAULT 0,
         precio_venta    INT UNSIGNED     NOT NULL DEFAULT 0,
         stock           INT              NOT NULL DEFAULT 0,
@@ -361,6 +362,13 @@ $colEstado = $pdo->query("SHOW COLUMNS FROM ordenes LIKE 'estado'")->fetch(PDO::
 if ($colEstado && strpos($colEstado['Type'], 'Entregado') === false) {
     $pdo->exec("ALTER TABLE ordenes MODIFY COLUMN estado ENUM('Ingresado','En Diagnóstico','En Reparación','Listo para Retiro','Entregado') NOT NULL DEFAULT 'Ingresado'");
     echo "[migrate] ordenes.estado ahora acepta Entregado\n";
+}
+
+// --- Proveedor en los productos del inventario ----------------------------
+$colProv = $pdo->query("SHOW COLUMNS FROM productos LIKE 'proveedor'")->fetch(PDO::FETCH_ASSOC);
+if (!$colProv) {
+    $pdo->exec("ALTER TABLE productos ADD COLUMN proveedor VARCHAR(120) NULL AFTER categoria");
+    echo "[migrate] productos.proveedor agregado\n";
 }
 
 // --- Gastos del negocio ---------------------------------------------------

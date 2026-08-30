@@ -38,6 +38,9 @@ function leer_producto(array $d): array
     if (isset($d['categoria'])) {
         $out['categoria'] = trim(mb_substr((string)$d['categoria'], 0, 60)) ?: 'Repuesto';
     }
+    if (isset($d['proveedor'])) {
+        $out['proveedor'] = trim(mb_substr((string)$d['proveedor'], 0, 120)) ?: null;
+    }
     foreach (['precio_costo', 'precio_venta', 'stock', 'stock_minimo'] as $campoNumerico) {
         if (array_key_exists($campoNumerico, $d)) {
             $out[$campoNumerico] = max(0, (int)$d[$campoNumerico]);
@@ -53,7 +56,7 @@ switch ($action) {
 
     case 'list':
         $stmt = db()->query(
-            'SELECT id, codigo, nombre, categoria, precio_costo, precio_venta,
+            'SELECT id, codigo, nombre, categoria, proveedor, precio_costo, precio_venta,
                     stock, stock_minimo, controlar_stock
              FROM productos WHERE activo = 1 ORDER BY nombre'
         );
@@ -73,14 +76,15 @@ switch ($action) {
         if (!isset($d['codigo'], $d['nombre'])) {
             responder(['ok' => false, 'error' => 'Código y Nombre son obligatorios'], 400);
         }
-        $sql = 'INSERT INTO productos (codigo, nombre, categoria, precio_costo, precio_venta, stock, stock_minimo, controlar_stock)
-                VALUES (:codigo, :nombre, :categoria, :costo, :venta, :stock, :minimo, :ctrl)';
+        $sql = 'INSERT INTO productos (codigo, nombre, categoria, proveedor, precio_costo, precio_venta, stock, stock_minimo, controlar_stock)
+                VALUES (:codigo, :nombre, :categoria, :proveedor, :costo, :venta, :stock, :minimo, :ctrl)';
         $st = db()->prepare($sql);
         try {
             $st->execute([
                 ':codigo' => $d['codigo'],
                 ':nombre' => $d['nombre'],
                 ':categoria'   => $d['categoria']   ?? 'Repuesto',
+                ':proveedor'   => $d['proveedor']   ?? null,
                 ':costo'       => $d['precio_costo'] ?? 0,
                 ':venta'       => $d['precio_venta'] ?? 0,
                 ':stock'       => $d['stock']         ?? 0,
