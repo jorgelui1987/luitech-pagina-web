@@ -74,11 +74,17 @@
       var tdStock = document.createElement('td');
       tdStock.className = 'p-3 text-center';
       var badge = document.createElement('span');
-      badge.className = 'px-2 py-0.5 rounded-full text-xs font-bold border ' +
-        (!p.controlar_stock ? 'bg-slate-800 text-slate-400 border-slate-700'
-          : (p.stock_bajo ? 'bg-red-950 text-red-400 border-red-900'
-                          : 'bg-emerald-950 text-emerald-400 border-emerald-800'));
-      badge.textContent = p.controlar_stock ? String(p.stock) : 's/c';
+      if (!p.controlar_stock) {
+        badge.className = 'px-2 py-0.5 rounded-full text-xs font-bold border bg-slate-800 text-slate-300 border-slate-600';
+        badge.textContent = 'Servicio';
+        badge.title = 'Servicio: no tiene stock que controlar (descontable ilimitado en el POS)';
+      } else {
+        badge.className = 'px-2 py-0.5 rounded-full text-xs font-bold border ' +
+          (p.stock_bajo ? 'bg-red-950 text-red-400 border-red-900'
+                        : 'bg-emerald-950 text-emerald-400 border-emerald-800');
+        badge.textContent = String(p.stock);
+        badge.title = 'Stock disponible (mínimo: ' + (p.stock_minimo || 0) + ')';
+      }
       tdStock.appendChild(badge);
       tr.appendChild(tdStock);
 
