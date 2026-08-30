@@ -54,9 +54,9 @@ switch ($action) {
     case 'list': {
         $q = trim((string)($_GET['q'] ?? ''));
         $sql = 'SELECT c.id, c.nombre, c.rut, c.telefono, c.email, c.notas,
-                       (SELECT COUNT(*) FROM ordenes o WHERE o.cliente_id = c.id) AS ordenes_total,
-                       (SELECT COALESCE(SUM(o.total),0) FROM ordenes o WHERE o.cliente_id = c.id) AS total_gastado,
-                       (SELECT MAX(o.fecha_ingreso) FROM ordenes o WHERE o.cliente_id = c.id) AS ultima_orden
+                       (SELECT COUNT(*) FROM ordenes o WHERE o.cliente_id = c.id OR LOWER(o.cliente) = LOWER(c.nombre)) AS ordenes_total,
+                       (SELECT COALESCE(SUM(o.total),0) FROM ordenes o WHERE o.cliente_id = c.id OR LOWER(o.cliente) = LOWER(c.nombre)) AS total_gastado,
+                       (SELECT MAX(o.fecha_ingreso) FROM ordenes o WHERE o.cliente_id = c.id OR LOWER(o.cliente) = LOWER(c.nombre)) AS ultima_orden
                 FROM clientes c WHERE c.activo = 1';
         $params = [];
         if ($q !== '') {
@@ -129,9 +129,10 @@ switch ($action) {
         }
         $ordenes = db()->prepare(
             'SELECT codigo, equipo, falla, estado, estado_pago, total, abono, fecha_ingreso, fecha_entrega
-             FROM ordenes WHERE cliente_id = ? ORDER BY id DESC LIMIT 200'
+             FROM ordenes WHERE cliente_id = ? OR LOWER(cliente) = LOWER(?)
+             ORDER BY id DESC LIMIT 200'
         );
-        $ordenes->execute([$id]);
+        $ordenes->execute([$id, $cliente['nombre']]);
         $lista = $ordenes->fetchAll();
         $gastado = 0;
         foreach ($lista as $o) {
