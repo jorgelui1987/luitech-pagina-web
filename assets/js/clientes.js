@@ -64,9 +64,9 @@
         var tdAcc = document.createElement('td');
         tdAcc.className = 'p-2 text-center whitespace-nowrap';
         var btnOr = document.createElement('button');
-        btnOr.type = 'button'; btnOr.title = 'Crear orden para este cliente';
-        btnOr.innerHTML = '<i class="fa-solid fa-file-invoice pointer-events-none"></i>';
-        btnOr.className = 'w-8 h-8 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white mx-0.5 transition-all';
+        btnOr.type = 'button'; btnOr.title = 'Ir a Nueva Orden con este cliente';
+        btnOr.innerHTML = '<i class="fa-solid fa-file-invoice"></i> Orden';
+        btnOr.className = 'px-2 h-8 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold mx-0.5 transition-all';
         btnOr.addEventListener('click', function () { irANuevaOrden(c.nombre); });
         var btnF = document.createElement('button');
         btnF.type = 'button'; btnF.title = 'Ver ficha e historial';
