@@ -495,7 +495,7 @@
       'CAMARA TRASERA': 'Cámara trasera', 'CAMARA DELANTERA': 'Cámara delantera', 'VIDRIO CAMARA': 'Vidrio de cámara',
       'TAPAS': 'Tapa', 'CHASIS': 'Chasis', 'BANDEJA SIM': 'Bandeja SIM', 'HUELLA': 'Huella',
       'ENCENDIDO': 'Encendido', 'AURICULAR': 'Auricular', 'DISCO ALTAVOZ': 'Disco altavoz',
-      'ANTENAS': 'Antena', 'CONECTOR FPC': 'Conector FPC', 'MOTOR CAMARA': 'Motor de cámara',
+      'ANTENAS': 'Antena', 'CONECTOR FPC': 'Conector FPC', 'MOTOR CAMARA' : 'Motor de cámara',
       'HOME Y HUELLA': 'Home y huella', 'PUERTO HDMI': 'Puerto HDMI', 'PIN DE CARGA': 'Pin de carga',
       'PIN': 'Pin de carga', 'TACTIL': 'Táctil', 'SELLO': 'Sello antipolvo', 'GLASS': 'Glass',
       'CONSOLAS': 'Consola', 'CONSOLA': 'Consola'
@@ -510,44 +510,46 @@
       var l = linea.trim();
       if (l === '') return;
 
-      // Encabezado de sección (sin $, en mayúsculas): define marca y pieza
+      // Encabezado de sección (sin $): define marca y pieza de lo que sigue
       if (l.indexOf('$') === -1) {
         if (l.length <= 55 && /^[A-ZÁÉÍÓÚÑ0-9 ]+$/.test(l)) {
+          var cambio = false;
           marcas.forEach(function (b) {
             if (l.indexOf(b) !== -1) {
               marca = (b === 'MOTO') ? 'Motorola' : ((b === 'LG' || b === 'IPAD') ? b : b.charAt(0) + b.slice(1).toLowerCase());
+              l = l.replace(b, ' ');
+              cambio = true;
             }
           });
           keysPiezas.forEach(function (k) {
-            if (l.indexOf(k) !== -1) { piezaCtx = piezasMap[k]; l = l.replace(k, ' '); }
+            if (l.indexOf(k) !== -1) { piezaCtx = piezasMap[k]; l = l.replace(k, ' '); cambio = true; }
           });
-          var palabras = l.replace(marca.toUpperCase(), ' ').split(/\s+/).filter(function (w) {
-            return w !== '' && !esCalidad.test(w);
-          });
-          extra = palabras.join(' ');
+          if (cambio) {
+            extra = l.split(/\s+/).filter(function (w) { return w !== '' && !esCalidad.test(w); }).join(' ');
+          }
         }
         return;
       }
 
-      // Línea de datos: puede traer VARIOS items separados por ")" (listas PDF)
-      l.split(/\)+/).forEach(function (chunk) {
-        chunk = chunk.trim();
-        if (chunk === '') return;
-        var mPrecio = chunk.match(/(\$?)\s*([\d][\d,\.]*)\s*\)*\s*$/);
-        if (!mPrecio) { saltadas++; return; }
-        var precio = parseInt(mPrecio[2].replace(/[.]/g, ''), 10);
-        if (!precio || precio < 100) { saltadas++; return; }
-        var desc = chunk.slice(0, mPrecio.index).replace(/^[\s\-–•*·>#]+/, '').replace(/[\s\-–•*·:]+$/, '').trim();
-        if (desc.length < 2) { saltadas++; return; }
-
-        var pieza = piezaCtx; var modelo = desc;
+      // Línea con precios: escanea los pares "descripción $ precio" (soporta
+      // items separados por ")" y líneas de 2 columnas con varios precios)
+      var re = /([^\$]*?)\$\s*([\d][\d.,]*)\s*\)?\s*/g;
+      var m; var agregados = 0;
+      while ((m = re.exec(l)) !== null) {
+        var desc = m[1].replace(/^[\s\-–•*·>#()\[\]]+/, '').replace(/[\s\-–•*·:()\[\],.]+$/, '').trim();
+        var precio = parseInt(m[2].replace(/[.,]/g, ''), 10);
+        if (!precio || precio < 100) continue;
+        if (desc.length < 2) continue;
+        var pieza = piezaCtx;
         keysPiezas.forEach(function (k) {
-          if (desc.toUpperCase().indexOf(k) !== -1 && pieza === piezaCtx) { pieza = piezasMap[k]; }
+          if (pieza === piezaCtx && desc.toUpperCase().indexOf(k) !== -1) pieza = piezasMap[k];
         });
-        modelo = (marca + ' ' + extra + ' ' + desc).replace(/\s+/g, ' ').trim();
-        if (modelo.length < 2) { saltadas++; return; }
+        var modelo = (marca + ' ' + extra + ' ' + desc).replace(/\s+/g, ' ').trim();
+        if (modelo.length < 2) continue;
         items.push({ modelo: modelo, pieza: pieza, precio: precio });
-      });
+        agregados++;
+      }
+      if (agregados === 0) saltadas++;
     });
     return { items: items, saltadas: saltadas };
   }
