@@ -1668,7 +1668,7 @@
     var total = parseInt(o.total, 10) || 0;
     var abonado = parseInt(o.abono, 10) || 0;
     var saldo = Math.max(0, total - abonado);
-    var tasa = empresaCfg && empresaCfg.iva_tasa ? parseFloat(empresaCfg.iva_tasa) : 0;
+    var tasa = empresaCfg && empresaCfg.iva_porcentaje ? parseFloat(empresaCfg.iva_porcentaje) : 0;
     if (isNaN(tasa) || tasa < 0) { tasa = 0; }
     var neto = tasa > 0 ? Math.round(total / (1 + tasa / 100)) : total;
     var iva = total - neto;
