@@ -93,6 +93,10 @@ switch ($action) {
             unset($_SESSION['totp_pendiente']);
             responder(['ok' => false, 'error' => 'La verificación expiró: inicia sesión de nuevo'], 401);
         }
+        // Límite por IP también en el paso 2FA (frena bombardeo de códigos)
+        if (!limitar_ip('2fa', 20, 600)) {
+            responder(['ok' => false, 'error' => 'Demasiados intentos desde tu conexión. Espera unos minutos.'], 429);
+        }
         $codigo = trim((string)(leer_cuerpo()['codigo'] ?? ''));
         if ($codigo === '') {
             responder(['ok' => false, 'error' => 'Ingresa el código de 6 dígitos'], 400);
