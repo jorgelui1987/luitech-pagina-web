@@ -16,7 +16,10 @@
   function mostrarVista(logueado, nombre) {
     $('view-login').classList.toggle('hidden', logueado);
     $('view-panel').classList.toggle('hidden', !logueado);
-    if (logueado && nombre) $('admin-nombre').textContent = nombre;
+    if (logueado && nombre) {
+      $('admin-nombre').textContent = nombre;
+      document.querySelectorAll('.bm-nombre').forEach(function (el) { el.textContent = nombre; });
+    }
     if (logueado) { cargarTecnicos(); cargarClientesLista(); aplicarClientePendiente(); }
     if (!logueado) { document.body.classList.remove('rol-tecnico'); $('usuario').focus(); }
   }
@@ -1880,6 +1883,15 @@
     });
 
     // Verificar sesión existente al cargar
+    // Barra móvil (teléfono): pestaña activa + panel Más + salir
+    var pagina = location.pathname.split('/').pop() || 'admin.html';
+    document.querySelectorAll('#barra-movil a').forEach(function (a) {
+      var href = (a.getAttribute('href') || '').split('?')[0];
+      if (href === pagina) { a.classList.add('activo'); }
+    });
+    $('bm-mas').addEventListener('click', function () { $('mas-panel').classList.toggle('hidden'); });
+    $('bm-salir').addEventListener('click', function () { cerrarSesion(); });
+
     api('api/auth.php?action=me').then(function (res) {
       if (res.logueado) {
         if (res.rol === 'tecnico') { document.body.classList.add('rol-tecnico'); }

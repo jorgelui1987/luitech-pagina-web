@@ -56,6 +56,27 @@
         body.rol-tecnico #mo-btn-nota { display:none !important; }
         #banner-tecnico{ display:none; }
         body.rol-tecnico #banner-tecnico{ display:block; }
+        /* Barra inferior estilo app nativa (solo teléfono) */
+        #barra-movil{ display:none; }
+        #mas-panel{ display:none; }
+        @media(max-width:767px){
+            #view-panel{ padding-bottom:78px; }
+            #view-panel header a{ display:none !important; }
+            #btn-salir-header{ display:none !important; }
+            #barra-movil{ position:fixed; bottom:0; left:0; right:0; z-index:9990; display:flex;
+                background:#020617; border-top:1px solid #1e293b; padding:4px 0 env(safe-area-inset-bottom); }
+            #barra-movil a, #barra-movil button{ flex:1; display:flex; flex-direction:column; align-items:center; gap:2px;
+                background:none; border:0; color:#94a3b8; font-size:10px; font-weight:700; padding:6px 2px; cursor:pointer; text-decoration:none; }
+            #barra-movil i{ font-size:17px; }
+            #barra-movil .activo{ color:#22d3ee; }
+            #mas-panel{ position:fixed; bottom:62px; left:10px; right:10px; z-index:9991; display:grid;
+                grid-template-columns:1fr 1fr; gap:8px; background:#0f172a; border:1px solid #334155;
+                border-radius:1rem; padding:12px; box-shadow:0 -10px 30px rgba(0,0,0,.55); }
+            #mas-panel a, #mas-panel button{ display:flex; align-items:center; gap:8px; color:#e2e8f0; background:#1e293b;
+                border:1px solid #334155; border-radius:0.6rem; padding:10px; font-size:12px; font-weight:700; text-decoration:none; cursor:pointer; }
+            body.rol-tecnico .bm-admin{ display:none !important; }
+            body:not(.rol-tecnico) .bm-tec{ display:none !important; }
+        }
         /* Órdenes como tarjetas en pantalla chica (el PC sigue con la tabla) */
         #ordenes-cards{ display:none; }
         @media(max-width:767px){
@@ -143,7 +164,7 @@
                     <img src="assets/img/logo-luitech.png" alt="Logo Luitech" width="36" height="36" class="h-9 w-9 rounded-lg object-cover">
                     <span class="font-extrabold text-white">Panel del Taller</span>
                 </div>
-                <div class="flex flex-wrap items-center gap-3 text-sm">
+                <div class="flex items-center gap-3 text-sm">
                     <a href="pos.html" rel="noopener" title="Punto de venta"
                        class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg font-semibold transition-all">
                         <i class="fa-solid fa-cash-register mr-1"></i>POS
@@ -183,7 +204,7 @@
                        class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-2 rounded-lg font-semibold transition-all">Ver Sitio</a>
                     <button type="button" id="btn-logout"
                             class="bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-900/60 px-3 py-2 rounded-lg font-semibold transition-all">
-                        <i class="fa-solid fa-right-from-bracket mr-1"></i> Salir (<span id="admin-nombre" class="font-bold">admin</span>)
+                        <i class="fa-solid fa-right-from-bracket mr-1"></i> <span id="btn-salir-header">Salir</span> (<span id="admin-nombre" class="font-bold">admin</span>)
                     </button>
                 </div>
             </div>
@@ -523,6 +544,24 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Barra inferior estilo app nativa (solo teléfono) -->
+    <nav id="barra-movil">
+        <a href="admin.html"><i class="fa-solid fa-house"></i><span>Inicio</span></a>
+        <a href="pos.html" class="bm-admin"><i class="fa-solid fa-cash-register"></i><span>POS</span></a>
+        <a href="inventario.html" class="bm-admin"><i class="fa-solid fa-boxes-stacked"></i><span>Inventario</span></a>
+        <a href="finanzas.html" class="bm-admin"><i class="fa-solid fa-coins"></i><span>Finanzas</span></a>
+        <button type="button" id="bm-mas"><i class="fa-solid fa-ellipsis"></i><span>Más</span></button>
+    </nav>
+    <div id="mas-panel" class="hidden">
+        <a href="clientes.html" class="bm-admin"><i class="fa-solid fa-users mr-1"></i>Clientes</a>
+        <a href="proveedores.html" class="bm-admin"><i class="fa-solid fa-truck-field mr-1"></i>Proveedores</a>
+        <a href="tecnicos.html" class="bm-admin"><i class="fa-solid fa-user-gear mr-1"></i>Técnicos</a>
+        <a href="configuracion.html" class="bm-admin"><i class="fa-solid fa-gear mr-1"></i>Configuración</a>
+        <a href="index.html" target="_blank" rel="noopener" class="bm-admin"><i class="fa-solid fa-globe mr-1"></i>Ver Sitio</a>
+        <a href="tecnicos.html" class="bm-tec"><i class="fa-solid fa-hand-holding-dollar mr-1"></i>Mis comisiones</a>
+        <button type="button" id="bm-salir" style="grid-column:1/-1"><i class="fa-solid fa-right-from-bracket mr-1"></i>Salir (<span class="bm-nombre"></span>)</button>
     </div>
 
     <script src="assets/js/common.js?v=mp16" defer></script>
