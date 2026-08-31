@@ -344,7 +344,7 @@
 
       var html = (
         '<html><head><title>' + numero + '</title><style>' +
-        '@page{margin:0}body{font-family:monospace;font-size:12px;padding:14px;color:#000}' +
+        '@page{size:80mm auto;margin:0}body{font-family:monospace;font-size:12px;line-height:1.25;padding:3mm 2mm;color:#000;width:74mm;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
         'h2{text-align:center;margin:4px 0;font-size:15px}.c{text-align:center}.d{border-top:1px dashed #000;margin:8px 0;border-bottom:1px dashed #000;padding:8px 0}' +
         'table{width:100%;border-collapse:collapse}td{padding:2px 0;vertical-align:top;font-size:11px}' +
         '.t{font-size:14px;font-weight:bold;text-align:right;margin-top:8px}' +
@@ -354,7 +354,7 @@
           ? '<img class="logo" src="' + esc(new URL(empresaCfg.empresa_logo, location.href).href) + '">'
           : '') +
         '<h2>' + esc(empresaCfg && empresaCfg.empresa_nombre ? empresaCfg.empresa_nombre : 'LUITECH SERVICIO TECNICO') + '</h2>' +
-        '<div class="c">' + esc(empresaCfg && empresaCfg.empresa_direccion ? empresaCfg.empresa_direccion : 'Persa Las Cenizas - Local 13 · B.O\'Higgins 564, La Serena') +
+        '<div class="c">' + (empresaCfg && empresaCfg.empresa_rut ? 'RUT ' + esc(empresaCfg.empresa_rut) + '<br>' : '') + esc(empresaCfg && empresaCfg.empresa_direccion ? empresaCfg.empresa_direccion : 'Persa Las Cenizas - Local 13 · B.O\'Higgins 564, La Serena') +
         '<br>' + esc(empresaCfg && empresaCfg.empresa_telefono ? 'WhatsApp ' + empresaCfg.empresa_telefono : 'WhatsApp +56 9 8220 9690') + '</div>' +
         '<div class="d c"><b>' + numero + '</b><br>' + cuando + '<br>Pago: ' + v.medio_pago +
         (v.cliente && v.cliente !== 'Publico General' ? '<br>Cliente: ' + esc(v.cliente) : '') +

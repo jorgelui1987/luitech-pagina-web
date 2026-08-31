@@ -1668,6 +1668,10 @@
     var total = parseInt(o.total, 10) || 0;
     var abonado = parseInt(o.abono, 10) || 0;
     var saldo = Math.max(0, total - abonado);
+    var tasa = empresaCfg && empresaCfg.iva_tasa ? parseFloat(empresaCfg.iva_tasa) : 0;
+    if (isNaN(tasa) || tasa < 0) { tasa = 0; }
+    var neto = tasa > 0 ? Math.round(total / (1 + tasa / 100)) : total;
+    var iva = total - neto;
     var gd = parseInt(o.garantia_dias, 10) || 0;
     var vence = '—';
     if (gd > 0 && o.fecha_entrega) {
@@ -1683,36 +1687,50 @@
     var html =
       '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Recibo ' + escapar(o.codigo) + '</title>' +
       '<style>' +
-      'body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;max-width:420px;margin:24px auto;padding:0 12px;}' +
-      'h1{font-size:18px;margin:0;text-align:center;letter-spacing:1px;}' +
-      'img.logo{max-width:120px;margin:0 auto 6px;display:block;}' +
-      'p.sub{font-size:11px;color:#475569;text-align:center;margin:2px 0 14px;}' +
-      'table{width:100%;border-collapse:collapse;font-size:12px;}' +
-      'th{text-align:left;padding:6px 8px;background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;width:38%;font-weight:normal;}' +
-      'td{padding:6px 8px;border:1px solid #cbd5e1;font-weight:700;}' +
-      'img{max-height:70px;margin-top:10px;display:block;}' +
-      'p.nota{font-size:10px;color:#64748b;text-align:center;margin-top:14px;}' +
+      '@page{size:80mm auto;margin:0}' +
+      'body{font-family:monospace;font-size:12px;line-height:1.25;padding:3mm 2mm;color:#000;width:74mm;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+      'h1{text-align:center;margin:2px 0;font-size:14px}' +
+      'img.logo{width:46mm;margin:0 auto 3px;display:block}' +
+      '.c{text-align:center}.d{border-top:1px dashed #000;margin:5px 0;padding:5px 0;border-bottom:1px dashed #000}' +
+      'table{width:100%;border-collapse:collapse}th,td{padding:1px 0;font-size:11px;vertical-align:top;text-align:left;font-weight:normal}' +
+      'th{width:38%}td{font-weight:bold}' +
+      '.t{font-size:13.5px;font-weight:bold;text-align:right;margin-top:4px}' +
+      'img.f{max-height:14mm;display:block;margin:2px 0}' +
+      '.n{font-size:9px;text-align:center;margin-top:6px}' +
       '</style></head><body>' +
       (empresaCfg && empresaCfg.empresa_logo
         ? '<img class="logo" src="' + escapar(new URL(empresaCfg.empresa_logo, location.href).href) + '">'
         : '') +
       '<h1>' + escapar(empresaCfg && empresaCfg.empresa_nombre ? empresaCfg.empresa_nombre : 'LUITECH — SERVICIO TÉCNICO') + '</h1>' +
-      '<p class="sub">Recibo de entrega · Orden ' + escapar(o.codigo) +
-      (empresaCfg && empresaCfg.empresa_direccion ? '<br>' + escapar(empresaCfg.empresa_direccion) : '') + '</p>' +
+      '<div class="c">' +
+      (empresaCfg && empresaCfg.empresa_rut ? 'RUT ' + escapar(empresaCfg.empresa_rut) + '<br>' : '') +
+      (empresaCfg && empresaCfg.empresa_direccion ? escapar(empresaCfg.empresa_direccion) + '<br>' : '') +
+      (empresaCfg && empresaCfg.empresa_telefono ? 'WhatsApp ' + escapar(empresaCfg.empresa_telefono) : '') +
+      '</div>' +
+      '<div class="d c"><b>RECIBO DE ENTREGA · ' + escapar(o.codigo) + '</b><br>' +
+      escapar(String(o.fecha_entrega || o.fecha_ingreso || '').slice(0, 16)) + '</div>' +
       '<table>' +
       filaRecibo('Cliente', escapar(o.cliente)) +
       filaRecibo('Equipo', escapar(o.equipo)) +
-      filaRecibo('Falla / servicio', escapar(o.falla)) +
-      filaRecibo('Fecha de ingreso', escapar(o.fecha_ingreso)) +
-      filaRecibo('Fecha de entrega', escapar(String(o.fecha_entrega || '—').slice(0, 16))) +
+      filaRecibo('Servicio', escapar(o.falla)) +
       filaRecibo('Retirado por', escapar(o.entregado_a || '—')) +
-      filaRecibo('Total', escapar(monto(total))) +
+      '</table>' +
+      '<div class="d">' +
+      (tasa > 0
+        ? '<table>' +
+          filaRecibo('Subtotal neto', escapar(monto(neto))) +
+          filaRecibo('IVA (' + tasa + '%) incluido', escapar(monto(iva))) +
+          '</table>' +
+          '<p class="t">TOTAL ' + escapar(monto(total)) + '</p>'
+        : '<p class="t">TOTAL ' + escapar(monto(total)) + '</p>') +
+      '<table>' +
       filaRecibo('Abonado', escapar(monto(abonado))) +
-      filaRecibo('Saldo', escapar(monto(saldo))) +
+      (saldo > 0 ? filaRecibo('SALDO PENDIENTE', escapar(monto(saldo))) : filaRecibo('Pagado completo', 'SÍ')) +
       filaRecibo('Garantía', gd > 0 ? escapar(gd + ' días (hasta ' + vence + ')') : 'Sin garantía') +
       '</table>' +
-      (o.firma_entrega ? '<img src="' + escapar(o.firma_entrega) + '" alt="Firma de retiro">' : '') +
-      '<p class="nota">' + escapar(empresaCfg && empresaCfg.terminos_texto ? empresaCfg.terminos_texto : '¡Gracias por confiar en Luitech! Conserve este recibo para hacer efectiva la garantía.') + '</p>' +
+      '</div>' +
+      (o.firma_entrega ? '<img class="f" src="' + escapar(o.firma_entrega) + '" alt="Firma de retiro">' : '') +
+      '<p class="n">' + escapar(empresaCfg && empresaCfg.terminos_texto ? empresaCfg.terminos_texto : '¡Gracias por confiar en Luitech! Conserve este recibo para hacer efectiva la garantía.') + '</p>' +
       '</body></html>';
 
     window.imprimirDocumento(html);

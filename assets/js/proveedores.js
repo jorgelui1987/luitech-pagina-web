@@ -378,7 +378,7 @@
     var cfg = empresaCfg || {};
     var html = (
       '<html><head><title>Cotizacion ' + esc(c.modelo) + '</title><style>' +
-      '@page{margin:0}body{font-family:monospace;font-size:12px;padding:14px;color:#000}' +
+      '@page{size:80mm auto;margin:0}body{font-family:monospace;font-size:12px;line-height:1.25;padding:3mm 2mm;color:#000;width:74mm;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
       'h2{text-align:center;margin:4px 0;font-size:15px}.c{text-align:center}.d{border-top:1px dashed #000;margin:8px 0;border-bottom:1px dashed #000;padding:8px 0}' +
       'img.logo{max-width:110px;margin:0 auto 4px;display:block}' +
       '.t{font-size:15px;font-weight:bold;text-align:right;margin-top:8px}' +
@@ -388,7 +388,7 @@
         ? '<img class="logo" src="' + esc(new URL(cfg.empresa_logo, location.href).href) + '">'
         : '') +
       '<h2>' + esc(cfg.empresa_nombre || 'LUITECH SERVICIO TECNICO') + '</h2>' +
-      '<div class="c">' + esc(cfg.empresa_direccion || '') +
+      '<div class="c">' + (cfg.empresa_rut ? 'RUT ' + esc(cfg.empresa_rut) + '<br>' : '') + esc(cfg.empresa_direccion || '') +
       (cfg.empresa_telefono ? '<br>WhatsApp ' + esc(cfg.empresa_telefono) : '') + '</div>' +
       '<div class="d c"><b>COTIZACION</b><br>' + hoy + '<br>Validez hasta: ' + validez + '</div>' +
       '<p class="pieza">' + esc(c.pieza) + '</p>' +
