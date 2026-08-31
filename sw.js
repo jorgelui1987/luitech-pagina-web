@@ -2,7 +2,7 @@
    - Interfaz (páginas, CSS, JS, imágenes): red primero + caché de respaldo
    - API (/api/): SIEMPRE red — los datos del taller nunca se cachean
    Al publicar una actualización, sube la constante CACHE (ej: luitech-v2). */
-var CACHE = 'luitech-v1';
+var CACHE = 'luitech-v2'; // v2: limpia cachés envenenados por despliegues a medias
 var NUCLEO = [
   'admin.html', 'pos.html', 'inventario.html', 'proveedores.html',
   'clientes.html', 'tecnicos.html', 'finanzas.html', 'configuracion.html',
@@ -47,7 +47,26 @@ self.addEventListener('fetch', function (e) {
     return;
   }
 
-  // Estáticos (con versión ?v=: al cambiar la versión se descargan solos)
+  // Estáticos CON versión (?v=): stale-while-revalidate — respuesta al instante
+  // desde caché y actualización por detrás (autocurativo ante despliegues).
+  var versionado = url.search.indexOf('v=') !== -1;
+  if (versionado) {
+    e.respondWith(
+      caches.match(e.request).then(function (r) {
+        var red = fetch(e.request).then(function (res) {
+          if (res && res.ok) {
+            var copia = res.clone();
+            caches.open(CACHE).then(function (c) { c.put(e.request, copia); });
+          }
+          return res;
+        }).catch(function () { return r; });
+        return r || red;
+      })
+    );
+    return;
+  }
+
+  // Otros estáticos (sin versión): caché primero
   e.respondWith(
     caches.match(e.request).then(function (r) {
       return r || fetch(e.request).then(function (res) {

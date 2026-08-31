@@ -16,6 +16,14 @@ Options -Indexes
     Header set X-Frame-Options "SAMEORIGIN"
     Header set Referrer-Policy "strict-origin-when-cross-origin"
     Header set Permissions-Policy "geolocation=(self), microphone=(), camera=()"
+    # Las páginas y el service worker SIEMPRE se revalidan: en el teléfono
+    # nunca se sirve una versión vieja guardada por el navegador.
+    <FilesMatch "\.(html)$">
+        Header set Cache-Control "no-cache, must-revalidate"
+    </FilesMatch>
+    <FilesMatch "^(sw\.js)$">
+        Header set Cache-Control "no-cache, must-revalidate"
+    </FilesMatch>
 </IfModule>
 
 # Nunca exponer respaldos ni archivos sensibles
