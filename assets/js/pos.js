@@ -34,6 +34,13 @@
     function ahora() {
       if (impresa) return;
       impresa = true;
+      // Auto-cierre: la ventana se cierra sola al cerrarse el diálogo de
+      // impresión (se imprima o se cancele) para que no se acumulen ventanas.
+      try {
+        w.addEventListener('afterprint', function () {
+          setTimeout(function () { try { w.close(); } catch (e) {} }, 500);
+        });
+      } catch (e) {}
       w.print();
     }
     if (pendientes === 0) { ahora(); return; }

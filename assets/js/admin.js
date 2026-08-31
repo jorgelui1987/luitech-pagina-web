@@ -1513,6 +1513,13 @@
     function ahora() {
       if (impresa) return;
       impresa = true;
+      // Auto-cierre: la ventana se cierra sola al cerrarse el diálogo de
+      // impresión (se imprima o se cancele) para que no se acumulen ventanas.
+      try {
+        ventana.addEventListener('afterprint', function () {
+          setTimeout(function () { try { ventana.close(); } catch (e) {} }, 500);
+        });
+      } catch (e) {}
       ventana.print();
     }
     if (pendientes === 0) { ahora(); return; }

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
@@ -9,7 +9,7 @@
     <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
     <link rel="stylesheet" href="assets/css/styles.css?v=mp2">
     <style>
-        /* Acta de recepción: firma táctil, chips de accesorios y miniaturas */
+        /* Acta de recepciÃ³n: firma tÃ¡ctil, chips de accesorios y miniaturas */
         .lienzo-firma{ touch-action:none; cursor:crosshair; background:#ffffff; display:block; width:100%; height:140px; border-radius:0.5rem; }
         .chip{ cursor:pointer; user-select:none; }
         .chip-on{ background:#06b6d4 !important; color:#0f172a !important; border-color:#06b6d4 !important; }
@@ -22,7 +22,7 @@
         #mo-fotos{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
         .lienzo-patron{ touch-action:none; cursor:pointer; width:100%; max-width:160px; aspect-ratio:1/1;
                         background:#0f172a; border:1px solid #1e293b; border-radius:0.5rem; display:block; }
-        /* Acordeón del patrón: cabecera clicable + cuerpo que se expande/colapsa animado */
+        /* AcordeÃ³n del patrÃ³n: cabecera clicable + cuerpo que se expande/colapsa animado */
         #patron-cuerpo{ max-height:0; overflow:hidden; transition:max-height .25s ease; }
         #patron-cuerpo.abierto{ max-height:340px; }
         #patron-chevron{ transition:transform .2s ease; }
@@ -33,12 +33,12 @@
         .chip-pago.abonado{ background:rgba(69,26,3,.45); color:#fbbf24; border-color:#92400e; }
         .chip-pago.pendiente{ background:rgba(76,5,25,.35); color:#f87171; border-color:#7f1d1d; }
         #mo-cobro{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
-        /* Bitácora de reparación: línea de tiempo */
+        /* BitÃ¡cora de reparaciÃ³n: lÃ­nea de tiempo */
         .bitacora-lista{ list-style:none; margin:0 0 8px 6px; padding:0 0 0 14px; border-left:2px solid #1e293b; }
         .bitacora-lista li{ position:relative; padding:0 0 10px; font-size:11px; }
         .bitacora-lista li::before{ content:''; position:absolute; left:-20px; top:3px; width:8px; height:8px;
                                     border-radius:50%; background:#22d3ee; box-shadow:0 0 0 2px #0f172a; }
-        /* Resumen del taller (métricas) */
+        /* Resumen del taller (mÃ©tricas) */
         #resumen-panel{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
         @media(min-width:1024px){ #resumen-panel{ grid-template-columns:repeat(4,1fr); } }
         /* Bloques del modal de detalle (espaciado sin space-y del build) */
@@ -51,9 +51,9 @@
         #mp-link{ color:#22d3ee; font-weight:700; font-size:12px; word-break:break-all; }
         .mp-mini{ background:#1e293b; color:#cbd5e1; border:1px solid #334155; border-radius:0.5rem; padding:0.4rem 0.8rem; font-size:11px; font-weight:600; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; }
         .mp-mini:hover{ background:#334155; }
-        /* Corrección de modales: el build de Tailwind no incluye max-h-[90vh],
+        /* CorrecciÃ³n de modales: el build de Tailwind no incluye max-h-[90vh],
            z-[9998], space-y-* ni backdrop-blur-sm. Sin max-height el modal crece
-           más que la pantalla y, al centrarse, se recorta arriba/abajo sin scroll. */
+           mÃ¡s que la pantalla y, al centrarse, se recorta arriba/abajo sin scroll. */
         #modal-orden{ position:fixed; inset:0; z-index:9998; background:rgba(2,6,23,.82); }
         #modal-orden > div{ max-height:90vh; overflow-y:auto; }
         #modal-orden > div > * + *{ margin-top:14px; }
@@ -87,19 +87,19 @@
                            placeholder="Tu usuario de taller">
                 </div>
                 <div>
-                    <label for="password" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Contraseña</label>
+                    <label for="password" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">ContraseÃ±a</label>
                     <input type="password" id="password" autocomplete="current-password" required
                            class="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500"
-                           placeholder="••••••••">
+                           placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢">
                 </div>
                 <button type="submit" id="btn-login"
                         class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <i class="fa-solid fa-right-to-bracket"></i> Iniciar Sesión
+                    <i class="fa-solid fa-right-to-bracket"></i> Iniciar SesiÃ³n
                 </button>
             </form>
 
             <a href="index.html" class="block mt-6 text-center text-xs text-slate-500 hover:text-cyan-400 transition-colors">
-                <i class="fa-solid fa-arrow-left mr-1"></i> Volver al sitio público
+                <i class="fa-solid fa-arrow-left mr-1"></i> Volver al sitio pÃºblico
             </a>
         </div>
     </div>
@@ -135,11 +135,11 @@
                        class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-2 rounded-lg font-semibold transition-all">
                         <i class="fa-solid fa-coins mr-1"></i>Finanzas
                     </a>
-                    <a href="tecnicos.html" title="Técnicos y comisiones"
+                    <a href="tecnicos.html" title="TÃ©cnicos y comisiones"
                        class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-2 rounded-lg font-semibold transition-all">
                         <i class="fa-solid fa-user-gear"></i>
                     </a>
-                    <a href="configuracion.html" title="Configuración"
+                    <a href="configuracion.html" title="ConfiguraciÃ³n"
                        class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-2 rounded-lg font-semibold transition-all">
                         <i class="fa-solid fa-gear"></i>
                     </a>
@@ -166,13 +166,13 @@
                 </h2>
                 <form id="form-nueva-orden" class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs" novalidate>
                     <div>
-                        <label for="new-codigo" class="block text-slate-400 mb-1 font-semibold">Código (opcional)</label>
-                        <input type="text" id="new-codigo" placeholder="Vacío = automático" maxlength="10"
+                        <label for="new-codigo" class="block text-slate-400 mb-1 font-semibold">CÃ³digo (opcional)</label>
+                        <input type="text" id="new-codigo" placeholder="VacÃ­o = automÃ¡tico" maxlength="10"
                                class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
                     </div>
                     <div>
                         <label for="new-cliente" class="block text-slate-400 mb-1 font-semibold">Nombre del Cliente</label>
-                        <input type="text" id="new-cliente" required maxlength="80" placeholder="Ej. Andrés Silva" list="lista-clientes"
+                        <input type="text" id="new-cliente" required maxlength="80" placeholder="Ej. AndrÃ©s Silva" list="lista-clientes"
                                class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
                         <datalist id="lista-clientes"></datalist>
                     </div>
@@ -195,11 +195,11 @@
                     </div>
                     <div class="md:col-span-2">
                         <label for="new-falla" class="block text-slate-400 mb-1 font-semibold">Detalle de la Falla</label>
-                        <input type="text" id="new-falla" required maxlength="200" placeholder="Ej. Cambio de batería y calibración"
+                        <input type="text" id="new-falla" required maxlength="200" placeholder="Ej. Cambio de baterÃ­a y calibraciÃ³n"
                                class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
                     </div>
                     <div>
-                        <label for="new-tecnico" class="block text-slate-400 mb-1 font-semibold"><i class="fa-solid fa-user-gear text-cyan-400 mr-1"></i>Técnico</label>
+                        <label for="new-tecnico" class="block text-slate-400 mb-1 font-semibold"><i class="fa-solid fa-user-gear text-cyan-400 mr-1"></i>TÃ©cnico</label>
                         <select id="new-tecnico" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
                             <option value="">Por Asignar</option>
                         </select>
@@ -209,29 +209,29 @@
                         <input type="date" id="new-fecha" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
                     </div>
                     <div>
-                        <label for="new-pin" class="block text-slate-400 mb-1 font-semibold"><i class="fa-solid fa-lock text-cyan-400 mr-1"></i>PIN numérico</label>
+                        <label for="new-pin" class="block text-slate-400 mb-1 font-semibold"><i class="fa-solid fa-lock text-cyan-400 mr-1"></i>PIN numÃ©rico</label>
                         <input type="text" id="new-pin" inputmode="numeric" maxlength="6" placeholder="Ej. 1234"
                                class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
-                        <!-- Acordeón: botón "Patrón" como cabecera; el cuerpo se despliega al hacer clic -->
+                        <!-- AcordeÃ³n: botÃ³n "PatrÃ³n" como cabecera; el cuerpo se despliega al hacer clic -->
                         <div id="patron-acordeon" class="mt-1 rounded-lg border border-slate-700 overflow-hidden bg-slate-900">
                             <button type="button" id="btn-patron-toggle" aria-expanded="false" aria-controls="patron-cuerpo"
                                     class="w-full flex items-center justify-between gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold px-3 py-2 transition-all">
-                                <span id="patron-etiqueta"><i class="fa-solid fa-plus mr-1"></i> Dibujar patrón</span>
+                                <span id="patron-etiqueta"><i class="fa-solid fa-plus mr-1"></i> Dibujar patrÃ³n</span>
                                 <i id="patron-chevron" class="fa-solid fa-chevron-down text-[10px]"></i>
                             </button>
                             <div id="patron-cuerpo">
                                 <div class="p-2">
                                     <canvas id="new-patron" class="lienzo-patron mx-auto" width="160" height="160"></canvas>
                                     <button type="button" id="btn-patron-limpiar" class="mt-1 w-full text-[10px] font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 px-2 py-1 rounded-md transition-all">
-                                        <i class="fa-solid fa-eraser mr-1"></i> Limpiar patrón
+                                        <i class="fa-solid fa-eraser mr-1"></i> Limpiar patrÃ³n
                                     </button>
                                 </div>
                             </div>
                         </div>
                     </div>
                     <div class="md:col-span-3">
-                        <label for="new-obs" class="block text-slate-400 mb-1 font-semibold">Observaciones de recepción (estado físico)</label>
-                        <input type="text" id="new-obs" maxlength="250" placeholder="Ej. Rayón en esquina inferior derecha, carcasa sin golpes"
+                        <label for="new-obs" class="block text-slate-400 mb-1 font-semibold">Observaciones de recepciÃ³n (estado fÃ­sico)</label>
+                        <input type="text" id="new-obs" maxlength="250" placeholder="Ej. RayÃ³n en esquina inferior derecha, carcasa sin golpes"
                                class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
                     </div>
                     <div class="md:col-span-4">
@@ -246,7 +246,7 @@
                         </div>
                     </div>
                     <div class="md:col-span-4">
-                        <label class="block text-slate-400 mb-1 font-semibold"><i class="fa-solid fa-money-bill-wave text-cyan-400 mr-1"></i>Presupuesto de la reparación (opcional)</label>
+                        <label class="block text-slate-400 mb-1 font-semibold"><i class="fa-solid fa-money-bill-wave text-cyan-400 mr-1"></i>Presupuesto de la reparaciÃ³n (opcional)</label>
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
                             <div>
                                 <label for="new-precio" class="block text-slate-500 mb-1">Precio al cliente ($ todo incluido)</label>
@@ -264,19 +264,19 @@
                                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-amber-400 font-bold">
                             </div>
                             <div>
-                                <label for="new-garantia" class="block text-slate-500 mb-1">Garantía</label>
+                                <label for="new-garantia" class="block text-slate-500 mb-1">GarantÃ­a</label>
                                 <select id="new-garantia" class="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
-                                    <option value="0">Sin garantía</option>
-                                    <option value="30">30 días</option>
-                                    <option value="60">60 días</option>
-                                    <option value="90">90 días</option>
+                                    <option value="0">Sin garantÃ­a</option>
+                                    <option value="30">30 dÃ­as</option>
+                                    <option value="60">60 dÃ­as</option>
+                                    <option value="90">90 dÃ­as</option>
                                 </select>
                             </div>
                         </div>
-                        <label class="flex items-center gap-2 text-xs text-slate-400 mt-1"><input type="checkbox" id="new-costo-egreso" class="chk"> Ya pagué la pieza al proveedor: registrar el <b class="text-red-400">Egreso</b> en la caja</label>
+                        <label class="flex items-center gap-2 text-xs text-slate-400 mt-1"><input type="checkbox" id="new-costo-egreso" class="chk"> Ya paguÃ© la pieza al proveedor: registrar el <b class="text-red-400">Egreso</b> en la caja</label>
                     </div>
                     <div class="md:col-span-2">
-                        <label class="block text-slate-400 mb-1 font-semibold"><i class="fa-solid fa-camera text-cyan-400 mr-1"></i>Fotos de respaldo del equipo (máx. 6)</label>
+                        <label class="block text-slate-400 mb-1 font-semibold"><i class="fa-solid fa-camera text-cyan-400 mr-1"></i>Fotos de respaldo del equipo (mÃ¡x. 6)</label>
                         <label class="inline-block bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-3 py-2 rounded-lg font-semibold cursor-pointer transition-all">
                             <i class="fa-solid fa-camera-retro mr-1"></i> Tomar / elegir fotos
                             <input type="file" id="new-fotos" accept="image/*" capture="environment" multiple class="hidden">
@@ -300,7 +300,7 @@
                 </form>
             </section>
 
-            <!-- Resumen del taller (métricas en vivo) -->
+            <!-- Resumen del taller (mÃ©tricas en vivo) -->
             <div id="resumen-panel"></div>
 
             <!-- Controles del taller -->
@@ -319,15 +319,15 @@
                 </div>
             </section>
 
-            <!-- Buscador y filtros de órdenes -->
+            <!-- Buscador y filtros de Ã³rdenes -->
             <section class="bg-slate-950 border border-slate-800 rounded-xl p-4">
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-2.5 text-xs">
-                    <input type="text" id="buscar-orden" placeholder="Buscar: código (1043), cliente, equipo, falla, RUT..." class="md:col-span-2 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-cyan-500">
+                    <input type="text" id="buscar-orden" placeholder="Buscar: cÃ³digo (1043), cliente, equipo, falla, RUT..." class="md:col-span-2 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-cyan-500">
                     <select id="filtro-estado-orden" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-cyan-500">
                         <option value="">Todos los estados</option>
                         <option>Ingresado</option>
-                        <option>En Diagnóstico</option>
-                        <option>En Reparación</option>
+                        <option>En DiagnÃ³stico</option>
+                        <option>En ReparaciÃ³n</option>
                         <option>Listo para Retiro</option>
                         <option>Entregado</option>
                     </select>
@@ -335,19 +335,19 @@
                 </div>
             </section>
 
-            <!-- Tabla de órdenes -->
+            <!-- Tabla de Ã³rdenes -->
             <section class="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm min-w-[1000px]">
                         <thead class="bg-slate-900/80 border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-400">
                             <tr>
-                                <th scope="col" class="p-3">Código</th>
+                                <th scope="col" class="p-3">CÃ³digo</th>
                                 <th scope="col" class="p-3">Cliente</th>
                                 <th scope="col" class="p-3">Equipo</th>
                                 <th scope="col" class="p-3">Falla</th>
                                 <th scope="col" class="p-3">Estado</th>
                                 <th scope="col" class="p-3">Avance</th>
-                                <th scope="col" class="p-3">Técnico</th>
+                                <th scope="col" class="p-3">TÃ©cnico</th>
                                 <th scope="col" class="p-3">Cobro</th>
                                 <th scope="col" class="p-3">Ingreso</th>
                                 <th scope="col" class="p-3 text-center">Acciones</th>
@@ -361,7 +361,7 @@
         </main>
     </div>
 
-    <!-- Modal: detalle de orden (acta de recepción + cobro + entrega + bitácora) -->
+    <!-- Modal: detalle de orden (acta de recepciÃ³n + cobro + entrega + bitÃ¡cora) -->
     <div id="modal-orden" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[9998] flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 space-y-4 shadow-2xl">
             <div class="flex justify-between items-center">
@@ -377,7 +377,7 @@
             <dl id="mo-datos" class="text-xs grid grid-cols-2 gap-x-3 gap-y-2"></dl>
 
             <div>
-                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1"><i class="fa-solid fa-pen-nib text-cyan-400 mr-1"></i>Firma de recepción</p>
+                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1"><i class="fa-solid fa-pen-nib text-cyan-400 mr-1"></i>Firma de recepciÃ³n</p>
                 <div class="bg-white rounded-lg p-2 min-h-[70px] flex items-center justify-center">
                     <img id="mo-firma" alt="Firma del cliente" class="max-h-16 hidden">
                     <span id="mo-firma-vacia" class="text-[11px] text-slate-400 italic">Sin firma registrada</span>
@@ -388,14 +388,14 @@
                 <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1"><i class="fa-solid fa-camera text-cyan-400 mr-1"></i>Fotos de respaldo</p>
                 <div id="mo-fotos"></div>
                 <label class="inline-block mt-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs px-3 py-2 rounded-lg font-semibold cursor-pointer transition-all">
-                    <i class="fa-solid fa-camera-retro mr-1"></i> Añadir fotos
+                    <i class="fa-solid fa-camera-retro mr-1"></i> AÃ±adir fotos
                     <input type="file" id="mo-input-fotos" accept="image/*" capture="environment" multiple class="hidden">
                 </label>
             </div>
 
-            <!-- Cobro de la reparación -->
+            <!-- Cobro de la reparaciÃ³n -->
             <div class="seccion-modal">
-                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1"><i class="fa-solid fa-money-bill-wave text-cyan-400 mr-1"></i>Cobro de la reparación</p>
+                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1"><i class="fa-solid fa-money-bill-wave text-cyan-400 mr-1"></i>Cobro de la reparaciÃ³n</p>
                 <div id="mo-cobro"></div>
                 <div class="grid grid-cols-2 gap-2">
                     <div>
@@ -406,10 +406,10 @@
                     <div>
                         <label for="mo-metodo" class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Medio de pago</label>
                         <select id="mo-metodo" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500">
-                            <option value="">—</option>
+                            <option value="">â€”</option>
                             <option value="Efectivo">Efectivo</option>
-                            <option value="Debito">Débito</option>
-                            <option value="Credito">Crédito</option>
+                            <option value="Debito">DÃ©bito</option>
+                            <option value="Credito">CrÃ©dito</option>
                             <option value="Transferencia">Transferencia</option>
                             <option value="Mercado Pago">Mercado Pago</option>
                         </select>
@@ -425,7 +425,7 @@
                     <button type="button" id="mo-btn-mp" class="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold py-2 px-3 rounded-lg transition-all disabled:opacity-40 hidden">
                         <i class="fa-solid fa-qrcode mr-1"></i> Cobrar con Mercado Pago
                     </button>
-                    <button type="button" id="mo-btn-point" class="hidden bg-blue-500 hover:bg-blue-400 text-white text-xs font-bold py-2 px-3 rounded-lg transition-all disabled:opacity-40" title="Envía el cobro al terminal Point">
+                    <button type="button" id="mo-btn-point" class="hidden bg-blue-500 hover:bg-blue-400 text-white text-xs font-bold py-2 px-3 rounded-lg transition-all disabled:opacity-40" title="EnvÃ­a el cobro al terminal Point">
                         <i class="fa-solid fa-credit-card mr-1"></i> Cobrar con Point
                     </button>
                     <button type="button" id="mo-btn-wa" class="hidden bg-green-600 hover:bg-green-500 text-white text-xs font-bold py-2 px-3 rounded-lg transition-all" title="Abre WhatsApp con el aviso de equipo listo">
@@ -438,15 +438,15 @@
                 <div id="mp-panel" class="hidden text-center" style="border:1px dashed #334155; border-radius:0.5rem; padding:10px;">
                     <img id="mp-qr" alt="QR de pago Mercado Pago" style="width:180px; height:180px; margin:0 auto 8px; display:block; background:#fff; padding:6px; border-radius:0.5rem;">
                     <p class="text-[10px] text-slate-400 mb-1">Escanea el QR o abre el enlace de pago:</p>
-                    <a id="mp-link" href="#" target="_blank" rel="noopener" style="color:#22d3ee; font-weight:700; font-size:12px; word-break:break-all;">—</a>
+                    <a id="mp-link" href="#" target="_blank" rel="noopener" style="color:#22d3ee; font-weight:700; font-size:12px; word-break:break-all;">â€”</a>
                     <div class="flex gap-2 mt-2 justify-center">
                         <button type="button" id="mp-copiar" class="mp-mini"><i class="fa-solid fa-copy mr-1"></i>Copiar enlace</button>
                         <a id="mp-whatsapp" href="#" target="_blank" rel="noopener" class="mp-mini" style="text-decoration:none"><i class="fa-brands fa-whatsapp mr-1"></i>Enviar por WhatsApp</a>
                     </div>
-                    <p id="mp-estado" class="text-[11px] font-bold text-amber-400 mt-2">Esperando el pago… (verificando cada 5 s)</p>
+                    <p id="mp-estado" class="text-[11px] font-bold text-amber-400 mt-2">Esperando el pagoâ€¦ (verificando cada 5 s)</p>
                 </div>
                 <div id="point-panel" class="mo-oculto text-center" style="border:1px dashed #334155; border-radius:0.5rem; padding:10px;">
-                    <p id="point-estado" class="text-[11px] font-bold text-amber-400">Enviando el cobro al terminal Point…</p>
+                    <p id="point-estado" class="text-[11px] font-bold text-amber-400">Enviando el cobro al terminal Pointâ€¦</p>
                     <p class="text-[10px] text-slate-400 mt-1">El cliente acerca su tarjeta al terminal Point.</p>
                 </div>
             </div>
@@ -456,7 +456,7 @@
                 <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1"><i class="fa-solid fa-box-open text-cyan-400 mr-1"></i>Entrega del equipo</p>
                 <div id="mo-entrega-info" class="text-xs text-slate-300"></div>
                 <div id="mo-entrega-form" class="mo-col mo-oculto">
-                    <input type="text" id="mo-entregado-a" maxlength="120" placeholder="¿Quién retira el equipo?"
+                    <input type="text" id="mo-entregado-a" maxlength="120" placeholder="Â¿QuiÃ©n retira el equipo?"
                            class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500">
                     <div class="border border-slate-700 rounded-lg p-1 bg-slate-900">
                         <canvas id="mo-firma-entrega" class="lienzo-firma"></canvas>
@@ -472,12 +472,12 @@
                 </div>
             </div>
 
-            <!-- Bitácora de reparación -->
+            <!-- BitÃ¡cora de reparaciÃ³n -->
             <div class="seccion-modal">
-                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1"><i class="fa-solid fa-list-check text-cyan-400 mr-1"></i>Bitácora de reparación</p>
+                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1"><i class="fa-solid fa-list-check text-cyan-400 mr-1"></i>BitÃ¡cora de reparaciÃ³n</p>
                 <ul id="mo-bitacora" class="bitacora-lista"></ul>
                 <div class="flex gap-2">
-                    <input type="text" id="mo-nota" maxlength="500" placeholder="Nota técnica: repuesto instalado, diagnóstico, etc."
+                    <input type="text" id="mo-nota" maxlength="500" placeholder="Nota tÃ©cnica: repuesto instalado, diagnÃ³stico, etc."
                            class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500">
                     <button type="button" id="mo-btn-nota" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold py-2 px-3 rounded-lg transition-all disabled:opacity-40">
                         <i class="fa-solid fa-plus mr-1"></i> Agregar
@@ -488,6 +488,6 @@
     </div>
 
     <script src="assets/js/common.js?v=mp2" defer></script>
-    <script src="assets/js/admin.js?v=mp2" defer></script>
+    <script src="assets/js/admin.js?v=mp9" defer></script>
 </body>
 </html>

@@ -25,7 +25,18 @@
     var imagenes = w.document.images;
     var pendientes = imagenes.length;
     var impresa = false;
-    function ahora() { if (!impresa) { impresa = true; w.print(); } }
+    function ahora() {
+      if (impresa) return;
+      impresa = true;
+      // Auto-cierre: la ventana se cierra sola al cerrarse el diálogo de
+      // impresión (se imprima o se cancele) para que no se acumulen ventanas.
+      try {
+        w.addEventListener('afterprint', function () {
+          setTimeout(function () { try { w.close(); } catch (e) {} }, 500);
+        });
+      } catch (e) {}
+      w.print();
+    }
     if (!pendientes) { ahora(); return; }
     Array.prototype.forEach.call(imagenes, function (im) {
       im.addEventListener('load', function () { pendientes--; if (pendientes <= 0) ahora(); });
