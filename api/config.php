@@ -65,9 +65,44 @@ function db(): PDO
 }
 
 // --- SesiÃ³n -----------------------------------------------------------
+/** Limitador de peticiones por IP (anti-enumeración y anti-fuerza bruta).
+ *  Archivo temporal compartido; devuelve false si la IP supera $max en $ventana seg. */
+function limitar_ip(string $accion, int $max, int $ventana): bool
+{
+    $ipRaw = (string)($_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? 'ip');
+    $ip = preg_replace('/[^0-9a-fA-F:.]/', '', trim(explode(',', $ipRaw)[0]));
+    if ($ip === '' || $ip === null) { $ip = 'ip'; }
+    $archivo = sys_get_temp_dir() . '/luitech_rl_' . md5($accion) . '.json';
+    $ahora = time();
+    $datos = json_decode((string)@file_get_contents($archivo), true);
+    if (!is_array($datos)) { $datos = []; }
+    foreach ($datos as $k => $lista) {
+        $datos[$k] = array_values(array_filter((array)$lista, fn($t) => is_int($t) && $t > $ahora - $ventana));
+        if (!$datos[$k]) { unset($datos[$k]); }
+    }
+    $lista = (array)($datos[$ip] ?? []);
+    if (count($lista) >= $max) { return false; }
+    $lista[] = $ahora;
+    $datos[$ip] = $lista;
+    @file_put_contents($archivo, json_encode($datos), LOCK_EX);
+    return true;
+}
+
 function iniciar_sesion(): void
 {
     if (session_status() !== PHP_SESSION_ACTIVE) {
+        // Cookies endurecidas: inaccesibles a JS (httponly), sin CSRF entre
+        // sitios (samesite=Lax) y solo por HTTPS en producción (proxy-aware:
+        // en hosting el TLS termina antes del PHP y llega X-Forwarded-Proto).
+        $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
+        session_set_cookie_params([
+            'lifetime' => 0,
+            'path'     => '/',
+            'httponly' => true,
+            'samesite' => 'Lax',
+            'secure'   => $https,
+        ]);
         session_name('LUITECHSESSID');
         session_start();
     }

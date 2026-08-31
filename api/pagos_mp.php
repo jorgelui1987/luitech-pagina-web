@@ -403,13 +403,28 @@ switch ($action) {
 
         // Notificaciones de orden (terminal Point en modo PDV)
         if ($tipo === 'order' || str_starts_with((string)($d['action'] ?? ''), 'order.')) {
-            $referencia  = (string)($d['data']['external_reference'] ?? '');
-            $montoOrden  = (int)round((float)($d['data']['total_paid_amount'] ?? 0));
-            $estadoOrden = (string)($d['data']['status'] ?? '');
-            $aprobado    = in_array($estadoOrden, ['processed', 'accredited'], true);
-            if ($aprobado && preg_match('/^LUH-\d{3,8}$/', $referencia) === 1 && $montoOrden > 0) {
-                $pagoIdOrden = (string)($d['data']['transactions']['payments'][0]['id'] ?? $pagoId);
-                mp_aplicar_pago_orden(db(), $referencia, $montoOrden, 'order-' . $pagoId);
+            $orderId = (string)($d['data']['id'] ?? $d['id'] ?? '');
+            if (preg_match('/^\d{5,20}$/', $orderId) !== 1) {
+                responder(['ok' => true]);
+            }
+            // VALIDACIÓN REAL: la orden se consulta a Mercado Pago con el token
+            // del comercio. NUNCA se confía en el cuerpo del webhook: un
+            // atacante podría falsificar un pago con datos inventados.
+            [$codigoHttpO, $ordenMP] = mp_api('GET', '/v1/orders/' . rawurlencode($orderId), null, $cfg['token']);
+            if ($codigoHttpO !== 200) {
+                responder(['ok' => true]);
+            }
+            $status = strtolower((string)($ordenMP['status'] ?? ''));
+            $referencia = (string)($ordenMP['external_reference'] ?? '');
+            $montoPagado = (int)round((float)($ordenMP['total_paid_amount'] ?? 0));
+            if ($montoPagado === 0 && isset($ordenMP['transactions']['payments']) && is_array($ordenMP['transactions']['payments'])) {
+                foreach ($ordenMP['transactions']['payments'] as $pago) {
+                    $montoPagado += (int)round((float)($pago['paid_amount'] ?? 0));
+                }
+            }
+            $aprobado = in_array($status, ['processed', 'accredited', 'closed', 'approved'], true);
+            if ($aprobado && preg_match('/^LUH-\d{3,8}$/', $referencia) === 1 && $montoPagado > 0) {
+                mp_aplicar_pago_orden(db(), $referencia, $montoPagado, 'mp-order-' . $orderId);
             }
             responder(['ok' => true]);
         }

@@ -37,6 +37,11 @@ switch ($action) {
             responder(['ok' => false, 'error' => "Demasiados intentos. Reintenta en {$espera} min."], 429);
         }
 
+        // Límite por IP (independiente de la sesión: frena bots que rotan cookies)
+        if (!limitar_ip('login', 20, 600)) {
+            responder(['ok' => false, 'error' => 'Demasiados intentos desde tu conexión. Espera unos minutos.'], 429);
+        }
+
         $cuerpo   = leer_cuerpo();
         $usuario  = campo_texto($cuerpo, 'usuario', 50);
         $password = (string)($cuerpo['password'] ?? '');

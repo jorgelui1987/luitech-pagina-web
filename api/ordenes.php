@@ -125,6 +125,11 @@ switch ($action) {
 
     /* ------------------------------------------------------------ TRACK */
     case 'track': {
+        // Anti-enumeración: los códigos son secuenciales (LUH-1043...); el límite
+        // por IP impide recorrer miles de códigos para ver órdenes ajenas.
+        if (!limitar_ip('track', 60, 300)) {
+            responder(['ok' => false, 'error' => 'Demasiadas consultas. Intenta más tarde.'], 429);
+        }
         $codigo = strtoupper(trim($_GET['codigo'] ?? ''));
         if (!preg_match('/^LUH-\d{3,8}$/', $codigo)) {
             responder(['ok' => false, 'error' => 'Formato de código inválido (ej: LUH-1024)'], 400);
