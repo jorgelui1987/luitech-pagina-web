@@ -1,15 +1,15 @@
 <?php
 /**
- * LUITECH API - ConfiguraciÃ³n base
- * ConexiÃ³n PDO, sesiones y utilidades JSON compartidas por los endpoints.
+ * LUITECH API - Configuración base
+ * Conexión PDO, sesiones y utilidades JSON compartidas por los endpoints.
  */
 
 declare(strict_types=1);
 
 // --- Credenciales MySQL ------------------------------------------------
-// ResoluciÃ³n de credenciales: 1Âº variables LUITECH_*, 2Âº variables genÃ©ricas
-// DB_* (estilo cPanel/Laravel del hosting), 3Âº valores por defecto de Laragon.
-// NUNCA escribas contraseÃ±as aquÃ­: se definen como variables de entorno en
+// Resolución de credenciales: 1º variables LUITECH_*, 2º variables genéricas
+// DB_* (estilo cPanel/Laravel del hosting), 3º valores por defecto de Laragon.
+// NUNCA escribas contraseñas aquí: se definen como variables de entorno en
 // el panel del hosting o quedan los valores locales de desarrollo.
 function env_var(string ...$nombres): ?string
 {
@@ -29,13 +29,13 @@ define('DB_USER', env_var('LUITECH_DB_USER', 'DB_USERNAME', 'DB_USER') ?? 'root'
 define('DB_PASS', env_var('LUITECH_DB_PASS', 'DB_PASSWORD', 'DB_PASS') ?? '');
 
 const ADMIN_USER_MIN_LEN = 3;
-const COMISION_PISO = 5000; // piso mÃ­nimo de comisiÃ³n por reparaciÃ³n (Modelo B)
+const COMISION_PISO = 5000; // piso mínimo de comisión por reparación (Modelo B)
 
 // --- Encabezados comunes para endpoints JSON --------------------------
 function iniciar_respuesta_json(): void
 {
     // Los errores se registran en el log del servidor, NUNCA se imprimen:
-    // un warning impreso antes del JSON corrompe la respuesta (HTTP 200 invÃ¡lido).
+    // un warning impreso antes del JSON corrompe la respuesta (HTTP 200 inválido).
     ini_set('display_errors', '0');
     error_reporting(E_ALL);
     header('Content-Type: application/json; charset=utf-8');
@@ -43,7 +43,7 @@ function iniciar_respuesta_json(): void
     header('Cache-Control: no-store');
 }
 
-// --- ConexiÃ³n a la base de datos (singleton) --------------------------
+// --- Conexión a la base de datos (singleton) --------------------------
 function db(): PDO
 {
     static $pdo = null;
@@ -57,14 +57,14 @@ function db(): PDO
             ]);
         } catch (PDOException $e) {
             http_response_code(500);
-            echo json_encode(['ok' => false, 'error' => 'Error de conexiÃ³n con la base de datos'], JSON_UNESCAPED_UNICODE);
+            echo json_encode(['ok' => false, 'error' => 'Error de conexión con la base de datos'], JSON_UNESCAPED_UNICODE);
             exit;
         }
     }
     return $pdo;
 }
 
-// --- SesiÃ³n -----------------------------------------------------------
+// --- Sesión -----------------------------------------------------------
 /** Limitador de peticiones por IP (anti-enumeración y anti-fuerza bruta).
  *  Archivo temporal compartido; devuelve false si la IP supera $max en $ventana seg. */
 function limitar_ip(string $accion, int $max, int $ventana): bool
@@ -129,15 +129,15 @@ function responder(array $datos, int $codigo_http = 200): never
     http_response_code($codigo_http);
     $json = json_encode($datos, JSON_UNESCAPED_UNICODE);
     if ($json === false) {
-        // Datos con UTF-8 invÃ¡lido (p. ej. texto antiguo en la BD): sustituye
-        // los bytes malos en vez de devolver un cuerpo vacÃ­o/invÃ¡lido.
+        // Datos con UTF-8 inválido (p. ej. texto antiguo en la BD): sustituye
+        // los bytes malos en vez de devolver un cuerpo vacío/inválido.
         $json = json_encode($datos, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR);
     }
     echo ($json === false) ? '{"ok":false,"error":"Error interno al codificar la respuesta"}' : $json;
     exit;
 }
 
-/** Lee el cuerpo JSON de la peticiÃ³n (acepta tambiÃ©n x-www-form-urlencoded). */
+/** Lee el cuerpo JSON de la petición (acepta también x-www-form-urlencoded). */
 function leer_cuerpo(): array
 {
     $tipo = $_SERVER['CONTENT_TYPE'] ?? '';
@@ -150,11 +150,11 @@ function leer_cuerpo(): array
 }
 
 /* ==========================================================================
- * Ã“RDENES: comisiÃ³n del tÃ©cnico (Modelo B) y entrega automÃ¡tica al pago completo
+ * ÓRDENES: comisión del técnico (Modelo B) y entrega automática al pago completo
  * ========================================================================== */
 
-/** Genera la comisiÃ³n del tÃ©cnico para una orden (Modelo B: % del margen neto
- *  real con piso mÃ­nimo). Idempotente: si la orden ya tiene comisiÃ³n, no duplica.
+/** Genera la comisión del técnico para una orden (Modelo B: % del margen neto
+ *  real con piso mínimo). Idempotente: si la orden ya tiene comisión, no duplica.
  *  Devuelve ['tecnico','monto','base_margen','porcentaje'] o null si no corresponde. */
 function generar_comision_orden(PDO $pdo, string $codigo): ?array
 {
@@ -187,12 +187,12 @@ function generar_comision_orden(PDO $pdo, string $codigo): ?array
     $pdo->prepare('INSERT INTO comisiones (orden_codigo, tecnico_id, tecnico_nombre, base_margen, porcentaje, monto) VALUES (?, ?, ?, ?, ?, ?)')
         ->execute([$codigo, (int)$oFila['tecnico_id'], (string)$tecnicoCom['nombre'], $baseMargen, $pctCom, $montoCom]);
     $pdo->prepare('INSERT INTO orden_bitacora (orden_codigo, tecnico, nota) VALUES (?, ?, ?)')
-        ->execute([$codigo, (string)$tecnicoCom['nombre'], 'ComisiÃ³n generada: $' . $montoCom . ' (' . $pctCom . '% del margen $' . $baseMargen . ')']);
+        ->execute([$codigo, (string)$tecnicoCom['nombre'], 'Comisión generada: $' . $montoCom . ' (' . $pctCom . '% del margen $' . $baseMargen . ')']);
     return ['tecnico' => (string)$tecnicoCom['nombre'], 'monto' => $montoCom, 'base_margen' => $baseMargen, 'porcentaje' => $pctCom];
 }
 
-/** Entrega automÃ¡tica: cuando la orden queda PAGADA por completo y aÃºn no estÃ¡
- *  entregada, la pasa a Entregado (sin firma) y genera la comisiÃ³n del tÃ©cnico.
+/** Entrega automática: cuando la orden queda PAGADA por completo y aún no está
+ *  entregada, la pasa a Entregado (sin firma) y genera la comisión del técnico.
  *  Devuelve ['auto'=>true,'entregado_a','comision'] o null si no corresponde. */
 function auto_entregar_si_pagada(PDO $pdo, string $codigo): ?array
 {
@@ -203,7 +203,7 @@ function auto_entregar_si_pagada(PDO $pdo, string $codigo): ?array
         return null;
     }
     if ((int)$o['total'] <= 0 || (int)$o['abono'] < (int)$o['total']) {
-        return null; // aÃºn no estÃ¡ pagada por completo
+        return null; // aún no está pagada por completo
     }
     if ($o['estado'] === 'Entregado') {
         return null; // ya estaba entregada
@@ -212,17 +212,17 @@ function auto_entregar_si_pagada(PDO $pdo, string $codigo): ?array
     $pdo->prepare("UPDATE ordenes SET estado = 'Entregado', avance = 100, fecha_entrega = NOW(), entregado_a = ? WHERE codigo = ?")
         ->execute([$entregadoA, $codigo]);
     $pdo->prepare('INSERT INTO orden_bitacora (orden_codigo, tecnico, nota, estado_nuevo) VALUES (?, ?, ?, ?)')
-        ->execute([$codigo, (string)($o['tecnico'] ?? ''), 'Pago completo: entrega automÃ¡tica del equipo', 'Entregado']);
+        ->execute([$codigo, (string)($o['tecnico'] ?? ''), 'Pago completo: entrega automática del equipo', 'Entregado']);
     $comision = generar_comision_orden($pdo, $codigo);
     return ['auto' => true, 'entregado_a' => $entregadoA, 'comision' => $comision];
 }
 
 /* ==========================================================================
- * CLIENTES: registro, ficha e historial (creaciÃ³n auto-reparable)
+ * CLIENTES: registro, ficha e historial (creación auto-reparable)
  * ========================================================================== */
 
 /** Garantiza la tabla de clientes y la columna cliente_id en ordenes
- *  (mismo espÃ­ritu que preparar_proveedores: hostings sin migrate). */
+ *  (mismo espíritu que preparar_proveedores: hostings sin migrate). */
 function preparar_clientes(PDO $pdo): void
 {
     $pdo->exec("CREATE TABLE IF NOT EXISTS clientes (
@@ -240,8 +240,8 @@ function preparar_clientes(PDO $pdo): void
     if (!$col) {
         $pdo->exec("ALTER TABLE ordenes ADD COLUMN cliente_id INT UNSIGNED NULL AFTER cliente");
     }
-    // Compatibilidad: la tabla clientes del diseÃ±o original puede existir sin
-    // notas/activo (tenÃ­a direccion). Agrega las columnas que falten.
+    // Compatibilidad: la tabla clientes del diseño original puede existir sin
+    // notas/activo (tenía direccion). Agrega las columnas que falten.
     foreach ([
         'notas' => "VARCHAR(255) NULL AFTER email",
         'activo' => "TINYINT(1) NOT NULL DEFAULT 1 AFTER notas",
@@ -253,7 +253,7 @@ function preparar_clientes(PDO $pdo): void
     }
 }
 
-/** Busca un cliente activo por nombre exacto (sin tildes ni mayÃºsculas). */
+/** Busca un cliente activo por nombre exacto (sin tildes ni mayúsculas). */
 function cliente_id_por_nombre(PDO $pdo, string $nombre): int
 {
     $st = $pdo->prepare('SELECT id FROM clientes WHERE LOWER(nombre) = LOWER(?) AND activo = 1 LIMIT 1');
@@ -262,10 +262,10 @@ function cliente_id_por_nombre(PDO $pdo, string $nombre): int
 }
 
 /** Garantiza las tablas de proveedores/compras y la columna proveedor_id en
- *  productos (mismo espÃ­ritu que preparar_configuraciones: para hostings que
+ *  productos (mismo espíritu que preparar_configuraciones: para hostings que
  *  no ejecutan database/migrate.php). */
 /* ==========================================================================
- * PROVEEDORES Y COMPRAS DE MERCADERÃA (tablas auto-reparables)
+ * PROVEEDORES Y COMPRAS DE MERCADERÍA (tablas auto-reparables)
  * ========================================================================== */
 
 function preparar_proveedores(PDO $pdo): void
@@ -306,8 +306,8 @@ function preparar_proveedores(PDO $pdo): void
     if (!$col) {
         $pdo->exec("ALTER TABLE productos ADD COLUMN proveedor_id INT UNSIGNED NULL AFTER proveedor");
     }
-    // Compatibilidad: la tabla proveedores del diseÃ±o original puede existir
-    // sin estas columnas (tenÃ­a contacto/email). Agrega lo que falte.
+    // Compatibilidad: la tabla proveedores del diseño original puede existir
+    // sin estas columnas (tenía contacto/email). Agrega lo que falte.
     foreach ([
         'rut' => "VARCHAR(12) NULL AFTER nombre",
         'notas' => "VARCHAR(255) NULL AFTER telefono",
@@ -320,7 +320,7 @@ function preparar_proveedores(PDO $pdo): void
     }
 }
 
-/** Texto del cuerpo (trim + longitud mÃ¡xima). */
+/** Texto del cuerpo (trim + longitud máxima). */
 function campo_texto(array $fuente, string $clave, int $max = 255): ?string
 {
     $valor = trim((string)($fuente[$clave] ?? ''));
@@ -339,7 +339,7 @@ function config_valor(PDO $pdo, string $clave, string $fallback): string
     return ($valor === false || $valor === null) ? $fallback : (string)$valor;
 }
 
-/** Valida un RUT chileno (acepta con/sin puntos y guion; dÃ­gito verificador mÃ³dulo 11). */
+/** Valida un RUT chileno (acepta con/sin puntos y guion; dígito verificador módulo 11). */
 function validar_rut_chileno(string $rut): bool
 {
     $limpio = strtoupper(preg_replace('/[^0-9kK]/', '', $rut) ?? '');
@@ -357,7 +357,7 @@ function validar_rut_chileno(string $rut): bool
     return $m[2] === $esperado;
 }
 
-/** Garantiza que la tabla de configuraciones exista con sus semillas mÃ­nimas
+/** Garantiza que la tabla de configuraciones exista con sus semillas mínimas
  *  (auto-reparable: sirve cuando el hosting no ejecuta database/migrate.php). */
 function preparar_configuraciones(): void
 {
@@ -375,10 +375,10 @@ function preparar_configuraciones(): void
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         db()->prepare("INSERT IGNORE INTO configuraciones (clave, valor) VALUES ('iva_porcentaje', '19'), ('zona_horaria', 'America/Santiago')")
             ->execute();
-    } catch (Exception $e) { /* si la BD no responde, las APIs darÃ¡n su propio error */ }
+    } catch (Exception $e) { /* si la BD no responde, las APIs darán su propio error */ }
 }
 
-/** Aplica la zona horaria configurada (una vez por peticiÃ³n). Si la BD aÃºn no
+/** Aplica la zona horaria configurada (una vez por petición). Si la BD aún no
  *  responde, deja la del servidor. Llamar antes de usar date() en las APIs. */
 function aplicar_zona_horaria(): void
 {
@@ -392,5 +392,5 @@ function aplicar_zona_horaria(): void
         if (is_string($tz) && $tz !== '' && in_array($tz, DateTimeZone::listIdentifiers(), true)) {
             date_default_timezone_set($tz);
         }
-    } catch (Exception $e) { /* sin BD todavÃ­a: se usa la del servidor */ }
+    } catch (Exception $e) { /* sin BD todavía: se usa la del servidor */ }
 }

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -17,7 +17,7 @@
     <div id="view-nologin" class="hidden min-h-screen flex items-center justify-center p-6 text-center">
         <div class="bg-slate-950 border border-slate-800 rounded-2xl p-8">
             <i class="fa-solid fa-lock text-amber-400 text-3xl mb-4"></i>
-            <h1 class="font-extrabold text-white text-lg">SesiÃ³n requerida</h1>
+            <h1 class="font-extrabold text-white text-lg">Sesión requerida</h1>
             <a href="admin.html" class="inline-block mt-5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-sm">Ir al Login</a>
         </div>
     </div>
@@ -43,7 +43,7 @@
             <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 text-xs">
                 <input type="text" id="pv-nombre" placeholder="Nombre*" maxlength="120" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
                 <input type="text" id="pv-rut" placeholder="RUT" maxlength="12" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
-                <input type="text" id="pv-telefono" placeholder="TelÃ©fono" maxlength="40" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                <input type="text" id="pv-telefono" placeholder="Teléfono" maxlength="40" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
                 <input type="text" id="pv-nota" placeholder="Nota (opcional)" maxlength="255" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
                 <button type="button" id="btn-prov-guardar" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg py-2 col-span-2">Guardar proveedor</button>
                 <button type="button" id="btn-prov-cancelar" class="hidden bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold rounded-lg py-2">Cancelar</button>
@@ -51,7 +51,7 @@
             <div class="overflow-x-auto mt-4">
                 <table class="w-full text-left text-xs" style="min-width:620px">
                     <thead class="text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-800">
-                        <tr><th class="p-2">Proveedor</th><th class="p-2">RUT</th><th class="p-2">TelÃ©fono</th><th class="p-2 text-right">Comprado</th><th class="p-2 text-center">Ãšltima compra</th><th class="p-2 text-center">Acciones</th></tr>
+                        <tr><th class="p-2">Proveedor</th><th class="p-2">RUT</th><th class="p-2">Teléfono</th><th class="p-2 text-right">Comprado</th><th class="p-2 text-center">Última compra</th><th class="p-2 text-center">Acciones</th></tr>
                     </thead>
                     <tbody id="prov-body"></tbody>
                 </table>
@@ -88,16 +88,16 @@
         </section>
 
         <section class="sec">
-            <h2><i class="fa-solid fa-book mr-1"></i>CatÃ¡logo de precios de proveedores (cotiza al instante)</h2>
+            <h2><i class="fa-solid fa-book mr-1"></i>Catálogo de precios de proveedores (cotiza al instante)</h2>
             <input type="hidden" id="cat-id">
             <div class="grid grid-cols-2 md:grid-cols-3 gap-2.5 text-xs">
-                <select id="cat-prov" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500"><option value="">â€” Proveedor â€”</option></select>
+                <select id="cat-prov" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500"><option value="">— Proveedor —</option></select>
                 <input type="text" id="cat-modelo" placeholder="Modelo del equipo* (ej: Samsung A54)" maxlength="80" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
-                <input type="text" id="cat-pieza" placeholder="Pieza* (ej: Pantalla, BaterÃ­a)" maxlength="60" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                <input type="text" id="cat-pieza" placeholder="Pieza* (ej: Pantalla, Batería)" maxlength="60" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
                 <input type="number" id="cat-precio" min="0" placeholder="Precio proveedor $*" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
                 <label class="flex items-center gap-2 text-slate-400"><input type="checkbox" id="cat-disp" checked class="accent-emerald-500">Disponible</label>
                 <button type="button" id="btn-cat-cancelar" class="hidden bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold rounded-lg py-2">Cancelar</button>
-                <button type="button" id="btn-cat" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg py-2 col-span-2 md:col-span-3"><i class="fa-solid fa-plus mr-1"></i>Agregar al catÃ¡logo</button>
+                <button type="button" id="btn-cat" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg py-2 col-span-2 md:col-span-3"><i class="fa-solid fa-plus mr-1"></i>Agregar al catálogo</button>
             </div>
             <div class="flex flex-wrap items-center gap-2 mt-4 text-xs">
                 <input type="text" id="cat-buscar" placeholder="Buscar modelo o pieza (ej: A54, pantalla)..." class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-cyan-500 flex-1" style="min-width:200px">
@@ -118,14 +118,14 @@
             <div class="border-t border-slate-800 pt-3 mt-3">
                 <h3 class="text-xs font-bold text-slate-300 mb-2"><i class="fa-solid fa-file-import mr-1"></i>Importar listado del proveedor (pega el texto)</h3>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs items-center">
-                    <select id="imp-prov" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500"><option value="">â€” Proveedor â€”</option></select>
+                    <select id="imp-prov" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500"><option value="">— Proveedor —</option></select>
                     <label class="flex items-center gap-2 text-slate-400"><input type="checkbox" id="imp-nodisp" checked class="accent-amber-500">Marcar "No disponible" lo que no venga en el listado</label>
                     <button type="button" id="btn-imp-prev" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg py-2"><i class="fa-solid fa-magnifying-glass-chart mr-1"></i>Analizar listado</button>
                 </div>
-                <textarea id="imp-texto" rows="7" placeholder="Pega aquÃ­ el listado, una lÃ­nea por item. Ej:&#10;Pantalla Samsung A54 - $25.000&#10;Bateria iPhone 11 $18.000&#10;Tapa trasera Xiaomi Redmi Note 12 $12.000" class="w-full mt-2 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white text-xs font-mono focus:outline-none focus:border-amber-500"></textarea>
+                <textarea id="imp-texto" rows="7" placeholder="Pega aquí el listado, una línea por item. Ej:&#10;Pantalla Samsung A54 - $25.000&#10;Bateria iPhone 11 $18.000&#10;Tapa trasera Xiaomi Redmi Note 12 $12.000" class="w-full mt-2 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white text-xs font-mono focus:outline-none focus:border-amber-500"></textarea>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs items-center mt-2">
                     <input type="file" id="imp-archivo" accept=".pdf,.txt" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-slate-300 text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-cyan-600 file:text-white file:font-bold col-span-1">
-                    <span class="text-slate-500 md:col-span-2">â€¦o selecciona directamente el <b>PDF</b> que te mandÃ³ el proveedor: el sistema lee el listado solo.</span>
+                    <span class="text-slate-500 md:col-span-2">…o selecciona directamente el <b>PDF</b> que te mandó el proveedor: el sistema lee el listado solo.</span>
                 </div>
                 <div id="imp-preview" class="hidden mt-2">
                     <p id="imp-resumen" class="text-xs font-bold text-cyan-400 mb-1"></p>
@@ -135,7 +135,7 @@
                             <tbody id="imp-body"></tbody>
                         </table>
                     </div>
-                    <button type="button" id="btn-imp-confirmar" class="mt-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg py-2 px-4 text-xs"><i class="fa-solid fa-check mr-1"></i>Confirmar importaciÃ³n</button>
+                    <button type="button" id="btn-imp-confirmar" class="mt-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg py-2 px-4 text-xs"><i class="fa-solid fa-check mr-1"></i>Confirmar importación</button>
                 </div>
             </div>
         </section>

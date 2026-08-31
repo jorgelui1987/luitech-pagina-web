@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -16,12 +16,12 @@
 
     <div id="toast-container" class="fixed top-4 right-4 z-[9999] flex flex-col gap-3 px-4 w-full sm:w-auto items-end pointer-events-none"></div>
 
-    <!-- Vista sin sesiÃ³n -->
+    <!-- Vista sin sesión -->
     <div id="view-nologin" class="hidden min-h-screen flex items-center justify-center p-6 text-center">
         <div class="bg-slate-950 border border-slate-800 rounded-2xl p-8 max-w-sm">
             <i class="fa-solid fa-lock text-amber-400 text-3xl mb-4"></i>
-            <h1 class="font-extrabold text-white text-lg">SesiÃ³n requerida</h1>
-            <p class="text-slate-400 text-xs mt-2">Inicia sesiÃ³n en el panel del taller para usar el punto de venta.</p>
+            <h1 class="font-extrabold text-white text-lg">Sesión requerida</h1>
+            <p class="text-slate-400 text-xs mt-2">Inicia sesión en el panel del taller para usar el punto de venta.</p>
             <a href="admin.html" class="inline-block mt-5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-sm">Ir al Login</a>
         </div>
     </div>
@@ -43,12 +43,12 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
 
-            <!-- CatÃ¡logo -->
+            <!-- Catálogo -->
             <section class="lg:col-span-7 bg-slate-950 border border-slate-800 rounded-2xl p-5">
                 <label for="buscar" class="sr-only">Buscar producto</label>
                 <div class="relative mb-4">
                     <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
-                    <input type="text" id="buscar" placeholder="Buscar por cÃ³digo o nombreâ€¦ (ej: CT-GNRL)"
+                    <input type="text" id="buscar" placeholder="Buscar por código o nombre… (ej: CT-GNRL)"
                            class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-11 pr-4 py-3 text-white text-sm focus:outline-none focus:border-cyan-500">
                 </div>
                 <div id="catalogo" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[430px] overflow-y-auto pr-1"></div>
@@ -75,8 +75,8 @@
                         <input type="text" id="venta-cliente" maxlength="80" placeholder="Cliente (opcional)" class="col-span-2 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500">
                         <select id="venta-pago" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500">
                             <option value="Efectivo">Efectivo</option>
-                            <option value="Debito">DÃ©bito</option>
-                            <option value="Credito">CrÃ©dito</option>
+                            <option value="Debito">Débito</option>
+                            <option value="Credito">Crédito</option>
                             <option value="Transferencia">Transferencia</option>
                             <option value="Mercado Pago">Mercado Pago</option>
                         </select>
