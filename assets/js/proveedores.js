@@ -9,6 +9,31 @@
 
   function fmt(n) { return '$ ' + Math.max(0, Math.round(Number(n) || 0)).toLocaleString('es-CL'); }
 
+  var empresaCfg = null; // datos de la empresa para la cotización
+
+  /** Escapa texto para incrustarlo en el HTML de la cotización. */
+  function esc(t) {
+    return String(t === null || t === undefined ? '' : t)
+      .replace(/[&<>\"]/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' }[c];
+      });
+  }
+
+  /** Imprime la ventana esperando a que carguen sus imágenes (logo). */
+  function imprimirVentana(w) {
+    w.focus();
+    var imagenes = w.document.images;
+    var pendientes = imagenes.length;
+    var impresa = false;
+    function ahora() { if (!impresa) { impresa = true; w.print(); } }
+    if (!pendientes) { ahora(); return; }
+    Array.prototype.forEach.call(imagenes, function (im) {
+      im.addEventListener('load', function () { pendientes--; if (pendientes <= 0) ahora(); });
+      im.addEventListener('error', function () { pendientes--; if (pendientes <= 0) ahora(); });
+    });
+    setTimeout(ahora, 2500);
+  }
+
   // Diagnóstico visible de la carga de datos del formulario de compra
   var estadoPartes = { prov: '', prod: '' };
   function refrescarEstadoCompras() {
@@ -311,7 +336,8 @@
   function cargarMargen() {
     api('api/configuracion.php?action=get_all').then(function (res) {
       if (!res.ok) return;
-      catMargen = parseInt((res.config || {}).catalogo_margen, 10);
+      empresaCfg = res.config || {};
+      catMargen = parseInt(empresaCfg.catalogo_margen, 10);
       if (isNaN(catMargen) || catMargen < 0) catMargen = 40;
       $('cat-margen').value = catMargen;
       cargarCatalogo();
@@ -357,6 +383,40 @@
         boton.disabled = false;
         window.mostrarToast('Error de conexión con el servidor', 'error');
       });
+  }
+
+  /** Abre la cotización imprimible (80mm / PDF desde el diálogo de impresión). */
+  function cotizarItem(c) {
+    var sugerido = Math.round(c.precio * (1 + catMargen / 100));
+    var validez = new Date(Date.now() + 7 * 86400000).toLocaleDateString('es-CL');
+    var hoy = new Date().toLocaleDateString('es-CL');
+    var cfg = empresaCfg || {};
+    var w = window.open('', '_blank', 'width=380,height=640');
+    if (!w) { window.mostrarToast('Permite las ventanas emergentes para imprimir', 'error'); return; }
+    w.document.write(
+      '<html><head><title>Cotizacion ' + esc(c.modelo) + '</title><style>' +
+      '@page{margin:0}body{font-family:monospace;font-size:12px;padding:14px;color:#000}' +
+      'h2{text-align:center;margin:4px 0;font-size:15px}.c{text-align:center}.d{border-top:1px dashed #000;margin:8px 0;border-bottom:1px dashed #000;padding:8px 0}' +
+      'img.logo{max-width:110px;margin:0 auto 4px;display:block}' +
+      '.t{font-size:15px;font-weight:bold;text-align:right;margin-top:8px}' +
+      '.pieza{font-size:14px;font-weight:bold;margin:8px 0}' +
+      '</style></head><body>' +
+      (cfg.empresa_logo
+        ? '<img class="logo" src="' + esc(new URL(cfg.empresa_logo, location.href).href) + '">'
+        : '') +
+      '<h2>' + esc(cfg.empresa_nombre || 'LUITECH SERVICIO TECNICO') + '</h2>' +
+      '<div class="c">' + esc(cfg.empresa_direccion || '') +
+      (cfg.empresa_telefono ? '<br>WhatsApp ' + esc(cfg.empresa_telefono) : '') + '</div>' +
+      '<div class="d c"><b>COTIZACION</b><br>' + hoy + '<br>Validez hasta: ' + validez + '</div>' +
+      '<p class="pieza">' + esc(c.pieza) + '</p>' +
+      '<p>' + esc(c.modelo) + '</p>' +
+      '<p class="t">TOTAL $' + fmt(sugerido) + '</p>' +
+      '<p class="c" style="margin-top:8px;font-size:11px">Precio de la pieza. La instalacion y la garantia<br>se confirman al momento de la reparacion.<br>Presupuesto valido hasta la fecha indicada.</p>' +
+      '<p class="c" style="margin-top:6px">¡Gracias por preferirnos!</p>' +
+      '</body></html>'
+    );
+    w.document.close();
+    imprimirVentana(w);
   }
 
   function cargarCatalogo() {
@@ -410,6 +470,11 @@
 
           var tdAcc = document.createElement('td');
           tdAcc.className = 'p-2 text-center whitespace-nowrap';
+          var btnCot = document.createElement('button');
+          btnCot.type = 'button'; btnCot.title = 'Imprimir cotización (o guardar como PDF)';
+          btnCot.innerHTML = '<i class="fa-solid fa-print"></i> Cotizar';
+          btnCot.className = 'px-2 h-7 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold mr-1 transition-all';
+          btnCot.addEventListener('click', function () { cotizarItem(c); });
           var btnEd = document.createElement('button');
           btnEd.type = 'button'; btnEd.title = 'Editar';
           btnEd.innerHTML = '<i class="fa-solid fa-pen pointer-events-none"></i>';

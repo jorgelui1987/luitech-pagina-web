@@ -1075,7 +1075,7 @@
     return cl ? (cl.telefono || '') : '';
   }
 
-  /** Abre WhatsApp con el aviso de equipo listo (teléfono del registro). */
+  /** Abre WhatsApp con un aviso según el estado de la orden. */
   function avisarClienteWhatsApp() {
     var o = ordenActualModal();
     if (!o) return;
@@ -1084,10 +1084,17 @@
       window.mostrarToast('El cliente no tiene teléfono registrado (edítalo en la página de Clientes)', 'error');
       return;
     }
-    var totalN = parseInt(o.total, 10) || 0;
-    var msg = 'Hola ' + o.cliente + ', tu ' + o.equipo + ' esta LISTO para retirar.' +
-      (totalN > 0 ? ' Orden ' + o.codigo + ' (total ' + monto(totalN) + ').' : ' Orden ' + o.codigo + '.') +
-      ' Te esperamos. — Luitech';
+    var frases = {
+      'Listo para Retiro': 'tu ' + o.equipo + ' esta LISTO para retirar',
+      'En Reparación': 'tu ' + o.equipo + ' esta en reparación',
+      'En Diagnóstico': 'tu ' + o.equipo + ' esta en diagnóstico',
+      'Ingresado': 'recibimos tu ' + o.equipo + ' y esta en revisión',
+      'Entregado': 'la orden de tu ' + o.equipo + ' fue entregada'
+    };
+    var frase = frases[o.estado] || 'te escribimos por tu orden ' + o.codigo;
+    var saldoN = saldoDe(o);
+    var extra = saldoN > 0 ? ' Saldo pendiente: ' + monto(saldoN) + '.' : '';
+    var msg = 'Hola ' + o.cliente + ', ' + frase + '. Orden ' + o.codigo + '.' + extra + ' — Luitech';
     window.open('https://wa.me/' + soloDigitos + '?text=' + encodeURIComponent(msg), '_blank');
   }
 
@@ -1204,10 +1211,10 @@
       botonPoint.classList.toggle('hidden', !(mpActivo && conDevice && saldo > 0));
     }
 
-    // Aviso por WhatsApp: visible cuando la orden está lista para retiro
+    // Aviso por WhatsApp: visible en cualquier estado (el mensaje se adapta)
     var botonWA = $('mo-btn-wa');
     if (botonWA) {
-      botonWA.classList.toggle('hidden', o.estado !== 'Listo para Retiro');
+      botonWA.classList.remove('hidden');
     }
   }
 
