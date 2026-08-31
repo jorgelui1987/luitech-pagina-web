@@ -137,46 +137,142 @@
     return meses[parseInt(p[1],10)-1] + ' ' + p[0];
   }
 
+  var gastosCache = [];
+  var ultimoResumen = {};
+  var ultimoMes = mesActual;
+
+  /** Escapa texto para incrustarlo en el HTML del reporte impreso. */
+  function esc(t) {
+    return String(t === null || t === undefined ? '' : t)
+      .replace(/[&<>"]/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+      });
+  }
+
+  /** Dibuja la tabla aplicando buscador (cada palabra debe coincidir) + categoría. */
+  function renderGastos() {
+    var q = ($('gastos-buscar') ? $('gastos-buscar').value : '').toLowerCase().trim();
+    var palabras = q ? q.split(/\s+/) : [];
+    var cat = $('gastos-filtro-cat') ? $('gastos-filtro-cat').value : '';
+    var tbody = $('gastos-body');
+    tbody.replaceChildren();
+    var visibles = 0;
+
+    gastosCache.forEach(function (g) {
+      if (cat && (g.categoria || 'General') !== cat) return;
+      var texto = ((g.concepto || '') + ' ' + (g.categoria || '')).toLowerCase();
+      for (var i = 0; i < palabras.length; i++) {
+        if (texto.indexOf(palabras[i]) === -1) return;
+      }
+      visibles++;
+      var tr = document.createElement('tr');
+      tr.className = 'hover:bg-slate-800/30 transition-colors';
+      function td(texto, clase) {
+        var c = document.createElement('td'); c.className = clase; c.textContent = texto; return c;
+      }
+      tr.appendChild(td(g.fecha, 'p-2.5 text-slate-400 text-xs'));
+      tr.appendChild(td(g.concepto, 'p-2.5 text-white'));
+      tr.appendChild(td(g.categoria, 'p-2.5 text-slate-400'));
+      tr.appendChild(td('$' + fmt(g.monto), 'p-2.5 text-right text-red-400 font-bold'));
+
+      var tdB = document.createElement('td');
+      tdB.className = 'p-2.5 text-center';
+      var btnX = document.createElement('button');
+      btnX.type = 'button'; btnX.title = 'Eliminar'; btnX.innerHTML = '<i class="fa-solid fa-xmark pointer-events-none"></i>';
+      btnX.className = 'w-7 h-7 rounded-md bg-slate-800 hover:bg-red-600 text-slate-400 hover:text-white transition-all';
+      btnX.addEventListener('click', function () {
+        if (!confirm('¿Eliminar gasto "' + g.concepto + '"?')) return;
+        api('api/gastos.php?action=delete', { method: 'POST', body: { id: g.id } })
+          .then(function (r2) { if (r2.ok) { refrescarGastos(); } });
+      });
+      tdB.appendChild(btnX);
+      tr.appendChild(tdB);
+      tbody.appendChild(tr);
+    });
+
+    if (!visibles) {
+      var v = document.createElement('tr');
+      var c = document.createElement('td');
+      c.colSpan = 5; c.className = 'p-4 text-center text-slate-500 italic';
+      c.textContent = gastosCache.length ? 'Sin resultados para la búsqueda.' : 'Sin gastos registrados este mes.';
+      v.appendChild(c); tbody.appendChild(v);
+    }
+  }
+
+  /** Imprime el reporte del mes (tícket 80mm / PDF desde el diálogo). */
+  function imprimirReporte() {
+    var r = ultimoResumen || {};
+    var filas = '<tr><td><b>Ingresos (ventas POS)</b></td><td align="right"><b>$' + fmt(r.ingresos_ventas || 0) + '</b></td></tr>';
+    var cats = r.gastos_por_categoria || [];
+    if (!cats.length) {
+      filas += '<tr><td>Sin gastos categorizados</td><td align="right">$0</td></tr>';
+    }
+    cats.forEach(function (cat) {
+      filas += '<tr><td>' + esc(cat.categoria) + '</td><td align="right">$' + fmt(cat.total) + '</td></tr>';
+    });
+    filas += '<tr><td><b>TOTAL GASTOS</b></td><td align="right"><b>$' + fmt(r.gastos || 0) + '</b></td></tr>';
+    var resultado = parseInt(r.resultado, 10) || 0;
+    filas += '<tr><td style="border-top:1px dashed #000"><b>RESULTADO DEL MES</b></td>' +
+             '<td align="right" style="border-top:1px dashed #000"><b>' + (resultado < 0 ? '-$' + fmt(Math.abs(resultado)) : '$' + fmt(resultado)) + '</b></td></tr>';
+
+    api('api/configuracion.php?action=get_all').then(function (cfgRes) {
+      var cfg = (cfgRes && cfgRes.config) ? cfgRes.config : {};
+      var hoy = new Date().toLocaleDateString('es-CL');
+      var html =
+        '<html><head><title>Reporte ' + esc(labelMes(ultimoMes)) + '</title><style>' +
+        '@page{margin:0}body{font-family:monospace;font-size:12px;padding:14px;color:#000}' +
+        'h2{text-align:center;margin:4px 0;font-size:15px}.c{text-align:center}.d{border-top:1px dashed #000;margin:8px 0;border-bottom:1px dashed #000;padding:8px 0}' +
+        'table{width:100%;border-collapse:collapse}td{padding:2px 0;vertical-align:top;font-size:11px}' +
+        'img.logo{max-width:110px;margin:0 auto 4px;display:block}' +
+        '</style></head><body>' +
+        (cfg.empresa_logo
+          ? '<img class="logo" src="' + esc(new URL(cfg.empresa_logo, location.href).href) + '">'
+          : '') +
+        '<h2>' + esc(cfg.empresa_nombre || 'LUITECH SERVICIO TECNICO') + '</h2>' +
+        '<div class="c">' + esc(cfg.empresa_direccion || '') +
+        (cfg.empresa_telefono ? '<br>WhatsApp ' + esc(cfg.empresa_telefono) : '') + '</div>' +
+        '<div class="d c"><b>REPORTE ' + esc(labelMes(ultimoMes)) + '</b><br>Emitido: ' + hoy + '</div>' +
+        '<table>' + filas + '</table>' +
+        '<p class="c" style="margin-top:10px">Documento generado por el sistema Luitech</p>' +
+        '</body></html>';
+      window.imprimirDocumento(html);
+    }).catch(function () {});
+  }
+
   function refrescarGastos() {
     api('api/gastos.php?action=list&mes=' + mesActual).then(function (res) {
       if (!res.ok) return;
       $('mes-label').textContent = labelMes(res.mes);
+      ultimoMes = res.mes;
+      gastosCache = res.gastos || [];
+      ultimoResumen = res.resumen || {};
 
-      var tbody = $('gastos-body');
-      tbody.replaceChildren();
-      (res.gastos || []).forEach(function (g) {
-        var tr = document.createElement('tr');
-        tr.className = 'hover:bg-slate-800/30 transition-colors';
-        function td(texto, clase) {
-          var c = document.createElement('td'); c.className = clase; c.textContent = texto; return c;
-        }
-        tr.appendChild(td(g.fecha, 'p-2.5 text-slate-400 text-xs'));
-        tr.appendChild(td(g.concepto, 'p-2.5 text-white'));
-        tr.appendChild(td(g.categoria, 'p-2.5 text-slate-400'));
-        tr.appendChild(td('$' + fmt(g.monto), 'p-2.5 text-right text-red-400 font-bold'));
-
-        var tdB = document.createElement('td');
-        tdB.className = 'p-2.5 text-center';
-        var btnX = document.createElement('button');
-        btnX.type = 'button'; btnX.title = 'Eliminar'; btnX.innerHTML = '<i class="fa-solid fa-xmark pointer-events-none"></i>';
-        btnX.className = 'w-7 h-7 rounded-md bg-slate-800 hover:bg-red-600 text-slate-400 hover:text-white transition-all';
-        btnX.addEventListener('click', function () {
-          if (!confirm('¿Eliminar gasto "' + g.concepto + '"?')) return;
-          api('api/gastos.php?action=delete', { method: 'POST', body: { id: g.id } })
-            .then(function (r2) { if (r2.ok) { refrescarGastos(); } });
-        });
-        tdB.appendChild(btnX);
-        tr.appendChild(tdB);
-        tbody.appendChild(tr);
-      });
-
-      if (!(res.gastos || []).length) {
-        var v = document.createElement('tr');
-        var c = document.createElement('td');
-        c.colSpan = 5; c.className = 'p-4 text-center text-slate-500 italic';
-        c.textContent = 'Sin gastos registrados este mes.';
-        v.appendChild(c); tbody.appendChild(v);
+      // Barra del acordeón: total + cantidad sin necesidad de abrir nada
+      var barra = $('gastos-barra');
+      if (barra) {
+        var n = (ultimoResumen.cantidad !== undefined) ? ultimoResumen.cantidad : gastosCache.length;
+        barra.textContent = labelMes(res.mes) + ': $' + fmt(ultimoResumen.gastos || 0) + ' en ' + n + ' gastos';
       }
+
+      // Opciones del filtro de categoría (cada una con su total)
+      var sel = $('gastos-filtro-cat');
+      if (sel) {
+        var previa = sel.value;
+        sel.replaceChildren();
+        var op0 = document.createElement('option');
+        op0.value = ''; op0.textContent = 'Todas las categorías';
+        sel.appendChild(op0);
+        (ultimoResumen.gastos_por_categoria || []).forEach(function (cat) {
+          var o = document.createElement('option');
+          o.value = cat.categoria;
+          o.textContent = cat.categoria + ' ($' + fmt(cat.total) + ')';
+          sel.appendChild(o);
+        });
+        sel.value = previa;
+        if (sel.selectedIndex === -1) { sel.value = ''; }
+      }
+
+      renderGastos();
 
       var r = res.resumen || {};
       $('rep-ingresos').textContent = fmt(r.ingresos_ventas || 0);
@@ -226,6 +322,17 @@
     $('form-mov').addEventListener('submit', agregarMovimiento);
     $('btn-cerrar-caja').addEventListener('click', cerrarCaja);
     $('form-gasto').addEventListener('submit', guardarGasto);
+
+    // Acordeón de gastos + filtros + impresión del reporte
+    $('btn-gastos-toggle').addEventListener('click', function () {
+      var cuerpo = $('gastos-cuerpo');
+      var abierto = cuerpo.classList.toggle('abierto');
+      $('gastos-chevron').classList.toggle('abierto', abierto);
+      this.setAttribute('aria-expanded', abierto ? 'true' : 'false');
+    });
+    $('gastos-buscar').addEventListener('input', renderGastos);
+    $('gastos-filtro-cat').addEventListener('change', renderGastos);
+    $('btn-reporte-print').addEventListener('click', imprimirReporte);
 
     $('mes-prev').addEventListener('click', function () {
       var p = mesActual.split('-').map(Number);

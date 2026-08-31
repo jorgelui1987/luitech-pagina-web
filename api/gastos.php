@@ -32,10 +32,14 @@ switch ($action) {
         $stmt = $pdo->prepare(
             "SELECT id, concepto, categoria, monto, fecha FROM gastos
              WHERE DATE_FORMAT(fecha, '%Y-%m') = ?
-             ORDER BY fecha DESC, id DESC LIMIT 200"
+             ORDER BY fecha DESC, id DESC LIMIT 500"
         );
         $stmt->execute([$mes]);
         $gastos = $stmt->fetchAll();
+
+        $stCant = $pdo->prepare("SELECT COUNT(*) FROM gastos WHERE DATE_FORMAT(fecha,'%Y-%m') = ?");
+        $stCant->execute([$mes]);
+        $cantidad = (int)$stCant->fetchColumn();
 
         $stGasto = $pdo->prepare("SELECT COALESCE(SUM(monto),0) FROM gastos WHERE DATE_FORMAT(fecha,'%Y-%m') = ?");
         $stGasto->execute([$mes]);

@@ -11,6 +11,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <style>
+        /* Acordeón de gastos: animación con grid-rows (soporta tablas largas) */
+        .gastos-cuerpo{ display:grid; grid-template-rows:0fr; transition:grid-template-rows .3s ease; }
+        .gastos-cuerpo > div{ overflow:hidden; min-height:0; }
+        .gastos-cuerpo.abierto{ grid-template-rows:1fr; }
+        #gastos-chevron{ transition:transform .25s ease; }
+        #gastos-chevron.abierto{ transform:rotate(180deg); }
+    </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen">
 
@@ -92,74 +100,67 @@
             </div>
         </section>
 
-        <!-- ============ GASTOS ============ -->
-        <section class="bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-4">
-            <h2 class="font-extrabold text-white"><i class="fa-solid fa-receipt text-red-400 mr-2"></i>Gastos del negocio</h2>
-
-            <form id="form-gasto" class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-slate-900/60 border border-slate-800 rounded-xl p-3 text-xs">
-                <input type="hidden" id="g-id">
-                <input type="text" id="g-concepto" maxlength="150" placeholder="Concepto*" required
-                       class="sm:col-span-4 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500">
-                <input type="text" id="g-cat" maxlength="60" placeholder="Categoría (ej. Mercadería, Arriendo)"
-                       class="sm:col-span-3 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500">
-                <input type="number" id="g-monto" min="1" placeholder="Monto*" required
-                       class="sm:col-span-2 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500">
-                <input type="date" id="g-fecha"
-                       class="sm:col-span-1 bg-slate-900 border border-slate-800 rounded-lg px-2 py-2 text-white focus:outline-none focus:border-red-500">
-                <button type="submit" id="btn-gasto" class="sm:col-span-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg py-2">Registrar gasto</button>
-            </form>
-
-            <div id="gastos-tabla-wrap" class="overflow-x-auto">
-                <table class="w-full text-left text-sm">
-                    <thead class="bg-slate-900/80 border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-400">
-                        <tr><th class="p-2.5">Fecha</th><th class="p-2.5">Concepto</th><th class="p-2.5">Categoría</th><th class="p-2.5 text-right">Monto</th><th class="p-2.5 text-center"></th></tr>
-                    </thead>
-                    <tbody id="gastos-body" class="divide-y divide-slate-800/50"></tbody>
-                </table>
-            </div>
-        </section>
-
         <!-- ============ REPORTE MENSUAL ============ -->
         <section class="bg-slate-950 border border-slate-800 rounded-2xl p-5 space-y-4">
-            <div class="flex justify-between items-center">
+            <div class="flex justify-between items-center flex-wrap gap-2">
                 <h2 class="font-extrabold text-white"><i class="fa-solid fa-chart-line text-cyan-400 mr-2"></i>Reporte mensual</h2>
                 <div class="flex items-center gap-2 text-sm font-bold">
+                    <button type="button" id="btn-reporte-print" class="bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold px-3 py-2 rounded-lg" title="Imprimir o guardar como PDF"><i class="fa-solid fa-print mr-1"></i>Imprimir reporte</button>
                     <button type="button" id="mes-prev" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">&lsaquo;</button>
                     <span id="mes-label" class="px-2 text-white uppercase tracking-wide text-xs">—</span>
                     <button type="button" id="mes-next" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">&rsaquo;</button>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div class="bg-emerald-950/50 border border-emerald-800/60 rounded-xl p-4 text-center">
-                    <p class="text-[10px] uppercase tracking-wider text-emerald-300 font-bold">Ingresos (ventas)</p>
-                    <p class="text-2xl font-black text-emerald-400 mt-1">$<span id="rep-ingresos">0</span></p>
-                </div>
-                <div class="bg-red-950/40 border border-red-900/60 rounded-xl p-4 text-center">
-                    <p class="text-[10px] uppercase tracking-wider text-red-300 font-bold">Gastos</p>
-                    <p class="text-2xl font-black text-red-400 mt-1">$<span id="rep-gastos">0</span></p>
-                </div>
-                <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
-                    <p class="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Resultado del mes</p>
-                    <p class="text-3xl font-black mt-1" id="rep-resultado">$0</p>
-                </div>
-            </div>
+        <!-- ============ GASTOS DEL NEGOCIO (acordeón) ============ -->
+        <section class="bg-slate-950 border border-slate-800 rounded-2xl p-5">
+            <button type="button" id="btn-gastos-toggle" class="w-full flex items-center justify-between gap-3 text-left" aria-expanded="false" aria-controls="gastos-cuerpo">
+                <h2 class="font-extrabold text-white"><i class="fa-solid fa-receipt text-red-400 mr-2"></i>Gastos del negocio</h2>
+                <span class="flex items-center gap-3">
+                    <span id="gastos-barra" class="text-xs font-bold text-red-300">—</span>
+                    <i id="gastos-chevron" class="fa-solid fa-chevron-down text-slate-500"></i>
+                </span>
+            </button>
+            <div id="gastos-cuerpo" class="gastos-cuerpo">
+                <div>
+                    <div class="space-y-4 pt-4">
+                        <form id="form-gasto" class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-slate-900/60 border border-slate-800 rounded-xl p-3 text-xs">
+                            <input type="hidden" id="g-id">
+                            <input type="text" id="g-concepto" maxlength="150" placeholder="Concepto*" required
+                                   class="sm:col-span-4 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500">
+                            <input type="text" id="g-cat" maxlength="60" placeholder="Categoría (ej. Mercadería, Arriendo)"
+                                   class="sm:col-span-3 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500">
+                            <input type="number" id="g-monto" min="1" placeholder="Monto*" required
+                                   class="sm:col-span-2 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500">
+                            <input type="date" id="g-fecha"
+                                   class="sm:col-span-1 bg-slate-900 border border-slate-800 rounded-lg px-2 py-2 text-white focus:outline-none focus:border-red-500">
+                            <button type="submit" id="btn-gasto" class="sm:col-span-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg py-2">Registrar gasto</button>
+                        </form>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-                <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Ventas por medio de pago</h3>
-                    <ul id="rep-pagos" class="space-y-1 text-xs text-slate-300"></ul>
-                </div>
-                <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Gastos por categoría</h3>
-                    <ul id="rep-cat" class="space-y-1 text-xs text-slate-300"></ul>
+                        <div class="flex flex-wrap gap-2 items-center text-xs">
+                            <input type="text" id="gastos-buscar" placeholder="Buscar gasto (concepto o categoría)..."
+                                   class="flex-grow min-w-[180px] bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-cyan-500">
+                            <select id="gastos-filtro-cat" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500">
+                                <option value="">Todas las categorías</option>
+                            </select>
+                        </div>
+
+                        <div id="gastos-tabla-wrap" class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-slate-900/80 border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-400">
+                                    <tr><th class="p-2.5">Fecha</th><th class="p-2.5">Concepto</th><th class="p-2.5">Categoría</th><th class="p-2.5 text-right">Monto</th><th class="p-2.5 text-center"></th></tr>
+                                </thead>
+                                <tbody id="gastos-body" class="divide-y divide-slate-800/50"></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
     </main>
 
-    <script src="assets/js/common.js" defer></script>
-    <script src="assets/js/finanzas.js" defer></script>
+    <script src="assets/js/common.js?v=mp11" defer></script>
+    <script src="assets/js/finanzas.js?v=mp11" defer></script>
 </body>
 </html>
 
