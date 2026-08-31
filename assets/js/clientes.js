@@ -4,6 +4,7 @@
 
   var api = window.LuitechAPI;
   var $ = function (id) { return document.getElementById(id); };
+  var ultimoClienteGuardado = '';
 
   function fmt(n) { return '$ ' + Math.max(0, Math.round(Number(n) || 0)).toLocaleString('es-CL'); }
 
@@ -132,6 +133,7 @@
       window.mostrarToast(id ? 'Cliente actualizado' : 'Cliente "' + cuerpo.nombre + '" creado', 'success');
       $('btn-cl-orden-nombre').textContent = cuerpo.nombre;
       $('btn-cl-orden').classList.remove('hidden');
+      ultimoClienteGuardado = cuerpo.nombre;
       cargarClientes();
     }).catch(function () {
       boton.disabled = false;
@@ -203,6 +205,10 @@
     $('btn-cl-cancelar').addEventListener('click', limpiarFormCliente);
     $('btn-cl-orden').addEventListener('click', function () {
       irANuevaOrden($('btn-cl-orden-nombre').textContent);
+    });
+    $('nav-nueva-orden').addEventListener('click', function (e) {
+      e.preventDefault();
+      irANuevaOrden(ultimoClienteGuardado);
     });
     var timer = null;
     $('cl-buscar').addEventListener('input', function () {

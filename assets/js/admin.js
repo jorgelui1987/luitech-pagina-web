@@ -8,6 +8,7 @@
   var api = window.LuitechAPI;
   var $ = function (id) { return document.getElementById(id); };
   var empresaCfg = null;   // configuración de empresa (logo, nombre, moneda, términos)
+  var clientesCache = [];  // registro de clientes (para teléfonos y autocompletado)
   var simboloMoneda = '$'; // viene de Configuración (moneda_simbolo)
   var mpTimer = null;      // monitoreo del pago por Mercado Pago
 
@@ -733,6 +734,7 @@
   function cargarClientesLista() {
     api('api/clientes.php?action=list').then(function (res) {
       if (!res.ok) return;
+      clientesCache = res.clientes || [];
       var dl = $('lista-clientes');
       if (!dl) return;
       dl.replaceChildren();
@@ -1063,6 +1065,66 @@
     return enlace;
   }
 
+  /** Teléfono registrado del cliente de la orden (por id o por nombre). */
+  function telefonoDeCliente(o) {
+    var nombre = (o.cliente || '').toLowerCase();
+    var cl = (clientesCache || []).find(function (c) {
+      return (o.cliente_id && parseInt(c.id, 10) === parseInt(o.cliente_id, 10)) ||
+             ((c.nombre || '').toLowerCase() === nombre);
+    });
+    return cl ? (cl.telefono || '') : '';
+  }
+
+  /** Abre WhatsApp con el aviso de equipo listo (teléfono del registro). */
+  function avisarClienteWhatsApp() {
+    var o = ordenActualModal();
+    if (!o) return;
+    var soloDigitos = telefonoDeCliente(o).replace(/\D/g, '');
+    if (soloDigitos.length < 8) {
+      window.mostrarToast('El cliente no tiene teléfono registrado (edítalo en la página de Clientes)', 'error');
+      return;
+    }
+    var totalN = parseInt(o.total, 10) || 0;
+    var msg = 'Hola ' + o.cliente + ', tu ' + o.equipo + ' esta LISTO para retirar.' +
+      (totalN > 0 ? ' Orden ' + o.codigo + ' (total ' + monto(totalN) + ').' : ' Orden ' + o.codigo + '.') +
+      ' Te esperamos. — Luitech';
+    window.open('https://wa.me/' + soloDigitos + '?text=' + encodeURIComponent(msg), '_blank');
+  }
+
+  /** Muestra los equipos que el cliente trajo antes (click para usar). */
+  var timerEquipos = null;
+  function mostrarEquiposPrevios() {
+    var cont = $('equipos-previos');
+    if (!cont) return;
+    var nombre = $('new-cliente').value.trim().toLowerCase();
+    cont.replaceChildren();
+    var equipos = [];
+    if (nombre.length >= 3) {
+      (ordenesCache || []).forEach(function (o) {
+        if ((o.cliente || '').toLowerCase() !== nombre) return;
+        var eq = (o.equipo || '').trim();
+        if (eq && equipos.indexOf(eq) === -1) equipos.push(eq);
+      });
+    }
+    if (!equipos.length) { cont.classList.add('hidden'); return; }
+    var lbl = document.createElement('span');
+    lbl.className = 'text-slate-500';
+    lbl.textContent = 'Trajo antes:';
+    cont.appendChild(lbl);
+    equipos.forEach(function (eq) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'bg-slate-800 hover:bg-cyan-600 border border-slate-700 text-slate-200 rounded-full px-3 py-1';
+      b.textContent = eq;
+      b.addEventListener('click', function () {
+        $('new-equipo').value = eq;
+        cont.classList.add('hidden');
+      });
+      cont.appendChild(b);
+    });
+    cont.classList.remove('hidden');
+  }
+
   /** Pinta los montos de cobro de la orden abierta (total / abonado / saldo). */
   function renderCobroModal(o) {
     var cont = $('mo-cobro');
@@ -1140,6 +1202,12 @@
     if (botonPoint) {
       var conDevice = empresaCfg && (empresaCfg.mp_point_device || '').length > 0;
       botonPoint.classList.toggle('hidden', !(mpActivo && conDevice && saldo > 0));
+    }
+
+    // Aviso por WhatsApp: visible cuando la orden está lista para retiro
+    var botonWA = $('mo-btn-wa');
+    if (botonWA) {
+      botonWA.classList.toggle('hidden', o.estado !== 'Listo para Retiro');
     }
   }
 
@@ -1654,6 +1722,12 @@
     $('buscar-orden').addEventListener('input', renderFilasOrdenes);
     $('filtro-estado-orden').addEventListener('change', renderFilasOrdenes);
     $('filtro-mes-orden').addEventListener('change', renderFilasOrdenes);
+    $('mo-btn-wa').addEventListener('click', avisarClienteWhatsApp);
+    var timerEquipos = null;
+    $('new-cliente').addEventListener('input', function () {
+      clearTimeout(timerEquipos);
+      timerEquipos = setTimeout(mostrarEquiposPrevios, 300);
+    });
     $('btn-simular').addEventListener('click', simularAvanceOrden);
 
     // Acta de recepción: firma táctil, fotos y accesorios
