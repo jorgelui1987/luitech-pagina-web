@@ -425,5 +425,65 @@
     }, 'image/png');
   }
 
+  /* ================== RESET DE DATOS (producción) ================== */
+  document.addEventListener('DOMContentLoaded', function () {
+    var $r = function (id) { return document.getElementById(id); };
+    if (!$r('btn-reset-ejecutar')) return;
+
+    // Estado inicial: avisa si hay caja abierta
+    api('api/reset.php?action=estado').then(function (res) {
+      if (!res.ok) return;
+      if (res.caja_abierta) {
+        $r('reset-estado').textContent = '⚠ Hay una caja ABIERTA: ciérrala y cuádrala antes de poder resetear.';
+      }
+    }).catch(function () {});
+
+    $r('btn-reset-ejecutar').addEventListener('click', function () {
+      var boton = this;
+      var pass = $r('reset-pass').value;
+      var conf = ($r('reset-confirmar').value || '').trim().toUpperCase();
+      if (conf !== 'RESETEAR') { window.mostrarToast('Escribe RESETEAR en el paso 3', 'error'); return; }
+      if (!pass) { window.mostrarToast('Ingresa tu contraseña en el paso 2', 'error'); return; }
+      if (!confirm('ÚLTIMA CONFIRMACIÓN:\nSe borrarán los grupos marcados. Tu configuración, logo y usuario NO se tocan.\n¿Continuar?')) return;
+
+      boton.disabled = true;
+      api('api/reset.php?action=ejecutar', { method: 'POST', body: {
+        password: pass,
+        confirmacion: conf,
+        demo: $r('g-demo').checked ? 1 : 0,
+        grupos: {
+          ordenes:     $r('g-ordenes').checked ? 1 : 0,
+          ventas:      $r('g-ventas').checked ? 1 : 0,
+          caja:        $r('g-caja').checked ? 1 : 0,
+          comisiones:  $r('g-comisiones').checked ? 1 : 0,
+          clientes:    $r('g-clientes').checked ? 1 : 0,
+          gastos:      $r('g-gastos').checked ? 1 : 0,
+          stock:       $r('g-stock').checked ? 1 : 0,
+          catalogo:    $r('g-catalogo').checked ? 1 : 0,
+          proveedores: $r('g-proveedores').checked ? 1 : 0,
+          productos:   $r('g-productos').checked ? 1 : 0,
+          tecnicos:    $r('g-tecnicos').checked ? 1 : 0
+        }
+      }}).then(function (res) {
+        boton.disabled = false;
+        if (!res.ok) { window.mostrarToast(res.error || 'No se pudo resetear', 'error'); return; }
+        var partes = [];
+        var borrados = res.borrados || {};
+        for (var k in borrados) {
+          if (borrados[k] > 0) { partes.push(k + ': ' + borrados[k]); }
+        }
+        var resumen = partes.length ? partes.join(' · ') : 'nada que borrar';
+        $r('reset-estado').textContent = '✓ Reset completado (' + resumen + ')' +
+          (res.demo ? ' · Órdenes demo re-sembradas: ' + res.demo : '') +
+          ' · Respaldo previo: ' + res.respaldo;
+        window.mostrarToast('Reset completado — sistema listo para producción', 'success');
+        $r('reset-pass').value = ''; $r('reset-confirmar').value = '';
+      }).catch(function () {
+        boton.disabled = false;
+        window.mostrarToast('Error de conexión con el servidor', 'error');
+      });
+    });
+  });
+
   /* __CONT__ */
 })();

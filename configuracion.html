@@ -161,6 +161,49 @@
                     <button type="submit" id="btn-clave-guardar" class="btn">Guardar nueva contraseña</button>
                 </form>
             </section>
+
+            <!-- ============ ZONA DE MANTENIMIENTO: RESET ============ -->
+            <section class="sec" style="border-color:#7f1d1d; background:rgba(69,10,10,.30)">
+                <h2 style="color:#f87171"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Zona de mantenimiento — Reset de datos</h2>
+                <p class="nota">Deja el sistema en cero para partir en producción con datos reales. <b style="color:#e2e8f0">Nunca</b> toca tu usuario, contraseña, logo, datos de empresa, IVA ni Mercado Pago. <b style="color:#fca5a5">Obligatorio</b>: generar el respaldo (paso 1) hace menos de 5 minutos o el reset se niega a ejecutarse.</p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-3 text-xs">
+                    <label class="flex items-center gap-2 text-slate-300"><input type="checkbox" id="g-ordenes" checked class="chk" style="accent-color:#f87171"> Órdenes + bitácoras (+ sus fotos/firmas)</label>
+                    <label class="flex items-center gap-2 text-slate-300"><input type="checkbox" id="g-ventas" checked class="chk" style="accent-color:#f87171"> Ventas (POS)</label>
+                    <label class="flex items-center gap-2 text-slate-300"><input type="checkbox" id="g-caja" checked class="chk" style="accent-color:#f87171"> Caja (sesiones y movimientos)</label>
+                    <label class="flex items-center gap-2 text-slate-300"><input type="checkbox" id="g-comisiones" checked class="chk" style="accent-color:#f87171"> Comisiones de técnicos</label>
+                    <label class="flex items-center gap-2 text-slate-300"><input type="checkbox" id="g-clientes" checked class="chk" style="accent-color:#f87171"> Clientes</label>
+                    <label class="flex items-center gap-2 text-slate-300"><input type="checkbox" id="g-gastos" checked class="chk" style="accent-color:#f87171"> Gastos del negocio</label>
+                    <label class="flex items-center gap-2 text-slate-300"><input type="checkbox" id="g-stock" checked class="chk" style="accent-color:#f87171"> Entradas de stock (compras)</label>
+                    <label class="flex items-center gap-2 text-slate-400"><input type="checkbox" id="g-catalogo" class="chk" style="accent-color:#f87171"> Catálogo de proveedores (opcional)</label>
+                    <label class="flex items-center gap-2 text-slate-400"><input type="checkbox" id="g-proveedores" class="chk" style="accent-color:#f87171"> Proveedores (opcional)</label>
+                    <label class="flex items-center gap-2 text-slate-400"><input type="checkbox" id="g-productos" class="chk" style="accent-color:#f87171"> Productos del inventario (opcional)</label>
+                    <label class="flex items-center gap-2 text-slate-400"><input type="checkbox" id="g-tecnicos" class="chk" style="accent-color:#f87171"> Técnicos (opcional)</label>
+                    <label class="flex items-center gap-2 text-cyan-300"><input type="checkbox" id="g-demo" class="chk"> Dejar 5 órdenes de demostración (LUH-1024…)</label>
+                </div>
+
+                <div class="fila mt-3">
+                    <div>
+                        <label class="lb">Paso 1 — Respaldo de seguridad (obligatorio, descarga y guarda el ZIP)</label>
+                        <a href="api/respaldo.php?action=descargar" id="btn-reset-respaldo" class="btn2" style="display:inline-block; text-decoration:none; color:#67e8f9; border-color:#155e75"><i class="fa-solid fa-download mr-1"></i>Generar respaldo ahora</a>
+                    </div>
+                    <div>
+                        <label class="lb">Paso 2 — Tu contraseña (confirmación)</label>
+                        <input type="password" id="reset-pass" class="inp" autocomplete="current-password" placeholder="Tu contraseña">
+                    </div>
+                </div>
+                <div class="fila mt-2">
+                    <div>
+                        <label class="lb">Paso 3 — Escribe RESETEAR para confirmar</label>
+                        <input type="text" id="reset-confirmar" class="inp" placeholder="RESETEAR">
+                    </div>
+                    <div>
+                        <label class="lb">&nbsp;</label>
+                        <button type="button" id="btn-reset-ejecutar" class="btn" style="background:#dc2626; color:#fff"><i class="fa-solid fa-eraser mr-1"></i>EJECUTAR RESET</button>
+                    </div>
+                </div>
+                <p id="reset-estado" class="nota mt-2"></p>
+            </section>
         </div>
     </main>
 
