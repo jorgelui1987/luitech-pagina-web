@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow">
     <meta name="theme-color" content="#020617">
     <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
-    <link rel="stylesheet" href="assets/css/styles.css?v=mp15">
+    <link rel="stylesheet" href="assets/css/styles.css?v=mp16">
     <style>
         /* Acta de recepción: firma táctil, chips de accesorios y miniaturas */
         .lienzo-firma{ touch-action:none; cursor:crosshair; background:#ffffff; display:block; width:100%; height:140px; border-radius:0.5rem; }
@@ -83,6 +83,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+<link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <link rel="apple-touch-icon" href="assets/img/icon-192.png">
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen">
 
@@ -169,6 +172,9 @@
                        class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-2 rounded-lg font-semibold transition-all">
                         <i class="fa-solid fa-gear"></i>
                     </a>
+                    <button type="button" id="btn-pwa-install" onclick="window.luitechInstalarApp()" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg font-semibold transition-all" title="Instalar Luitech como aplicación en tu dispositivo">
+                        <i class="fa-solid fa-mobile-screen mr-1"></i>Instalar app
+                    </button>
                     <a href="tv.html" target="_blank" rel="noopener" title="Abrir pantalla de sala de espera"
                        class="bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 px-3 py-2 rounded-lg font-semibold transition-all">
                         <i class="fa-solid fa-tv mr-1"></i> Modo TV
@@ -519,7 +525,7 @@
         </div>
     </div>
 
-    <script src="assets/js/common.js?v=mp14" defer></script>
-    <script src="assets/js/admin.js?v=mp14" defer></script>
+    <script src="assets/js/common.js?v=mp16" defer></script>
+    <script src="assets/js/admin.js?v=mp16" defer></script>
 </body>
 </html>

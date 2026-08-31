@@ -169,5 +169,37 @@
   window.abrirExterno = abrirExterno;
   window.LUITECH_WA = WHATSAPP_LUITECH;
 
+  /* ================== PWA: service worker + botón instalar ================== */
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function () {});
+    });
+  }
+
+  var eventoInstalar = null;
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    eventoInstalar = e;
+    var btn = document.getElementById('btn-pwa-install');
+    if (btn) { btn.classList.remove('hidden'); }
+  });
+  window.luitechInstalarApp = function () {
+    if (!eventoInstalar) {
+      window.mostrarToast('Usa el menú del navegador → "Instalar app" o "Añadir a pantalla de inicio"', 'error');
+      return;
+    }
+    eventoInstalar.prompt();
+    eventoInstalar.userChoice.then(function () {
+      eventoInstalar = null;
+      var btn = document.getElementById('btn-pwa-install');
+      if (btn) { btn.classList.add('hidden'); }
+    });
+  };
+  window.addEventListener('appinstalled', function () {
+    var btn = document.getElementById('btn-pwa-install');
+    if (btn) { btn.classList.add('hidden'); }
+    window.mostrarToast('Luitech instalada en tu dispositivo ✓', 'success');
+  });
+
   document.addEventListener('DOMContentLoaded', ponerAnio);
 })();
