@@ -17,7 +17,7 @@ require __DIR__ . '/config.php';
 aplicar_zona_horaria();
 
 iniciar_respuesta_json();
-exigir_admin();
+exigir_admin(); exigir_rol_admin();
 
 $action = $_GET['action'] ?? '';
 

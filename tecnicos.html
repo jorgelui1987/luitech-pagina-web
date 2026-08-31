@@ -30,6 +30,9 @@
         .chip-est.pendiente{ background:rgba(69,26,3,.45); color:#fbbf24; border-color:#92400e; }
         .chip-est.pagada{ background:rgba(6,78,59,.45); color:#34d399; border-color:#065f46; }
     </style>
+    <style>
+        body.rol-tecnico .solo-admin{ display:none !important; }
+    </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen">
 
@@ -57,7 +60,7 @@
             </nav>
         </header>
 
-            <section class="sec">
+            <section class="sec solo-admin">
                 <h2 id="form-titulo"><i class="fa-solid fa-plus mr-1"></i>Nuevo técnico</h2>
                 <input type="hidden" id="t-id">
                 <div class="fila">

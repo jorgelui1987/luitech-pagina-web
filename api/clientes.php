@@ -14,7 +14,7 @@ declare(strict_types=1);
 require __DIR__ . '/config.php';
 
 iniciar_respuesta_json();
-exigir_admin();
+exigir_admin(); exigir_rol_admin();
 preparar_clientes(db()); // tabla auto-reparable (hostings sin migrate)
 
 $action = $_GET['action'] ?? '';

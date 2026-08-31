@@ -18,11 +18,19 @@
     $('view-panel').classList.toggle('hidden', !logueado);
     if (logueado && nombre) $('admin-nombre').textContent = nombre;
     if (logueado) { cargarTecnicos(); cargarClientesLista(); aplicarClientePendiente(); }
-    if (!logueado) $('usuario').focus();
+    if (!logueado) { document.body.classList.remove('rol-tecnico'); $('usuario').focus(); }
+  }
+
+  function sesionAbierta(res) {
+    if (res.rol === 'tecnico') { document.body.classList.add('rol-tecnico'); }
+    else { document.body.classList.remove('rol-tecnico'); }
+    renderizarTablaAdmin();
+    mostrarVista(true, res.nombre);
   }
 
   function iniciarSesion(event) {
     event.preventDefault();
+    if (!$('fila-2fa').classList.contains('hidden')) { confirmar2fa(); return; }
     var boton = $('btn-login');
     boton.disabled = true;
 
@@ -34,15 +42,33 @@
         window.mostrarToast(res.error || 'No se pudo iniciar sesión', 'error');
         return;
       }
-      window.mostrarToast('Bienvenido/a, ' + res.nombre, 'success');
-      renderizarTablaAdmin();
-      mostrarVista(true, res.nombre);
+      if (res.paso === '2fa') {
+        $('fila-2fa').classList.remove('hidden');
+        $('codigo-2fa').focus();
+        window.mostrarToast('Ingresa el código de tu autenticador', 'success');
+        return;
+      }
+      sesionAbierta(res);
     }).catch(function () {
       window.mostrarToast('Error de conexión con el servidor', 'error');
     }).finally(function () {
       boton.disabled = false;
-      $('password').value = '';
+      if ($('fila-2fa').classList.contains('hidden')) { $('password').value = ''; }
     });
+  }
+
+  function confirmar2fa() {
+    var codigo = $('codigo-2fa').value.trim();
+    if (codigo.length < 6) { window.mostrarToast('Ingresa los 6 dígitos del autenticador', 'error'); return; }
+    api('api/auth.php?action=login_2fa', { method: 'POST', body: { codigo: codigo } })
+      .then(function (res) {
+        if (!res.ok) { window.mostrarToast(res.error || 'Código incorrecto', 'error'); return; }
+        $('fila-2fa').classList.add('hidden');
+        $('codigo-2fa').value = '';
+        sesionAbierta(res);
+      }).catch(function () {
+        window.mostrarToast('Error de conexión con el servidor', 'error');
+      });
   }
 
   function cerrarSesion() {
@@ -1776,6 +1802,7 @@
     // Verificar sesión existente al cargar
     api('api/auth.php?action=me').then(function (res) {
       if (res.logueado) {
+        if (res.rol === 'tecnico') { document.body.classList.add('rol-tecnico'); }
         renderizarTablaAdmin();
         mostrarVista(true, res.nombre);
       } else {

@@ -8,6 +8,7 @@
   var $ = function (id) { return document.getElementById(id); };
 
   function fmt(n) { return '$ ' + Math.max(0, Math.round(Number(n) || 0)).toLocaleString('es-CL'); }
+  var esRolTecnico = false;
 
   function mostrarVista(logueado) {
     $('view-nologin').classList.toggle('hidden', logueado);
@@ -67,6 +68,17 @@
 
         var tdAcc = document.createElement('td');
         tdAcc.className = 'p-2 text-center';
+        if (!esRolTecnico) {
+            var btnKey = document.createElement('button');
+            btnKey.type = 'button';
+            btnKey.title = t.tiene_acceso > 0 ? 'Quitar acceso al sistema' : 'Crear acceso al sistema (usuario + contraseña)';
+            btnKey.innerHTML = '<i class="fa-solid ' + (t.tiene_acceso > 0 ? 'fa-unlock' : 'fa-key') + ' pointer-events-none"></i>';
+            btnKey.className = 'w-8 h-8 rounded-lg mx-0.5 transition-all ' + (t.tiene_acceso > 0
+              ? 'bg-emerald-950 hover:bg-red-900/60 text-emerald-400 hover:text-red-300 border border-emerald-800'
+              : 'bg-slate-800 hover:bg-cyan-600 text-slate-300 hover:text-white');
+            btnKey.addEventListener('click', function () { gestionarAcceso(t); });
+            tdAcc.appendChild(btnKey);
+        }
         var btnEd = document.createElement('button');
         btnEd.type = 'button';
         btnEd.title = 'Editar';
@@ -134,6 +146,31 @@
       boton.disabled = false;
       window.mostrarToast('Error de conexión con el servidor', 'error');
     });
+  }
+
+  function gestionarAcceso(t) {
+    if (t.tiene_acceso > 0) {
+      if (!confirm('¿QUITAR el acceso al sistema de "' + t.nombre + '"? Ya no podrá iniciar sesión.')) return;
+      api('api/tecnicos.php?action=quitar_acceso', { method: 'POST', body: { tecnico_id: t.id } })
+        .then(function (res) {
+          if (!res.ok) { window.mostrarToast(res.error || 'No se pudo quitar', 'error'); return; }
+          window.mostrarToast('Acceso quitado', 'success');
+          cargarTecnicos();
+        }).catch(function () {});
+      return;
+    }
+    var usuario = prompt('Usuario de acceso para "' + t.nombre + '":\n(letras, números, punto o guion)');
+    if (usuario === null) return;
+    usuario = (usuario || '').trim();
+    if (!/^[a-zA-Z0-9._-]{3,30}$/.test(usuario)) { window.mostrarToast('Usuario inválido (3-30: letras, números, punto, guion)', 'error'); return; }
+    var password = prompt('Contraseña (mínimo 10, con MAYÚSCULA, minúscula, número y carácter especial):\nEj: Taller2026$Luitech');
+    if (password === null) return;
+    api('api/tecnicos.php?action=crear_acceso', { method: 'POST', body: { tecnico_id: t.id, usuario: usuario, password: password } })
+      .then(function (res) {
+        if (!res.ok) { window.mostrarToast(res.error || 'No se pudo crear el acceso', 'error'); return; }
+        window.mostrarToast('Acceso creado para "' + t.nombre + '"', 'success');
+        cargarTecnicos();
+      }).catch(function () {});
   }
 
   function eliminarTecnico(t) {
@@ -206,7 +243,7 @@
 
         var tdAcc = document.createElement('td');
         tdAcc.className = 'p-2 text-center';
-        if (c.estado === 'Pendiente') {
+        if (c.estado === 'Pendiente' && !esRolTecnico) {
           var btn = document.createElement('button');
           btn.type = 'button';
           btn.className = 'btn-pagar';
@@ -244,6 +281,10 @@
     $('fil-estado').addEventListener('change', cargarComisiones);
 
     api('api/auth.php?action=me').then(function (res) {
+      if (res && res.logueado && res.rol === 'tecnico') {
+        esRolTecnico = true;
+        document.body.classList.add('rol-tecnico');
+      }
       mostrarVista(!!(res && res.logueado));
     }).catch(function () { mostrarVista(false); });
   });

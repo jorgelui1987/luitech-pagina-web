@@ -15,7 +15,7 @@ declare(strict_types=1);
 require __DIR__ . '/config.php';
 
 iniciar_sesion();
-if (!es_admin()) {
+if (!es_admin() || rol_actual() !== 'admin') {
     http_response_code(401);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode(['ok' => false, 'error' => 'No autorizado'], JSON_UNESCAPED_UNICODE);

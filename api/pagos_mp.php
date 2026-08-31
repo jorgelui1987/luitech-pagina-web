@@ -176,7 +176,7 @@ function mp_aplicar_pago_orden(PDO $pdo, string $codigo, int $monto, string $pag
 switch ($action) {
 
     case 'crear_link': {
-        exigir_admin();
+        exigir_admin(); exigir_rol_admin();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
@@ -230,7 +230,7 @@ switch ($action) {
 
     case 'point_dispositivos': {
         // Lista los dispositivos Point de la cuenta (API Point Orders)
-        exigir_admin();
+        exigir_admin(); exigir_rol_admin();
         $cfg = mp_config();
         if (!$cfg['enabled'] || $cfg['token'] === '') {
             responder(['ok' => false, 'error' => 'Mercado Pago no está habilitado'], 409);
@@ -243,7 +243,7 @@ switch ($action) {
 
     case 'point_pdv': {
         // Activa el modo PDV (integrado) en el terminal configurado
-        exigir_admin();
+        exigir_admin(); exigir_rol_admin();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
@@ -264,7 +264,7 @@ switch ($action) {
     }
 
     case 'point_cobrar': {
-        exigir_admin();
+        exigir_admin(); exigir_rol_admin();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
@@ -308,7 +308,7 @@ switch ($action) {
         // Envía el TOTAL del carrito del POS al terminal Point.
         // external_reference "POS-..." (no LUH): el webhook la ignora y la venta
         // la registra el POS al confirmarse el pago (evita doble ingreso a caja).
-        exigir_admin();
+        exigir_admin(); exigir_rol_admin();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
@@ -342,7 +342,7 @@ switch ($action) {
     }
 
     case 'point_estado': {
-        exigir_admin();
+        exigir_admin(); exigir_rol_admin();
         $cfg = mp_config();
         if (!$cfg['enabled'] || $cfg['token'] === '') {
             responder(['ok' => false, 'error' => 'Mercado Pago no está habilitado'], 409);
@@ -446,7 +446,7 @@ switch ($action) {
 
     case 'diagnostico': {
         // Prueba en vivo de todo lo que Mercado Pago necesita para funcionar
-        exigir_admin();
+        exigir_admin(); exigir_rol_admin();
         $cfg = mp_config();
         $diag = [
             'habilitado'    => $cfg['enabled'] ? 1 : 0,
@@ -497,7 +497,7 @@ switch ($action) {
     case 'verificar': {
         // El panel consulta cada pocos segundos: si el pago ya entró (por el
         // webhook o buscando directamente en Mercado Pago), responde pagada.
-        exigir_admin();
+        exigir_admin(); exigir_rol_admin();
         $codigo = strtoupper(trim((string)($_GET['codigo'] ?? '')));
         if (preg_match('/^LUH-\d{3,8}$/', $codigo) !== 1) {
             responder(['ok' => false, 'error' => 'Código inválido'], 400);

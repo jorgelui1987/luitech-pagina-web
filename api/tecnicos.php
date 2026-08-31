@@ -17,6 +17,9 @@ require __DIR__ . '/config.php';
 iniciar_respuesta_json();
 exigir_admin();
 
+$miTecnicoId = isset($_SESSION['admin_tecnico_id']) ? (int)$_SESSION['admin_tecnico_id'] : 0;
+$esTecnico   = rol_actual() === 'tecnico';
+
 $action = $_GET['action'] ?? '';
 
 /** Valida y normaliza los datos de un técnico. */
@@ -55,6 +58,7 @@ switch ($action) {
     case 'list':
         $stmt = db()->query(
             'SELECT t.id, t.nombre, t.rut, t.telefono, t.porcentaje_comision,
+                    (SELECT COUNT(*) FROM usuarios_admin u WHERE u.tecnico_id = t.id AND u.rol = "tecnico") AS tiene_acceso,
                     (SELECT COUNT(*) FROM comisiones c WHERE c.tecnico_id = t.id AND c.estado = "Pendiente") AS comisiones_pendientes,
                     (SELECT COALESCE(SUM(c.monto),0) FROM comisiones c WHERE c.tecnico_id = t.id AND c.estado = "Pendiente") AS monto_pendiente,
                     (SELECT COUNT(*) FROM comisiones c WHERE c.tecnico_id = t.id AND c.estado = "Pagada") AS comisiones_pagadas,
@@ -117,10 +121,17 @@ switch ($action) {
         $estado = in_array(($_GET['estado'] ?? ''), ['Pendiente', 'Pagada', 'Anulada'], true) ? $_GET['estado'] : null;
         $sql = 'SELECT id, orden_codigo, tecnico_nombre, base_margen, porcentaje, monto, estado, fecha_generada, fecha_pagada FROM comisiones';
         $params = [];
+        $conds = [];
+        if ($esTecnico) {
+            // Un técnico solo ve SUS comisiones
+            $conds[] = 'tecnico_id = ?';
+            $params[] = $miTecnicoId;
+        }
         if ($estado !== null) {
-            $sql .= ' WHERE estado = ?';
+            $conds[] = 'estado = ?';
             $params[] = $estado;
         }
+        if ($conds) { $sql .= ' WHERE ' . implode(' AND ', $conds); }
         $sql .= ' ORDER BY (estado = "Pendiente") DESC, id DESC LIMIT 200';
         $stmt = db()->prepare($sql);
         $stmt->execute($params);
@@ -140,6 +151,7 @@ switch ($action) {
     }
 
     case 'pagar_comision': {
+        exigir_rol_admin(); // solo el dueño paga comisiones
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
@@ -165,6 +177,57 @@ switch ($action) {
             ->execute([(int)$sesion['id'], 'Egreso', 'Comisión técnico ' . $com['tecnico_nombre'] . ' — orden ' . $com['orden_codigo'], (int)$com['monto']]);
         db()->prepare('INSERT INTO orden_bitacora (orden_codigo, tecnico, nota) VALUES (?, ?, ?)')
             ->execute([(string)$com['orden_codigo'], (string)$com['tecnico_nombre'], 'Comisión pagada: $' . $com['monto']]);
+        responder(['ok' => true]);
+    }
+
+    case 'crear_acceso': {
+        // Cuenta de acceso para un técnico (solo administrador)
+        exigir_rol_admin();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            responder(['ok' => false, 'error' => 'Método no permitido'], 405);
+        }
+        $d = leer_cuerpo();
+        $tecnicoId = (int)($d['tecnico_id'] ?? 0);
+        $usuario   = trim((string)($d['usuario'] ?? ''));
+        $password  = (string)($d['password'] ?? '');
+        if ($tecnicoId <= 0 || $usuario === '' || $password === '') {
+            responder(['ok' => false, 'error' => 'Técnico, usuario y contraseña son obligatorios'], 400);
+        }
+        if (!preg_match('/^[a-zA-Z0-9._-]{3,30}$/', $usuario)) {
+            responder(['ok' => false, 'error' => 'Usuario inválido (3-30 caracteres: letras, números, punto, guion)'], 400);
+        }
+        $errorPolicy = validar_politica_password($password);
+        if ($errorPolicy !== null) {
+            responder(['ok' => false, 'error' => $errorPolicy], 400);
+        }
+        $st = db()->prepare('SELECT id, nombre FROM tecnicos WHERE id = ? AND activo = 1 LIMIT 1');
+        $st->execute([$tecnicoId]);
+        $tec = $st->fetch();
+        if (!$tec) { responder(['ok' => false, 'error' => 'Técnico no encontrado'], 404); }
+        $st2 = db()->prepare('SELECT id FROM usuarios_admin WHERE usuario = ? LIMIT 1');
+        $st2->execute([$usuario]);
+        if ($st2->fetch()) { responder(['ok' => false, 'error' => 'Ese usuario ya existe'], 409); }
+        $hash = password_hash($password, PASSWORD_BCRYPT);
+        $st3 = db()->prepare("SELECT id FROM usuarios_admin WHERE tecnico_id = ? AND rol = 'tecnico' LIMIT 1");
+        $st3->execute([$tecnicoId]);
+        $existente = $st3->fetch();
+        if ($existente) {
+            db()->prepare('UPDATE usuarios_admin SET usuario = ?, password_hash = ? WHERE id = ?')
+                 ->execute([$usuario, $hash, (int)$existente['id']]);
+        } else {
+            db()->prepare("INSERT INTO usuarios_admin (usuario, password_hash, nombre, rol, tecnico_id) VALUES (?, ?, ?, 'tecnico', ?)")
+                 ->execute([$usuario, $hash, $tec['nombre'], $tecnicoId]);
+        }
+        responder(['ok' => true]);
+    }
+
+    case 'quitar_acceso': {
+        exigir_rol_admin();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            responder(['ok' => false, 'error' => 'Método no permitido'], 405);
+        }
+        $tecnicoId = (int)(leer_cuerpo()['tecnico_id'] ?? 0);
+        db()->prepare("DELETE FROM usuarios_admin WHERE tecnico_id = ? AND rol = 'tecnico'")->execute([$tecnicoId]);
         responder(['ok' => true]);
     }
 

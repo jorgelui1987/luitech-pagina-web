@@ -164,6 +164,15 @@ switch ($action) {
     /* ------------------------------------------------------------- LIST */
     case 'list': {
         exigir_admin();
+        if (rol_actual() === 'tecnico') {
+            $stmt = db()->prepare('SELECT id, codigo, cliente, cliente_id, equipo, tipo, falla, estado, avance, tecnico, fecha_ingreso,
+                    pin_patron, accesorios, obs_recepcion, firma_ingreso,
+                    precio_repuestos, mano_obra, total, abono, estado_pago, metodo_pago, garantia_dias,
+                    fecha_entrega, entregado_a, firma_entrega, tecnico_id, costo_repuesto
+             FROM ordenes WHERE tecnico_id = ? ORDER BY id DESC');
+            $stmt->execute([$_SESSION['admin_tecnico_id'] ?? 0]);
+            responder(['ok' => true, 'ordenes' => $stmt->fetchAll()]);
+        }
         $stmt = db()->query(
             'SELECT id, codigo, cliente, cliente_id, equipo, tipo, falla, estado, avance, tecnico, fecha_ingreso,
                     pin_patron, accesorios, obs_recepcion, firma_ingreso,
@@ -176,7 +185,7 @@ switch ($action) {
 
     /* ----------------------------------------------------------- CREATE */
     case 'create': {
-        exigir_admin();
+        exigir_admin(); exigir_rol_admin();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
@@ -291,7 +300,7 @@ switch ($action) {
 
     /* ----------------------------------------------------------- UPDATE */
     case 'update': {
-        exigir_admin();
+        exigir_admin(); exigir_rol_admin();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
@@ -524,7 +533,7 @@ switch ($action) {
         // Registra el Egreso de la compra de la pieza en la caja abierta.
         // Idempotente: un solo egreso de compra por orden (se detecta por la
         // marca [EGRESO-REPUESTO codigo] en la bitácora).
-        exigir_admin();
+        exigir_admin(); exigir_rol_admin();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
@@ -564,7 +573,7 @@ switch ($action) {
 
     /* ----------------------------------------------------------- DELETE */
     case 'delete': {
-        exigir_admin();
+        exigir_admin(); exigir_rol_admin();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
@@ -613,7 +622,7 @@ switch ($action) {
 
     /* --------------------------------------------------------- FOTOS GET */
     case 'fotos': {
-        exigir_admin();
+        exigir_admin(); exigir_rol_admin();
         $codigo = strtoupper(trim($_GET['codigo'] ?? ''));
         if (!preg_match('/^LUH-\d{3,8}$/', $codigo)) {
             responder(['ok' => false, 'error' => 'Código inválido'], 400);
@@ -627,7 +636,7 @@ switch ($action) {
 
     /* ------------------------------------------------- FOTOS SUBIR (POST) */
     case 'subir_foto': {
-        exigir_admin();
+        exigir_admin(); exigir_rol_admin();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
@@ -693,7 +702,7 @@ switch ($action) {
 
     /* ------------------------------------------------- FOTOS BORRAR (POST) */
     case 'borrar_foto': {
-        exigir_admin();
+        exigir_admin(); exigir_rol_admin();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
@@ -720,7 +729,7 @@ switch ($action) {
 
     /* ------------------------------------------------ BITÁCORA NOTA (POST) */
     case 'nota': {
-        exigir_admin();
+        exigir_admin(); exigir_rol_admin();
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
@@ -746,7 +755,7 @@ switch ($action) {
 
     /* ------------------------------------------------ BITÁCORA GET (lista) */
     case 'bitacora': {
-        exigir_admin();
+        exigir_admin(); exigir_rol_admin();
         $codigo = strtoupper(trim($_GET['codigo'] ?? ''));
         if (!preg_match('/^LUH-\d{3,8}$/', $codigo)) {
             responder(['ok' => false, 'error' => 'Código inválido'], 400);

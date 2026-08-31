@@ -12,7 +12,7 @@ declare(strict_types=1);
 require __DIR__ . '/config.php';
 
 iniciar_respuesta_json();
-exigir_admin();
+exigir_admin(); exigir_rol_admin();
 
 $action = $_GET['action'] ?? '';
 $dirBackups = realpath(__DIR__ . '/../backups') ?: (__DIR__ . '/../backups');

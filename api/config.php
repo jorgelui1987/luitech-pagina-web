@@ -88,6 +88,86 @@ function limitar_ip(string $accion, int $max, int $ventana): bool
     return true;
 }
 
+/** Política de contraseñas: mínimo 10 + mayúscula + minúscula + número + especial.
+ *  Devuelve null si es válida, o el motivo del rechazo. */
+function validar_politica_password(string $p): ?string
+{
+    if (strlen($p) < 10) { return 'Mínimo 10 caracteres'; }
+    if (preg_match('/\s/', $p)) { return 'No puede contener espacios'; }
+    if (!preg_match('/[A-Z]/', $p)) { return 'Debe incluir al menos una MAYÚSCULA'; }
+    if (!preg_match('/[a-z]/', $p)) { return 'Debe incluir al menos una minúscula'; }
+    if (!preg_match('/[0-9]/', $p)) { return 'Debe incluir al menos un número'; }
+    if (!preg_match('/[^A-Za-z0-9]/', $p)) { return 'Debe incluir al menos un carácter especial (!@#$%&*.-_)'; }
+    return null;
+}
+
+/* ---------- TOTP (RFC 6238) para doble factor, sin librerías externas ---------- */
+
+function base32_codificar(string $bytes): string
+{
+    $alfabeto = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    $bits = '';
+    foreach (str_split($bytes) as $b) { $bits .= str_pad(decbin(ord($b)), 8, '0', STR_PAD_LEFT); }
+    $salida = '';
+    foreach (str_split($bits, 5) as $trozo) {
+        if (strlen($trozo) < 5) { $trozo = str_pad($trozo, 5, '0'); }
+        $salida .= $alfabeto[bindec($trozo)];
+    }
+    return $salida;
+}
+
+function base32_decodificar(string $b32): string
+{
+    $alfabeto = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    $b32 = strtoupper((string)preg_replace('/[^A-Za-z2-7]/', '', $b32));
+    $bits = '';
+    foreach (str_split($b32) as $c) {
+        $pos = strpos($alfabeto, $c);
+        if ($pos !== false) { $bits .= str_pad(decbin($pos), 5, '0', STR_PAD_LEFT); }
+    }
+    $salida = '';
+    foreach (str_split($bits, 8) as $trozo) {
+        if (strlen($trozo) === 8) { $salida .= chr(bindec($trozo)); }
+    }
+    return $salida;
+}
+
+/** Verifica un código TOTP de 6 dígitos con ventana de ±30 segundos. */
+function totp_verificar(string $secretoB32, string $codigo): bool
+{
+    $codigo = (string)preg_replace('/\D/', '', $codigo);
+    if (strlen($codigo) !== 6 || strlen($secretoB32) < 16) { return false; }
+    $secreto = base32_decodificar($secretoB32);
+    $contador = intdiv(time(), 30);
+    for ($i = -1; $i <= 1; $i++) {
+        $hash = hash_hmac('sha1', pack('N*', 0, $contador + $i), $secreto, true);
+        $offset = ord(substr($hash, -1)) & 0x0F;
+        $valor = (unpack('N', substr($hash, $offset, 4))[1] & 0x7FFFFFFF) % 1000000;
+        if (hash_equals(str_pad((string)$valor, 6, '0', STR_PAD_LEFT), $codigo)) { return true; }
+    }
+    return false;
+}
+
+/** Genera un secreto TOTP aleatorio (160 bits en base32). */
+function totp_generar_secreto(): string
+{
+    return base32_codificar(random_bytes(20));
+}
+
+/** Rol de la sesión actual: 'admin' o 'tecnico'. */
+function rol_actual(): string
+{
+    return ($_SESSION['admin_rol'] ?? 'admin') === 'tecnico' ? 'tecnico' : 'admin';
+}
+
+/** Exige cuenta de ADMINISTRADOR (403 para técnicos). */
+function exigir_rol_admin(): void
+{
+    if (rol_actual() !== 'admin') {
+        responder(['ok' => false, 'error' => 'Esta acción requiere cuenta de administrador'], 403);
+    }
+}
+
 function iniciar_sesion(): void
 {
     if (session_status() !== PHP_SESSION_ACTIVE) {

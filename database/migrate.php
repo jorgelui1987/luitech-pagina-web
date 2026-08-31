@@ -47,9 +47,21 @@ $pdo->exec("
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 ");
 
-// Admin inicial (usuario admin Â· clave luitech2026 — cambiar tras primer login)
+// Admin inicial (usuario admin · clave luitech2026 — cambiar tras primer login)
 $pdo->prepare('INSERT IGNORE INTO usuarios_admin (usuario, password_hash, nombre) VALUES (?, ?, ?)')
     ->execute(['admin', '$2y$10$dexr0Src7HyB4oAmWadqw.SH3DfipUA9iVmFXtYgkUY/TcHk5U8Qm', 'Administrador Luitech']);
+
+// --- Seguridad de cuentas: 2FA (TOTP) + roles (idempotente) --------------
+foreach ([
+    ['totp_secret',  "ALTER TABLE usuarios_admin ADD COLUMN totp_secret VARCHAR(64) NULL"],
+    ['totp_enabled', "ALTER TABLE usuarios_admin ADD COLUMN totp_enabled TINYINT(1) NOT NULL DEFAULT 0"],
+    ['totp_backup',  "ALTER TABLE usuarios_admin ADD COLUMN totp_backup TEXT NULL"],
+    ['rol',          "ALTER TABLE usuarios_admin ADD COLUMN rol VARCHAR(20) NOT NULL DEFAULT 'admin'"],
+    ['tecnico_id',   "ALTER TABLE usuarios_admin ADD COLUMN tecnico_id INT UNSIGNED NULL"],
+] as [$colSeg, $sqlSeg]) {
+    try { $pdo->query("SELECT `$colSeg` FROM usuarios_admin LIMIT 1"); }
+    catch (Throwable $e) { $pdo->exec($sqlSeg); echo "[migrate] usuarios_admin.$colSeg agregada\n"; }
+}
 
 // --- Tabla de órdenes ---------------------------------------------------
 $pdo->exec("

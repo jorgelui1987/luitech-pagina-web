@@ -485,5 +485,68 @@
     });
   });
 
+  /* ============ SEGURIDAD DE CUENTA: medidor de contraseña + 2FA ============ */
+  document.addEventListener('DOMContentLoaded', function () {
+    var inputNueva = $('clave-nueva');
+    if (inputNueva) inputNueva.addEventListener('input', function () {
+      var v = inputNueva.value; var faltan = [];
+      if (v.length < 10) faltan.push('10 caracteres');
+      if (!/[A-Z]/.test(v)) faltan.push('mayúscula');
+      if (!/[a-z]/.test(v)) faltan.push('minúscula');
+      if (!/[0-9]/.test(v)) faltan.push('número');
+      if (!/[^A-Za-z0-9]/.test(v)) faltan.push('carácter especial');
+      var meter = $('clave-meter');
+      if (!meter) return;
+      meter.textContent = v === '' ? '' : (faltan.length ? 'Falta: ' + faltan.join(', ') : '✓ Contraseña segura');
+      meter.style.color = faltan.length ? '#fbbf24' : '#34d399';
+    });
+
+    function estado2fa() {
+      api('api/auth.php?action=me').then(function (res) {
+        if (!res.logueado) return;
+        var activo = !!res.totp_enabled;
+        var zona = $('totp-zona'), activa = $('totp-activa');
+        if (zona) zona.classList.toggle('hidden', activo);
+        if (activa) activa.classList.toggle('hidden', !activo);
+        var act = $('totp-activacion'); if (act) act.classList.add('hidden');
+        var rsp = $('totp-respaldos'); if (rsp) rsp.classList.add('hidden');
+      }).catch(function () {});
+    }
+    estado2fa();
+
+    var btnAct = $('btn-totp-activar');
+    if (btnAct) btnAct.addEventListener('click', function () {
+      api('api/auth.php?action=totp_inicio', { method: 'POST' }).then(function (res) {
+        if (!res.ok) { window.mostrarToast(res.error || 'No se pudo iniciar la activación', 'error'); return; }
+        $('totp-qr').src = 'https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=' + encodeURIComponent(res.uri);
+        $('totp-activacion').classList.remove('hidden');
+        $('totp-codigo').focus();
+      }).catch(function () {});
+    });
+    var btnConf = $('btn-totp-confirmar');
+    if (btnConf) btnConf.addEventListener('click', function () {
+      api('api/auth.php?action=totp_confirmar', { method: 'POST', body: { codigo: $('totp-codigo').value } }).then(function (res) {
+        if (!res.ok) { window.mostrarToast(res.error || 'Código incorrecto', 'error'); return; }
+        $('totp-codigos-lista').textContent = (res.codigos_respaldo || []).join('   ·   ');
+        $('totp-respaldos').classList.remove('hidden');
+        $('totp-activacion').classList.add('hidden');
+        window.mostrarToast('2FA activado — guarda tus códigos de respaldo', 'success');
+        estado2fa();
+      }).catch(function () {});
+    });
+    var btnCan = $('btn-totp-cancelar');
+    if (btnCan) btnCan.addEventListener('click', function () { $('totp-activacion').classList.add('hidden'); estado2fa(); });
+    var btnOff = $('btn-totp-desactivar');
+    if (btnOff) btnOff.addEventListener('click', function () {
+      if (!confirm('¿Desactivar el doble factor de tu cuenta?')) return;
+      api('api/auth.php?action=totp_desactivar', { method: 'POST', body: { password: $('totp-pass-off').value } }).then(function (res) {
+        if (!res.ok) { window.mostrarToast(res.error || 'No se pudo desactivar', 'error'); return; }
+        window.mostrarToast('2FA desactivado', 'success');
+        $('totp-pass-off').value = '';
+        estado2fa();
+      }).catch(function () {});
+    });
+  });
+
   /* __CONT__ */
 })();

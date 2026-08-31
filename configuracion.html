@@ -158,8 +158,36 @@
                     <input type="password" id="clave-actual" required placeholder="Contraseña ACTUAL" autocomplete="current-password" class="inp">
                     <input type="password" id="clave-nueva" required minlength="8" maxlength="72" placeholder="Nueva (mínimo 8 caracteres)" autocomplete="new-password" class="inp">
                     <input type="password" id="clave-repetida" required minlength="8" maxlength="72" placeholder="Repite la nueva" autocomplete="new-password" class="inp">
+                    <div id="clave-meter" class="nota" style="grid-column:1/-1"></div>
                     <button type="submit" id="btn-clave-guardar" class="btn">Guardar nueva contraseña</button>
                 </form>
+
+                <div class="border-t border-slate-800 mt-3 pt-3">
+                    <h3 style="color:#a5b4fc"><i class="fa-solid fa-shield-halved mr-1"></i>Doble factor (2FA) — Google Authenticator</h3>
+                    <p class="nota mb-2">Segundo código de 6 dígitos que cambia cada 30 segundos en tu celu. Se activa y desactiva cuando quieras.</p>
+                    <p id="totp-estado" class="nota mb-2"></p>
+                    <div id="totp-zona">
+                        <button type="button" id="btn-totp-activar" class="btn2"><i class="fa-solid fa-qrcode mr-1"></i>Activar 2FA</button>
+                    </div>
+                    <div id="totp-activacion" class="hidden mt-2">
+                        <img id="totp-qr" alt="QR del autenticador" class="bg-white p-1 rounded" width="140" height="140">
+                        <p class="nota mt-1">Escanea con Google Authenticator / Authy e ingresa el código ACTUAL de la app.</p>
+                        <input type="text" id="totp-codigo" class="inp mt-1" inputmode="numeric" maxlength="6" placeholder="000000">
+                        <div class="mt-1 flex gap-2">
+                            <button type="button" id="btn-totp-confirmar" class="btn">Confirmar y activar</button>
+                            <button type="button" id="btn-totp-cancelar" class="btn2">Cancelar</button>
+                        </div>
+                    </div>
+                    <div id="totp-activa" class="hidden mt-1">
+                        <p class="nota" style="color:#34d399; font-weight:700">✓ 2FA ACTIVO — tu cuenta pide código al iniciar sesión.</p>
+                        <input type="password" id="totp-pass-off" class="inp mt-1" placeholder="Tu contraseña para desactivar" autocomplete="current-password">
+                        <button type="button" id="btn-totp-desactivar" class="btn2 mt-1">Desactivar 2FA</button>
+                    </div>
+                    <div id="totp-respaldos" class="hidden mt-2">
+                        <p class="nota" style="color:#fbbf24; font-weight:700">Códigos de respaldo (un solo uso — guárdalos AHORA):</p>
+                        <p id="totp-codigos-lista" class="font-mono text-xs text-white"></p>
+                    </div>
+                </div>
             </section>
 
             <!-- ============ ZONA DE MANTENIMIENTO: RESET ============ -->
@@ -207,7 +235,7 @@
         </div>
     </main>
 
-    <script src="assets/js/common.js" defer></script>
-    <script src="assets/js/configuracion.js" defer></script>
+    <script src="assets/js/common.js?v=mp12" defer></script>
+    <script src="assets/js/configuracion.js?v=mp12" defer></script>
 </body>
 </html>
