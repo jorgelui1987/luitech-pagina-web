@@ -69,9 +69,11 @@
                 background:none; border:0; color:#94a3b8; font-size:10px; font-weight:700; padding:6px 2px; cursor:pointer; text-decoration:none; }
             #barra-movil i{ font-size:17px; }
             #barra-movil .activo{ color:#22d3ee; }
-            #mas-panel{ position:fixed; bottom:62px; left:10px; right:10px; z-index:9991; display:grid;
+            #mas-panel{ position:fixed; bottom:62px; left:10px; right:10px; z-index:9991;
                 grid-template-columns:1fr 1fr; gap:8px; background:#0f172a; border:1px solid #334155;
                 border-radius:1rem; padding:12px; box-shadow:0 -10px 30px rgba(0,0,0,.55); }
+            #mas-panel.hidden{ display:none !important; }
+            #mas-panel:not(.hidden){ display:grid; }
             #mas-panel a, #mas-panel button{ display:flex; align-items:center; gap:8px; color:#e2e8f0; background:#1e293b;
                 border:1px solid #334155; border-radius:0.6rem; padding:10px; font-size:12px; font-weight:700; text-decoration:none; cursor:pointer; }
             body.rol-tecnico .bm-admin{ display:none !important; }
