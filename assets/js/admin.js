@@ -1095,7 +1095,7 @@
     var saldoN = saldoDe(o);
     var extra = saldoN > 0 ? ' Saldo pendiente: ' + monto(saldoN) + '.' : '';
     var msg = 'Hola ' + o.cliente + ', ' + frase + '. Orden ' + o.codigo + '.' + extra + ' — Luitech';
-    window.open('https://wa.me/' + soloDigitos + '?text=' + encodeURIComponent(msg), '_blank');
+    window.abrirExterno('https://wa.me/' + soloDigitos + '?text=' + encodeURIComponent(msg));
   }
 
   /** Muestra los equipos que el cliente trajo antes (click para usar). */
@@ -1503,33 +1503,6 @@
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
-  /** Imprime la ventana emergente esperando a que carguen sus imágenes
-   *  (sin esto, el logo salía en blanco: print() corría antes de la carga). */
-  function imprimirVentana(ventana) {
-    ventana.focus();
-    var imagenes = ventana.document.images;
-    var pendientes = imagenes.length;
-    var impresa = false;
-    function ahora() {
-      if (impresa) return;
-      impresa = true;
-      // Auto-cierre: la ventana se cierra sola al cerrarse el diálogo de
-      // impresión (se imprima o se cancele) para que no se acumulen ventanas.
-      try {
-        ventana.addEventListener('afterprint', function () {
-          setTimeout(function () { try { ventana.close(); } catch (e) {} }, 500);
-        });
-      } catch (e) {}
-      ventana.print();
-    }
-    if (pendientes === 0) { ahora(); return; }
-    Array.prototype.forEach.call(imagenes, function (im) {
-      im.addEventListener('load', function () { pendientes--; if (pendientes <= 0) ahora(); });
-      im.addEventListener('error', function () { pendientes--; if (pendientes <= 0) ahora(); });
-    });
-    setTimeout(ahora, 2500); // respaldo si una imagen nunca responde
-  }
-
   /** Genera el link/QR de pago del saldo en Mercado Pago y monitorea hasta
    *  que se confirme; al confirmarse imprime el recibo automáticamente. */
   function cobrarConMP() {
@@ -1716,15 +1689,7 @@
       '<p class="nota">' + escapar(empresaCfg && empresaCfg.terminos_texto ? empresaCfg.terminos_texto : '¡Gracias por confiar en Luitech! Conserve este recibo para hacer efectiva la garantía.') + '</p>' +
       '</body></html>';
 
-    var ventana = window.open('', '_blank', 'width=520,height=720');
-    if (!ventana) {
-      window.mostrarToast('Permite las ventanas emergentes para imprimir el recibo', 'error');
-      return;
-    }
-    ventana.document.open();
-    ventana.document.write(html);
-    ventana.document.close();
-    imprimirVentana(ventana);
+    window.imprimirDocumento(html);
   }
 
   /* ------------------------------------------------------------ ARRANQUE */

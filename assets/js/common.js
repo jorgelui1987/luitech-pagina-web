@@ -111,11 +111,62 @@
     }
   }
 
+  /**
+   * Impresión SIN ventanas: el documento se escribe en un iframe oculto
+   * reutilizable y se imprime desde ahí. Nunca abre pestañas ni ventanas
+   * nuevas: solo aparece el diálogo de impresión del navegador.
+   * Espera a que carguen las imágenes (logo/firma) antes de imprimir.
+   */
+  function imprimirDocumento(html) {
+    var marco = document.getElementById('luitech-print-frame');
+    if (!marco) {
+      marco = document.createElement('iframe');
+      marco.id = 'luitech-print-frame';
+      marco.style.position = 'fixed';
+      marco.style.right = '0';
+      marco.style.bottom = '0';
+      marco.style.width = '0';
+      marco.style.height = '0';
+      marco.style.border = '0';
+      document.body.appendChild(marco);
+    }
+    var doc = marco.contentWindow.document;
+    doc.open();
+    doc.write(html);
+    doc.close();
+    var imagenes = doc.images;
+    var pendientes = imagenes.length;
+    var lanzada = false;
+    function imprimir() {
+      if (lanzada) return;
+      lanzada = true;
+      try { marco.contentWindow.focus(); } catch (e) {}
+      marco.contentWindow.print();
+    }
+    if (pendientes === 0) { setTimeout(imprimir, 50); return; }
+    Array.prototype.forEach.call(imagenes, function (im) {
+      im.addEventListener('load', function () { pendientes--; if (pendientes <= 0) imprimir(); });
+      im.addEventListener('error', function () { pendientes--; if (pendientes <= 0) imprimir(); });
+    });
+    setTimeout(imprimir, 2500); // respaldo si una imagen nunca responde
+  }
+
+  /**
+   * Pestaña externa REUTILIZABLE: todas las aperturas con el mismo nombre
+   * de destino reutilizan la misma pestaña (WhatsApp, Mercado Pago) en
+   * lugar de acumular una nueva por cada clic.
+   */
+  function abrirExterno(url) {
+    var w = window.open(url, 'luitech-ext');
+    if (w && w.focus) { w.focus(); }
+    return w;
+  }
+
   // API pública (los onclick del HTML usan estas globales)
   window.LuitechAPI   = api;
   window.mostrarToast = mostrarToast;
-  window.toggleMobileMenu = toggleMobileMenu;
-  window.emitirAlertaTurno = emitirAlertaTurno;
+  window.imprimirDocumento = imprimirDocumento;
+  window.abrirExterno = abrirExterno;
   window.LUITECH_WA = WHATSAPP_LUITECH;
 
   document.addEventListener('DOMContentLoaded', ponerAnio);

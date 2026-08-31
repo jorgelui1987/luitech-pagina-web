@@ -19,32 +19,6 @@
       });
   }
 
-  /** Imprime la ventana esperando a que carguen sus imágenes (logo). */
-  function imprimirVentana(w) {
-    w.focus();
-    var imagenes = w.document.images;
-    var pendientes = imagenes.length;
-    var impresa = false;
-    function ahora() {
-      if (impresa) return;
-      impresa = true;
-      // Auto-cierre: la ventana se cierra sola al cerrarse el diálogo de
-      // impresión (se imprima o se cancele) para que no se acumulen ventanas.
-      try {
-        w.addEventListener('afterprint', function () {
-          setTimeout(function () { try { w.close(); } catch (e) {} }, 500);
-        });
-      } catch (e) {}
-      w.print();
-    }
-    if (!pendientes) { ahora(); return; }
-    Array.prototype.forEach.call(imagenes, function (im) {
-      im.addEventListener('load', function () { pendientes--; if (pendientes <= 0) ahora(); });
-      im.addEventListener('error', function () { pendientes--; if (pendientes <= 0) ahora(); });
-    });
-    setTimeout(ahora, 2500);
-  }
-
   // Diagnóstico visible de la carga de datos del formulario de compra
   var estadoPartes = { prov: '', prod: '' };
   function refrescarEstadoCompras() {
@@ -402,9 +376,7 @@
     var validez = new Date(Date.now() + 7 * 86400000).toLocaleDateString('es-CL');
     var hoy = new Date().toLocaleDateString('es-CL');
     var cfg = empresaCfg || {};
-    var w = window.open('', '_blank', 'width=380,height=640');
-    if (!w) { window.mostrarToast('Permite las ventanas emergentes para imprimir', 'error'); return; }
-    w.document.write(
+    var html = (
       '<html><head><title>Cotizacion ' + esc(c.modelo) + '</title><style>' +
       '@page{margin:0}body{font-family:monospace;font-size:12px;padding:14px;color:#000}' +
       'h2{text-align:center;margin:4px 0;font-size:15px}.c{text-align:center}.d{border-top:1px dashed #000;margin:8px 0;border-bottom:1px dashed #000;padding:8px 0}' +
@@ -426,8 +398,7 @@
       '<p class="c" style="margin-top:6px">¡Gracias por preferirnos!</p>' +
       '</body></html>'
     );
-    w.document.close();
-    imprimirVentana(w);
+    window.imprimirDocumento(html);
   }
 
   function cargarCatalogo() {

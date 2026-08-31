@@ -24,33 +24,6 @@
       });
   }
 
-  /** Imprime la ventana emergente esperando a que carguen sus imágenes
-   *  (sin esto, el logo salía en blanco: print() corría antes de la carga). */
-  function imprimirVentana(w) {
-    w.focus();
-    var imagenes = w.document.images;
-    var pendientes = imagenes.length;
-    var impresa = false;
-    function ahora() {
-      if (impresa) return;
-      impresa = true;
-      // Auto-cierre: la ventana se cierra sola al cerrarse el diálogo de
-      // impresión (se imprima o se cancele) para que no se acumulen ventanas.
-      try {
-        w.addEventListener('afterprint', function () {
-          setTimeout(function () { try { w.close(); } catch (e) {} }, 500);
-        });
-      } catch (e) {}
-      w.print();
-    }
-    if (pendientes === 0) { ahora(); return; }
-    Array.prototype.forEach.call(imagenes, function (im) {
-      im.addEventListener('load', function () { pendientes--; if (pendientes <= 0) ahora(); });
-      im.addEventListener('error', function () { pendientes--; if (pendientes <= 0) ahora(); });
-    });
-    setTimeout(ahora, 2500); // respaldo si una imagen nunca responde
-  }
-
   function mostrarVista(logueado) {
     $('view-nologin').classList.toggle('hidden', logueado);
     $('view-pos').classList.toggle('hidden', !logueado);
@@ -369,9 +342,7 @@
       var fechaHora = new Date(String(v.creado_en).replace(' ', 'T'));
       var cuando = isNaN(fechaHora.getTime()) ? v.creado_en : fechaHora.toLocaleString('es-CL');
 
-      var w = window.open('', '_blank', 'width=380,height=640');
-      if (!w) { window.mostrarToast('Permite las ventanas emergentes para imprimir', 'error'); return; }
-      w.document.write(
+      var html = (
         '<html><head><title>' + numero + '</title><style>' +
         '@page{margin:0}body{font-family:monospace;font-size:12px;padding:14px;color:#000}' +
         'h2{text-align:center;margin:4px 0;font-size:15px}.c{text-align:center}.d{border-top:1px dashed #000;margin:8px 0;border-bottom:1px dashed #000;padding:8px 0}' +
@@ -400,8 +371,7 @@
         '<div class="c" style="margin-top:10px">¡Gracias por tu compra!<br>Garantía por escrito en tu orden.</div>' +
         '</body></html>'
       );
-      w.document.close();
-      imprimirVentana(w);
+      window.imprimirDocumento(html);
     }).catch(function () {});
   }
 
