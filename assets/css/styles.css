@@ -3,3 +3,8 @@
 .bg-amber-400{background-color:#fbbf24}
 .hover\:bg-amber-300:hover{background-color:#fcd34d}
 .shadow-amber-500\/20{box-shadow:0 10px 15px -3px rgba(251,191,36,.2),0 4px 6px -4px rgba(251,191,36,.2)}
+
+/* ===== Responsive faltantes auto-generados (2026-08-31) ===== */
+img{max-width:100%}
+@media(min-width:640px){.sm\:grid-cols-6{grid-template-columns:repeat(6,minmax(0,1fr))}}
+@media(min-width:1024px){.lg\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}}

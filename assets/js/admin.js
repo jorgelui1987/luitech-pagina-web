@@ -626,11 +626,73 @@
     });
   }
 
-  /** Pinta las filas de la tabla aplicando los filtros activos. */
+  /** Tarjetas de órdenes para pantalla chica (el PC sigue usando la tabla). */
+  function renderTarjetasOrdenes(lista) {
+    var cont = $('ordenes-cards');
+    if (!cont) return;
+    cont.replaceChildren();
+    if (!lista.length) {
+      var v = document.createElement('div');
+      v.className = 'text-center text-slate-500 italic text-xs py-4';
+      v.textContent = 'Sin órdenes para mostrar con los filtros actuales.';
+      cont.appendChild(v);
+      return;
+    }
+    lista.forEach(function (o) {
+      var card = document.createElement('div');
+      card.className = 'bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-1';
+      var cab = document.createElement('div');
+      cab.className = 'flex items-center justify-between gap-2';
+      var cod = document.createElement('span');
+      cod.className = 'font-bold text-cyan-400 font-mono text-sm';
+      cod.textContent = o.codigo;
+      cab.appendChild(cod);
+      cab.appendChild(selectEstado(o.codigo, o.estado));
+      card.appendChild(cab);
+      var l1 = document.createElement('div');
+      l1.className = 'text-xs text-slate-200';
+      l1.textContent = (o.cliente || '—') + ' · ' + (o.equipo || '');
+      card.appendChild(l1);
+      if (o.falla) {
+        var l2 = document.createElement('div');
+        l2.className = 'text-[11px] text-slate-500';
+        l2.textContent = o.falla;
+        card.appendChild(l2);
+      }
+      var l3 = document.createElement('div');
+      l3.className = 'flex items-center justify-between text-xs pt-1';
+      var tot = document.createElement('span');
+      tot.className = 'font-bold text-slate-100';
+      tot.textContent = (parseInt(o.total, 10) || 0) > 0 ? monto(o.total) : 'Sin presupuesto';
+      l3.appendChild(tot);
+      l3.appendChild(chipPago(o.estado_pago));
+      card.appendChild(l3);
+      var saldoN = saldoDe(o);
+      if (saldoN > 0) {
+        var s = document.createElement('div');
+        s.className = 'text-[10px] text-red-400';
+        s.textContent = 'Saldo: ' + monto(saldoN);
+        card.appendChild(s);
+      }
+      var l4 = document.createElement('div');
+      l4.className = 'flex items-center justify-between text-[10px] text-slate-500';
+      l4.textContent = 'Técnico: ' + (o.tecnico || '—') + ' · ' + (o.fecha_ingreso || '');
+      card.appendChild(l4);
+      var acc = document.createElement('div');
+      acc.className = 'flex items-center justify-center gap-2 pt-1 border-t border-slate-800/60';
+      acc.appendChild(botonVer(o.codigo));
+      acc.appendChild(botonEliminar(o.codigo));
+      card.appendChild(acc);
+      cont.appendChild(card);
+    });
+  }
+
+  /** Pinta las filas de la tabla (PC) aplicando los filtros activos. */
   function renderFilasOrdenes() {
+    var lista = ordenesFiltradas();
+    renderTarjetasOrdenes(lista);
     var tbody = $('admin-table-body');
     tbody.replaceChildren();
-    var lista = ordenesFiltradas();
 
     if (!(ordenesCache || []).length) {
       var vacio = celda('Aún no hay órdenes registradas. Crea la primera con el formulario superior.', 'p-6 text-center text-slate-500 italic');

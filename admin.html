@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow">
     <meta name="theme-color" content="#020617">
     <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
-    <link rel="stylesheet" href="assets/css/styles.css?v=mp2">
+    <link rel="stylesheet" href="assets/css/styles.css?v=mp14">
     <style>
         /* Acta de recepción: firma táctil, chips de accesorios y miniaturas */
         .lienzo-firma{ touch-action:none; cursor:crosshair; background:#ffffff; display:block; width:100%; height:140px; border-radius:0.5rem; }
@@ -56,6 +56,12 @@
         body.rol-tecnico #mo-btn-nota { display:none !important; }
         #banner-tecnico{ display:none; }
         body.rol-tecnico #banner-tecnico{ display:block; }
+        /* Órdenes como tarjetas en pantalla chica (el PC sigue con la tabla) */
+        #ordenes-cards{ display:none; }
+        @media(max-width:767px){
+            #tabla-ordenes-wrap{ display:none !important; }
+            #ordenes-cards{ display:grid; gap:10px; }
+        }
         /* Bloques del modal de detalle (espaciado sin space-y del build) */
         .seccion-modal{ border-top:1px solid #1e293b; padding-top:12px; display:flex; flex-direction:column; gap:8px; }
         .mo-col{ display:flex; flex-direction:column; gap:8px; }
@@ -362,7 +368,7 @@
 
             <!-- Tabla de órdenes -->
             <section class="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
-                <div class="overflow-x-auto">
+                <div id="tabla-ordenes-wrap" class="overflow-x-auto">
                     <table class="w-full text-left text-sm min-w-[1000px]">
                         <thead class="bg-slate-900/80 border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-400">
                             <tr>
@@ -381,6 +387,7 @@
                         <tbody id="admin-table-body" class="divide-y divide-slate-800/50"></tbody>
                     </table>
                 </div>
+                <div id="ordenes-cards" class="p-3"></div>
             </section>
 
         </main>
