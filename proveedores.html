@@ -6,7 +6,7 @@
     <title>Proveedores | Luitech</title>
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
-    <link rel="stylesheet" href="assets/css/styles.css?v=mp29">
+    <link rel="stylesheet" href="assets/css/styles.css?v=mp30">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
@@ -143,11 +143,12 @@
                     <input type="file" id="imp-archivo" accept=".pdf,.txt,.csv" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-slate-300 text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-cyan-600 file:text-white file:font-bold col-span-1">
                     <span class="text-slate-500 md:col-span-2">…o selecciona directamente el <b>PDF</b> que te mandó el proveedor: el sistema lee el listado solo.</span>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-2.5 text-xs items-center mt-2">
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-2.5 text-xs items-center mt-2">
                     <input type="text" id="imp-url" autocomplete="off" placeholder="URL de la planilla Google Sheets del proveedor (opcional)" maxlength="500"
                            class="md:col-span-2 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500">
                     <button type="button" id="btn-imp-url" class="bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded-lg py-2"><i class="fa-solid fa-link mr-1"></i>Guardar URL</button>
                     <button type="button" id="btn-imp-sync" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg py-2"><i class="fa-solid fa-rotate mr-1"></i>Sincronizar ahora</button>
+                    <button type="button" id="btn-imp-vaciar" class="bg-red-950 hover:bg-red-900 border border-red-900 text-red-300 font-semibold rounded-lg py-2" title="Borra TODOS los items del catálogo de este proveedor (para volver a importar limpio)"><i class="fa-solid fa-broom mr-1"></i>Vaciar catálogo</button>
                 </div>
                 <p class="nota mt-1"><b>Sincronizar:</b> descarga la planilla de Google Sheets (compartida como «Cualquiera con el link»), entiende las secciones y las variantes BLANCO/NEGRO entre paréntesis, y actualiza el catálogo de ese proveedor. Se guarda la URL para las próximas veces.</p>
                 <div id="imp-preview" class="hidden mt-2">
@@ -168,7 +169,7 @@
         </section>
     </main>
 
-    <script src="assets/js/common.js?v=mp29" defer></script>
-    <script src="assets/js/proveedores.js?v=mp29" defer></script>
+    <script src="assets/js/common.js?v=mp30" defer></script>
+    <script src="assets/js/proveedores.js?v=mp30" defer></script>
 </body>
 </html>

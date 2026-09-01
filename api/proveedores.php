@@ -276,7 +276,7 @@ switch ($action) {
         if (count($conds) > 0) {
             $sql .= ' WHERE ' . implode(' AND ', $conds);
         }
-        $sql .= ' ORDER BY c.disponible DESC, c.precio ASC, c.modelo ASC LIMIT 5000';
+        $sql .= ' ORDER BY c.disponible DESC, c.precio ASC, c.modelo ASC LIMIT 8000';
         $stmt = db()->prepare($sql);
         $stmt->execute($params);
         responder(['ok' => true, 'catalogo' => $stmt->fetchAll()]);
@@ -421,6 +421,22 @@ switch ($action) {
         db()->prepare('UPDATE catalogo_proveedores SET precio_venta = ?, actualizado_en = NOW() WHERE id = ?')
             ->execute([$pv > 0 ? $pv : null, $id]);
         responder(['ok' => true]);
+    }
+
+    case 'catalogo_vaciar': {
+        // Borra TODOS los items del catálogo de un proveedor. Útil para
+        // empezar limpio (ej. tras importaciones de prueba) y volver a
+        // sincronizar con el parser correcto. No se puede deshacer.
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            responder(['ok' => false, 'error' => 'Método no permitido'], 405);
+        }
+        $proveedorId = (int)(leer_cuerpo()['proveedor_id'] ?? 0);
+        if ($proveedorId <= 0) {
+            responder(['ok' => false, 'error' => 'Proveedor obligatorio'], 400);
+        }
+        $st = db()->prepare('DELETE FROM catalogo_proveedores WHERE proveedor_id = ?');
+        $st->execute([$proveedorId]);
+        responder(['ok' => true, 'borrados' => $st->rowCount()]);
     }
 
     default:

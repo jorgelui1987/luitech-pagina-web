@@ -828,6 +828,19 @@
     input.focus();
   }
 
+  /** Borra TODO el catálogo del proveedor elegido (para reimportar limpio). */
+  function vaciarCatalogo() {
+    var p = proveedorSeleccionadoImport();
+    if (!p) { window.mostrarToast('Elige el proveedor primero', 'error'); return; }
+    if (!confirm('¿BORRAR TODOS los items del catálogo de "' + p.nombre + '"?\n\nSirve para empezar limpio y volver a sincronizar con el formato correcto. NO se puede deshacer.')) return;
+    api('api/proveedores.php?action=catalogo_vaciar', { method: 'POST', body: { proveedor_id: p.id } })
+      .then(function (res) {
+        if (!res.ok) { window.mostrarToast(res.error || 'No se pudo vaciar', 'error'); return; }
+        window.mostrarToast('Catálogo de ' + p.nombre + ' vaciado (' + (res.borrados || 0) + ' items). Ahora sincroniza o importa de nuevo.', 'success');
+        cargarCatalogo();
+      }).catch(function () { window.mostrarToast('Error de conexión con el servidor', 'error'); });
+  }
+
   /* ----------------------------------------------------------- ARRANQUE */
   document.addEventListener('DOMContentLoaded', function () {
     $('btn-prov-guardar').addEventListener('click', guardarProveedor);
@@ -844,6 +857,7 @@
     $('imp-buscar').addEventListener('input', pintarPreview);
     $('btn-imp-url').addEventListener('click', guardarUrlListado);
     $('btn-imp-sync').addEventListener('click', sincronizarPlanilla);
+    $('btn-imp-vaciar').addEventListener('click', vaciarCatalogo);
     var busquedaTimer = null;
     $('cat-buscar').addEventListener('input', function () {
       clearTimeout(busquedaTimer);
