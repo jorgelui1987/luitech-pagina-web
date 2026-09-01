@@ -6,6 +6,18 @@
 (function () {
   'use strict';
 
+  /* La cámara del escáner exige HTTPS. Este hosting entrega el SSL por proxy
+     y NO puede forzar el salto desde .htaccess (ver nota ahí), así que si
+     alguien entra por http:// se redirige al instante a https://. Localhost
+     queda excluido para no estorbar el desarrollo. Sin bucle posible: el
+     navegador conoce su protocolo real. */
+  try {
+    if (location.protocol === 'http:' &&
+        !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) {
+      location.replace('https://' + location.host + location.pathname + location.search + location.hash);
+    }
+  } catch (e) {}
+
   var WHATSAPP_LUITECH = '56982209690';
 
   /** Atajo por id */

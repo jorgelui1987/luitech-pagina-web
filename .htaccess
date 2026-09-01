@@ -15,7 +15,11 @@ Options -Indexes
     Header set X-Content-Type-Options "nosniff"
     Header set X-Frame-Options "SAMEORIGIN"
     Header set Referrer-Policy "strict-origin-when-cross-origin"
-    Header set Permissions-Policy "geolocation=(self), microphone=(), camera=()"
+    # Permissions-Policy: el propio sitio SÍ puede pedir la cámara (escáner
+    # del POS) y la geolocalización; los terceros no. OJO: camera=() (lista
+    # vacía) bloqueaba la cámara por completo y Chrome NUNCA mostraba el
+    # aviso de permiso — ni en incognito ni desde el candado.
+    Header set Permissions-Policy "geolocation=(self), microphone=(), camera=(self)"
     # Las páginas y el service worker SIEMPRE se revalidan: en el teléfono
     # nunca se sirve una versión vieja guardada por el navegador.
     <FilesMatch "\.(html)$">
