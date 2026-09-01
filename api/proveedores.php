@@ -238,29 +238,45 @@ switch ($action) {
     }
 
     case 'catalogo_list': {
-        // Búsqueda por palabras: cada palabra escrita debe estar presente
-        // (modelo, pieza o proveedor). Ej: "pantalla iphone 15" -> solo
-        // pantallas del iPhone 15; "iphone 15" -> todas las piezas de ese modelo.
+        // Búsqueda por palabras sobre el TEXTO COMPLETO del item (modelo +
+        // pieza + proveedor): todas las palabras deben calzar en el MISMO
+        // item. Extras: sinónimos de marca (redmi/xiaomi/poco — el proveedor
+        // nombra los items corto, ej. "NOTE 12 PRO", y la marca va en la
+        // sección), tolerancia de plurales y límite alto para no cortar
+        // resultados en catálogos grandes.
         $q = trim((string)($_GET['q'] ?? ''));
+        $textoItem = "LOWER(CONCAT(c.modelo, ' ', c.pieza, ' ', COALESCE(p.nombre, '')))";
         $sql = 'SELECT c.id, c.modelo, c.pieza, c.precio, c.precio_venta, c.disponible, c.actualizado_en,
                        p.nombre AS proveedor_nombre
                 FROM catalogo_proveedores c
                 JOIN proveedores p ON p.id = c.proveedor_id';
         $params = [];
         $conds = [];
+        $sinonimos = [
+            'redmi'  => ['xiaomi', 'poco'],
+            'xiaomi' => ['redmi', 'poco'],
+            'poco'   => ['xiaomi', 'redmi'],
+        ];
         foreach (preg_split('/\s+/', mb_strtolower($q)) as $palabra) {
             if ($palabra === '') continue;
-            // Cada palabra debe estar en el TEXTO COMPLETO del item (modelo +
-            // pieza + proveedor juntos). Así "pantalla iphone 13" no mezcla un
-            // modelo "A13" de otra marca por el solo número, ni un proveedor
-            // llamado "iPhone…" hace calzar pantallas de otras marcas.
-            $conds[] = "LOWER(CONCAT(c.modelo, ' ', c.pieza, ' ', COALESCE(p.nombre, ''))) LIKE ?";
-            $params[] = '%' . $palabra . '%';
+            $variantes = ['%' . $palabra . '%'];
+            if (isset($sinonimos[$palabra])) {
+                foreach ($sinonimos[$palabra] as $sin) $variantes[] = '%' . $sin . '%';
+            }
+            if (mb_strlen($palabra) > 3 && mb_substr($palabra, -1) === 's') {
+                $variantes[] = '%' . mb_substr($palabra, 0, -1) . '%'; // "pantallas" -> "pantalla"
+            }
+            $parte = [];
+            foreach ($variantes as $v) {
+                $parte[] = $textoItem . ' LIKE ?';
+                $params[] = $v;
+            }
+            $conds[] = '(' . implode(' OR ', $parte) . ')';
         }
         if (count($conds) > 0) {
             $sql .= ' WHERE ' . implode(' AND ', $conds);
         }
-        $sql .= ' ORDER BY c.disponible DESC, c.precio ASC, c.modelo ASC LIMIT 300';
+        $sql .= ' ORDER BY c.disponible DESC, c.precio ASC, c.modelo ASC LIMIT 2000';
         $stmt = db()->prepare($sql);
         $stmt->execute($params);
         responder(['ok' => true, 'catalogo' => $stmt->fetchAll()]);
