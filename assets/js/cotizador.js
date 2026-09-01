@@ -147,9 +147,17 @@
     var claves = Object.keys(grupos);
     claves.sort(function (a, b) { return minPrecio(grupos[a]) - minPrecio(grupos[b]); });
 
+    // Tope de dibujo: con catálogos enormes, pintar miles de filas congela la
+    // página. Se muestran los primeros 60 (los más baratos por categoría) y
+    // el usuario afina escribiendo más.
+    var MAX = 60;
+    var mostrados = 0;
     claves.forEach(function (k) {
-      var items = grupos[k];
-      items.sort(function (a, b) { return precioDe(a) - precioDe(b); });
+      if (mostrados >= MAX) return;
+      var todos = grupos[k];
+      todos.sort(function (a, b) { return precioDe(a) - precioDe(b); });
+      var items = todos.slice(0, MAX - mostrados);
+      mostrados += items.length;
 
       var caja = document.createElement('section');
       caja.className = 'bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden';
@@ -161,7 +169,7 @@
       tt.textContent = k;
       var desde = document.createElement('span');
       desde.className = 'text-[11px] font-bold text-emerald-400';
-      desde.textContent = 'desde ' + fmt(minPrecio(items)) + ' · ' + items.length;
+      desde.textContent = 'desde ' + fmt(minPrecio(todos)) + ' · ' + todos.length;
       cab.appendChild(tt);
       cab.appendChild(desde);
       caja.appendChild(cab);
@@ -170,9 +178,22 @@
       items.forEach(function (c) {
         lista.appendChild(filaItem(c));
       });
+      if (todos.length > items.length) {
+        var extra = document.createElement('li');
+        extra.className = 'px-4 py-1.5 text-[10px] text-slate-500 italic';
+        extra.textContent = '… y ' + (todos.length - items.length) + ' más de esta categoría (escribe más para afinar)';
+        lista.appendChild(extra);
+      }
       caja.appendChild(lista);
       cont.appendChild(caja);
     });
+
+    if (mostrados < catalogo.length) {
+      var nota = document.createElement('p');
+      nota.className = 'text-[11px] text-slate-500 text-center py-1';
+      nota.textContent = 'Mostrando ' + mostrados + ' de ' + catalogo.length + ' — escribe más para afinar la búsqueda.';
+      cont.appendChild(nota);
+    }
   }
 
   function minPrecio(arr) {
@@ -405,7 +426,7 @@
   document.addEventListener('DOMContentLoaded', function () {
     $('cot-buscar').addEventListener('input', function () {
       clearTimeout(timer);
-      timer = setTimeout(buscar, 250);
+      timer = setTimeout(buscar, 400); // deja de escribir un momento antes de buscar
     });
     $('cot-buscar').addEventListener('keydown', function (e) {
       if (e.key === 'Enter') { clearTimeout(timer); buscar(); }
