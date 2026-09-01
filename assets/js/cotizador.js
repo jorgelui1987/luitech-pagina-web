@@ -15,7 +15,7 @@
 
   function fmt(n) { return '$ ' + Math.max(0, Math.round(Number(n) || 0)).toLocaleString('es-CL'); }
   function esc(t) {
-    return String(t === null || t === undefined ? '').replace(/[&<>"]/g, function (c) {
+    return String(t === null || t === undefined ? '' : t).replace(/[&<>"]/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
     });
   }
