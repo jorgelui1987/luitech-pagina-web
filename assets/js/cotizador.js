@@ -25,7 +25,21 @@
   function mostrarVista(logueado) {
     $('view-nologin').classList.toggle('hidden', logueado);
     $('view-cot').classList.toggle('hidden', !logueado);
-    if (logueado) { cargarConfig(); $('cot-buscar').focus(); }
+    if (logueado) { cargarConfig(); cargarProveedoresCot(); $('cot-buscar').focus(); }
+  }
+
+  /** Carga los proveedores en el filtro (para buscar por proveedor exacto). */
+  function cargarProveedoresCot() {
+    api('api/proveedores.php?action=list').then(function (res) {
+      if (!res.ok) return;
+      var sel = $('cot-prov');
+      var actual = sel.value;
+      sel.replaceChildren(new Option('Todos los proveedores', ''));
+      (res.proveedores || []).forEach(function (p) {
+        sel.add(new Option(p.nombre, String(p.id)));
+      });
+      sel.value = actual;
+    }).catch(function () {});
   }
 
   function cargarConfig() {
@@ -55,7 +69,9 @@
 
   function buscar() {
     var q = $('cot-buscar').value.trim();
-    api('api/proveedores.php?action=catalogo_list' + (q ? '&q=' + encodeURIComponent(q) : ''))
+    var prov = $('cot-prov').value;
+    api('api/proveedores.php?action=catalogo_list' + (q ? '&q=' + encodeURIComponent(q) : '') +
+        (prov ? '&proveedor_id=' + encodeURIComponent(prov) : ''))
       .then(function (res) {
         if (!res.ok) return;
         ultimos.catalogo = res.catalogo || [];
@@ -319,6 +335,7 @@
     $('cot-buscar').addEventListener('keydown', function (e) {
       if (e.key === 'Enter') { clearTimeout(timer); buscar(); }
     });
+    $('cot-prov').addEventListener('change', buscar);
     $('btn-cot-limpiar').addEventListener('click', limpiarSeleccion);
     $('btn-cot-imprimir').addEventListener('click', imprimirSeleccion);
     api('api/auth.php?action=me').then(function (res) {

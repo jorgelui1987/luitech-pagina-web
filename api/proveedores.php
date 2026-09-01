@@ -245,6 +245,7 @@ switch ($action) {
         // sección), tolerancia de plurales y límite alto para no cortar
         // resultados en catálogos grandes.
         $q = trim((string)($_GET['q'] ?? ''));
+        $proveedorFiltro = (int)($_GET['proveedor_id'] ?? 0);
         $textoItem = "LOWER(CONCAT(c.modelo, ' ', c.pieza, ' ', COALESCE(p.nombre, '')))";
         $sql = 'SELECT c.id, c.modelo, c.pieza, c.precio, c.precio_venta, c.disponible, c.actualizado_en,
                        p.nombre AS proveedor_nombre
@@ -272,6 +273,10 @@ switch ($action) {
                 $params[] = $v;
             }
             $conds[] = '(' . implode(' OR ', $parte) . ')';
+        }
+        if ($proveedorFiltro > 0) {
+            $conds[] = 'c.proveedor_id = ?';
+            $params[] = $proveedorFiltro;
         }
         if (count($conds) > 0) {
             $sql .= ' WHERE ' . implode(' AND ', $conds);
