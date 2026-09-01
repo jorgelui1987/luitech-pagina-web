@@ -206,9 +206,20 @@
      Uso: window.LuitechScanner.abrir({ titulo, continuo, onDetect(texto, cerrar) })
      Requiere HTTPS (o localhost) para el permiso de cámara. */
   var _scanOverlay = null, _scanVideo = null, _scanTitulo = null,
-      _scanEstado = null, _scanContador = null;
+      _scanEstado = null, _scanContador = null, _scanBtnReintentar = null;
   var _lectorZxing = null, _scanCallback = null, _scanContinuo = false;
   var _scanUltimo = '', _scanUltimoTs = 0, _scanTotal = 0;
+  var _scanUltimasOpciones = null;
+
+  /** ¿La página corre como app instalada (PWA)? En ese modo NO hay barra de
+   *  direcciones ni candado: el permiso de cámara se da desde los Ajustes
+   *  del teléfono (Aplicaciones → Luitech → Permisos). */
+  function escanerAppInstalada() {
+    try {
+      return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+             window.navigator.standalone === true;
+    } catch (e) { return false; }
+  }
 
   /** Descarga ZXing la primera vez que se usa el escáner (no pesa al arrancar). */
   function escanerCargarZxing() {
@@ -255,7 +266,20 @@
     btnCerrar.style.cssText = 'background:#155e75;color:#a5f3fc;border:0;border-radius:10px;' +
       'padding:10px 18px;font-weight:700;font-size:13px;cursor:pointer';
     btnCerrar.addEventListener('click', function () { escanerCerrar(); });
+
+    // Aparece solo cuando hay un error (ej: tras habilitar el permiso en
+    // Ajustes), para reintentar sin cerrar y reabrir nada.
+    _scanBtnReintentar = document.createElement('button');
+    _scanBtnReintentar.type = 'button';
+    _scanBtnReintentar.textContent = 'Reintentar';
+    _scanBtnReintentar.style.cssText = 'background:#06b6d4;color:#04283a;border:0;border-radius:10px;' +
+      'padding:10px 18px;font-weight:700;font-size:13px;cursor:pointer;display:none';
+    _scanBtnReintentar.addEventListener('click', function () {
+      if (_scanUltimasOpciones) escanerAbrir(_scanUltimasOpciones);
+    });
+
     fila.appendChild(_scanContador);
+    fila.appendChild(_scanBtnReintentar);
     fila.appendChild(btnCerrar);
     _scanOverlay.appendChild(_scanTitulo);
     _scanOverlay.appendChild(visor);
@@ -273,6 +297,16 @@
     _scanContinuo = false;
     if (_scanEstado) { _scanEstado.textContent = ''; _scanEstado.style.color = '#67e8f9'; }
     if (_scanContador) _scanContador.style.display = 'none';
+    if (_scanBtnReintentar) _scanBtnReintentar.style.display = 'none';
+  }
+
+  /** Mensaje de error visible + botón Reintentar (útil tras habilitar el
+   *  permiso en Ajustes: no hay que cerrar ni reabrir nada). */
+  function escanerMostrarError(texto) {
+    if (!_scanEstado) return;
+    _scanEstado.style.color = '#fca5a5';
+    _scanEstado.textContent = texto;
+    if (_scanBtnReintentar) _scanBtnReintentar.style.display = 'inline';
   }
 
   /**
@@ -281,16 +315,16 @@
    */
   function escanerAbrir(opciones) {
     opciones = opciones || {};
+    _scanUltimasOpciones = opciones; // para el botón Reintentar
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       // Sin getUserMedia: casi siempre es HTTP (la cámara exige HTTPS) o un
       // navegador antiguo. Se explica EN PANTALLA, no solo en el toast.
       escanerConstruirOverlay();
       _scanTitulo.textContent = opciones.titulo || 'Escáner de códigos de barras';
-      _scanEstado.style.color = '#fca5a5';
-      _scanEstado.textContent = (window.isSecureContext === false)
-        ? '📷 La cámara exige conexión segura: abre el sitio con https:// (ahora estás por ' + location.protocol.replace(':', '') + ') y vuelve a abrir el escáner.'
-        : '📷 Este navegador no permite usar la cámara: actualiza Chrome o Safari y reintenta.';
       _scanOverlay.style.display = 'flex';
+      escanerMostrarError((window.isSecureContext === false)
+        ? '📷 La cámara exige conexión segura: abre el sitio con https:// (ahora estás por ' + location.protocol.replace(':', '') + '). Por http:// el permiso NUNCA aparece.'
+        : '📷 Este navegador no permite usar la cámara: actualiza Chrome o Safari y reintenta.');
       return;
     }
     escanerConstruirOverlay();
@@ -334,18 +368,19 @@
       );
     }).catch(function (err) {
       if (!_scanOverlay || _scanOverlay.style.display === 'none') return;
-      _scanEstado.style.color = '#fca5a5';
       var nombre = err && err.name;
       if (nombre === 'NotAllowedError' || nombre === 'PermissionDeniedError') {
-        // Chrome recuerda el "No" y ya no vuelve a preguntar: hay que
-        // re-habilitarlo desde el candado de la barra de direcciones.
-        _scanEstado.textContent = 'Permiso de cámara DENEGADO. Toca el candado 🔒 o el ⓘ junto a la dirección del sitio → Permisos → Cámara → Permitir, y abre el escáner otra vez. (iPhone: Ajustes → Safari → Cámara → Permitir)';
+        // Chrome recuerda el "No" y ya no vuelve a preguntar. En la app
+        // instalada (PWA) no existe el candado: se habilita en Ajustes.
+        escanerMostrarError(escanerAppInstalada()
+          ? 'Permiso de cámara DENEGADO. Estás en la app instalada (sin candado): AJUSTES DEL TELÉFONO → Aplicaciones → Luitech → Permisos → Cámara → Permitir, y toca Reintentar. También puedes abrir el sitio en Chrome y aceptar el permiso ahí.'
+          : 'Permiso de cámara DENEGADO. Toca el candado 🔒 junto a la dirección → Permisos → Cámara → Permitir y toca Reintentar. Si no aparece: Chrome ⋮ → Configuración → Configuración de sitios → Cámara → tu sitio → Permitir.');
       } else if (nombre === 'NotReadableError' || nombre === 'TrackStartError') {
-        _scanEstado.textContent = 'La cámara está ocupada por otra aplicación. Ciérrala y vuelve a abrir el escáner.';
+        escanerMostrarError('La cámara está ocupada por otra aplicación. Ciérrala y toca Reintentar.');
       } else if (nombre === 'NotFoundError' || nombre === 'OverconstrainedError') {
-        _scanEstado.textContent = 'No se encontró una cámara compatible en este dispositivo.';
+        escanerMostrarError('No se encontró una cámara compatible en este dispositivo.');
       } else {
-        _scanEstado.textContent = 'No se pudo abrir la cámara. ' + ((err && err.message) || '');
+        escanerMostrarError('No se pudo abrir la cámara. ' + ((err && err.message) || ''));
       }
     });
   }
