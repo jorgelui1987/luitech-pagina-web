@@ -6,7 +6,7 @@
     <title>Proveedores | Luitech</title>
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
-    <link rel="stylesheet" href="assets/css/styles.css?v=mp27">
+    <link rel="stylesheet" href="assets/css/styles.css?v=mp28">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
@@ -151,8 +151,12 @@
                 </div>
                 <p class="nota mt-1"><b>Sincronizar:</b> descarga la planilla de Google Sheets (compartida como «Cualquiera con el link»), entiende las secciones y las variantes BLANCO/NEGRO entre paréntesis, y actualiza el catálogo de ese proveedor. Se guarda la URL para las próximas veces.</p>
                 <div id="imp-preview" class="hidden mt-2">
-                    <p id="imp-resumen" class="text-xs font-bold text-cyan-400 mb-1"></p>
-                    <div class="overflow-x-auto max-h-56 overflow-y-auto border border-slate-800 rounded-lg">
+                    <div class="flex flex-wrap items-center gap-2 mb-1">
+                        <p id="imp-resumen" class="text-xs font-bold text-cyan-400 flex-1"></p>
+                        <input type="text" id="imp-buscar" autocomplete="off" placeholder="Filtrar modelos… (ej: a56, note 12)"
+                               class="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-white text-xs focus:outline-none focus:border-cyan-500" style="width:180px">
+                    </div>
+                    <div class="overflow-x-auto overflow-y-auto border border-slate-800 rounded-lg" style="max-height:20rem">
                         <table class="w-full text-left text-xs">
                             <thead class="bg-slate-900/80 text-[10px] uppercase text-slate-500"><tr><th class="p-2">Pieza</th><th class="p-2">Modelo</th><th class="p-2 text-right">Precio</th></tr></thead>
                             <tbody id="imp-body"></tbody>
@@ -164,7 +168,7 @@
         </section>
     </main>
 
-    <script src="assets/js/common.js?v=mp27" defer></script>
-    <script src="assets/js/proveedores.js?v=mp27" defer></script>
+    <script src="assets/js/common.js?v=mp28" defer></script>
+    <script src="assets/js/proveedores.js?v=mp28" defer></script>
 </body>
 </html>

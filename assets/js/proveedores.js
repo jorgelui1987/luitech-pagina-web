@@ -651,16 +651,51 @@
     if (!provId) { window.mostrarToast('Elige el proveedor primero', 'error'); return; }
     var r = parsearListado($('imp-texto').value);
     impItems = r.items;
-    var prev = $('imp-preview');
-    prev.classList.remove('hidden');
+    $('imp-preview').classList.remove('hidden');
+    $('imp-buscar').value = '';
+    pintarPreview(r.saltadas);
+  }
+
+  /** Tabla del preview con filtro de búsqueda (para revisar sin scroll). */
+  function pintarPreview(saltadas) {
+    var filtro = ($('imp-buscar').value || '').trim().toLowerCase();
     var tb = $('imp-body');
     tb.replaceChildren();
+
     if (!impItems.length) {
-      $('imp-resumen').textContent = '✗ No se pudo leer ningún item con precio (' + r.saltadas + ' líneas saltadas). Revisa el formato: una línea por item, precio al final.';
+      $('imp-resumen').textContent = '✗ No se pudo leer ningún item con precio' +
+        (saltadas ? ' (' + saltadas + ' líneas saltadas)' : '') + '. Revisa el formato: una línea por item, precio al final.';
       $('btn-imp-confirmar').classList.add('hidden');
       return;
     }
-    impItems.slice(0, 40).forEach(function (it) {
+
+    var visibles = impItems;
+    if (filtro) {
+      var palabras = filtro.split(/\s+/);
+      var sinonimos = { redmi: ['xiaomi', 'poco'], xiaomi: ['redmi', 'poco'], poco: ['xiaomi', 'redmi'] };
+      visibles = impItems.filter(function (it) {
+        var t = (it.modelo + ' ' + it.pieza).toLowerCase();
+        return palabras.every(function (w) {
+          if (t.indexOf(w) !== -1) return true;
+          var alts = sinonimos[w] || [];
+          for (var i = 0; i < alts.length; i++) { if (t.indexOf(alts[i]) !== -1) return true; }
+          return false;
+        });
+      });
+    }
+
+    var cats = {};
+    impItems.forEach(function (it) { cats[it.pieza] = (cats[it.pieza] || 0) + 1; });
+    var resumen = '✓ ' + impItems.length + ' items en ' + Object.keys(cats).length + ' categorías' +
+      (saltadas ? ' · ' + saltadas + ' líneas saltadas (sin precio)' : '');
+    if (filtro) {
+      resumen += ' · ' + visibles.length + ' coinciden con "' + filtro + '"' + (visibles.length > 100 ? ' (mostrando 100)' : '');
+    } else if (impItems.length > 40) {
+      resumen += ' · mostrando 40 — usa el filtro para buscar uno';
+    }
+    $('imp-resumen').textContent = resumen;
+
+    visibles.slice(0, 100).forEach(function (it) {
       var tr = document.createElement('tr');
       tr.className = 'border-b border-slate-800/40';
       [it.pieza, it.modelo, fmt(it.precio)].forEach(function (t, i) {
@@ -671,9 +706,6 @@
       });
       tb.appendChild(tr);
     });
-    $('imp-resumen').textContent = '✓ ' + impItems.length + ' items listos para importar' +
-      (impItems.length > 40 ? ' (mostrando los primeros 40)' : '') +
-      (r.saltadas ? ' · ' + r.saltadas + ' líneas saltadas (sin precio)' : '');
     $('btn-imp-confirmar').classList.remove('hidden');
   }
 
@@ -809,6 +841,7 @@
     $('btn-imp-confirmar').addEventListener('click', confirmarImportacion);
     $('imp-archivo').addEventListener('change', leerArchivoListado);
     $('imp-prov').addEventListener('change', urlAlCambiarProveedor);
+    $('imp-buscar').addEventListener('input', pintarPreview);
     $('btn-imp-url').addEventListener('click', guardarUrlListado);
     $('btn-imp-sync').addEventListener('click', sincronizarPlanilla);
     var busquedaTimer = null;
