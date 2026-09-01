@@ -213,6 +213,7 @@ $pdo->exec("
     CREATE TABLE IF NOT EXISTS productos (
         id              INT UNSIGNED     AUTO_INCREMENT PRIMARY KEY,
         codigo          VARCHAR(30)      NOT NULL UNIQUE,
+        barcode         VARCHAR(32)      NULL UNIQUE,
         nombre          VARCHAR(120)     NOT NULL,
         categoria       VARCHAR(60)      NOT NULL DEFAULT 'Repuesto',
         proveedor       VARCHAR(120)     NULL,
@@ -428,6 +429,14 @@ $colProvId = $pdo->query("SHOW COLUMNS FROM productos LIKE 'proveedor_id'")->fet
 if (!$colProvId) {
     $pdo->exec("ALTER TABLE productos ADD COLUMN proveedor_id INT UNSIGNED NULL AFTER proveedor");
     echo "[migrate] productos.proveedor_id agregado\n";
+}
+// --- Código de barras del producto (EAN de fábrica o Code 128 interno) ------
+// La cámara del teléfono lo lee en el POS para agregar productos al carrito
+// al vuelo. Único entre productos activos; NULL = producto sin barcode.
+$colBarcode = $pdo->query("SHOW COLUMNS FROM productos LIKE 'barcode'")->fetch(PDO::FETCH_ASSOC);
+if (!$colBarcode) {
+    $pdo->exec("ALTER TABLE productos ADD COLUMN barcode VARCHAR(32) NULL UNIQUE AFTER codigo");
+    echo "[migrate] productos.barcode agregado\n";
 }
 // Compatibilidad: la tabla proveedores del diseño original puede existir sin
 // rut/notas/activo (tenía contacto/email). Agrega las columnas que falten.

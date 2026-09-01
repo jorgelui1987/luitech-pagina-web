@@ -49,7 +49,8 @@
 
     var lista = productos.filter(function (p) {
       return !filtro || p.nombre.toLowerCase().indexOf(filtro) !== -1 ||
-             p.codigo.toLowerCase().indexOf(filtro) !== -1;
+             p.codigo.toLowerCase().indexOf(filtro) !== -1 ||
+             (p.barcode && p.barcode.toLowerCase().indexOf(filtro) !== -1);
     });
 
     if (!lista.length) {
@@ -92,6 +93,17 @@
       if (!sinStock) card.addEventListener('click', function () { agregarAlCarrito(p); });
       cont.appendChild(card);
     });
+  }
+
+  /** Coincidencia EXACTA por código de barras (EAN) o código interno. */
+  function buscarPorCodigoExacto(termino) {
+    var t = String(termino || '').trim().toLowerCase();
+    if (!t) return null;
+    for (var i = 0; i < productos.length; i++) {
+      var p = productos[i];
+      if ((p.barcode && p.barcode.toLowerCase() === t) || p.codigo.toLowerCase() === t) return p;
+    }
+    return null;
   }
 
   /* ---------------------------------------------------------- CARRITO */
@@ -378,6 +390,38 @@
   /* ----------------------------------------------------------- ARRANQUE */
   document.addEventListener('DOMContentLoaded', function () {
     $('buscar').addEventListener('input', function () { pintarCatalogo(this.value); });
+    // Enter en el buscador = coincidencia exacta (barcode o código interno)
+    // → agrega directo al carrito. Así un lector láser USB/Bluetooth funciona
+    // sin configuración: escribe el código y "aprieta Enter" solo.
+    $('buscar').addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      var t = this.value.trim();
+      if (!t) return;
+      var p = buscarPorCodigoExacto(t);
+      if (p) {
+        agregarAlCarrito(p);
+        this.value = '';
+        pintarCatalogo('');
+      } else {
+        window.mostrarToast('Ningún producto con código "' + t + '"', 'error');
+      }
+    });
+    // Escáner con la cámara: modo continuo para vender varios productos seguidos.
+    $('btn-escanear').addEventListener('click', function () {
+      window.LuitechScanner.abrir({
+        titulo: 'Escanea los productos para agregarlos al carrito',
+        continuo: true,
+        onDetect: function (texto) {
+          var p = buscarPorCodigoExacto(texto);
+          if (p) {
+            agregarAlCarrito(p);
+            window.mostrarToast('Agregado: ' + p.nombre, 'success');
+          } else {
+            window.mostrarToast('Código "' + texto + '" sin producto asociado. Regístralo en Inventario.', 'error');
+          }
+        }
+      });
+    });
     $('btn-limpiar').addEventListener('click', function () { carrito = []; pintarCarrito(); });
     $('btn-cobrar').addEventListener('click', cobrar);
     $('btn-point').addEventListener('click', function () {

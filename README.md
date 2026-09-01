@@ -72,3 +72,19 @@ npx tailwindcss -c tailwind.config.js -i ./assets/css/input.css -o ./assets/css/
 - Definir URLs reales de redes sociales en el footer.
 - Crear imagen de 1200×630 px para mejor vista previa en WhatsApp.
 - Publicar con HTTPS.
+
+## 📷 Códigos de barras (POS e Inventario)
+
+- **POS:** botón con icono de código de barras junto al buscador → abre la
+  cámara del teléfono (lector ZXing bajo demanda) y cada código leído agrega
+  el producto al carrito (modo continuo, con vibración). Enter en el buscador
+  también agrega directo si hay coincidencia exacta — así un lector láser
+  USB/Bluetooth funciona sin configuración.
+- **Inventario:** campo "Cód. barras (opcional)" con botón de escáner para
+  capturar el EAN de fábrica una sola vez; también puedes escribirlo.
+- **Productos sin código de fábrica:** botón 🏷 "Imprimir etiqueta" por
+  producto genera etiquetas de 50×25 mm (EAN13 si son 13 dígitos, Code 128
+  para el resto) con el código interno y el precio. Pega la etiqueta al
+  producto/estante y el POS la lee con la cámara.
+- Base de datos: columna `productos.barcode` (única entre productos activos,
+  NULL = sin barcode). Migración idempotente en `database/migrate.php`.

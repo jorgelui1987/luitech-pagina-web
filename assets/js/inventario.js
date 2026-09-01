@@ -17,7 +17,7 @@
 
   function limpiarFormulario() {
     $('form-titulo').innerHTML = '<i class="fa-solid fa-plus mr-1"></i>Nuevo producto';
-    ['p-id','p-codigo','p-nombre','p-cat','p-prov','p-costo','p-venta','p-stock'].forEach(function (i) { $(i).value = ''; });
+    ['p-id','p-codigo','p-barcode','p-nombre','p-cat','p-prov','p-costo','p-venta','p-stock'].forEach(function (i) { $(i).value = ''; });
     $('p-min').value = '3';
     $('p-ctrl').checked = true;
     $('btn-cancelar').classList.add('hidden');
@@ -110,13 +110,19 @@
       btnEd.className = 'w-8 h-8 rounded-lg bg-slate-800 hover:bg-cyan-600 text-slate-300 hover:text-white mx-0.5 transition-all';
       btnEd.addEventListener('click', function () { editarProducto(p); });
 
+      var btnEt = document.createElement('button');
+      btnEt.type = 'button'; btnEt.title = 'Imprimir etiqueta con código de barras';
+      btnEt.innerHTML = '<i class="fa-solid fa-tag pointer-events-none"></i>';
+      btnEt.className = 'w-8 h-8 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 mx-0.5 transition-all';
+      btnEt.addEventListener('click', function () { imprimirEtiqueta(p); });
+
       var btnEl = document.createElement('button');
       btnEl.type = 'button'; btnEl.title = 'Eliminar';
       btnEl.innerHTML = '<i class="fa-solid fa-trash-can pointer-events-none"></i>';
       btnEl.className = 'w-8 h-8 rounded-lg bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-900/60 mx-0.5 transition-all';
       btnEl.addEventListener('click', function () { eliminar(p.id, p.nombre); });
 
-      tdAcc.appendChild(btnEd); tdAcc.appendChild(btnEl);
+      tdAcc.appendChild(btnEd); tdAcc.appendChild(btnEt); tdAcc.appendChild(btnEl);
       tr.appendChild(tdAcc);
       tbody.appendChild(tr);
     });
@@ -126,7 +132,7 @@
   function editarProducto(p) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     $('form-titulo').innerHTML = '<i class="fa-solid fa-pen mr-1"></i>Editando: ' + p.nombre;
-    $('p-id').value = p.id; $('p-codigo').value = p.codigo; $('p-nombre').value = p.nombre;
+    $('p-id').value = p.id; $('p-codigo').value = p.codigo; $('p-barcode').value = p.barcode || ''; $('p-nombre').value = p.nombre;
     $('p-cat').value = p.categoria; $('p-prov').value = p.proveedor_id || '';
     $('p-costo').value = p.precio_costo; $('p-venta').value = p.precio_venta;
     $('p-stock').value = p.stock; $('p-min').value = (p.controlar_stock ? p.stock_minimo : 0) || 0;
@@ -137,6 +143,7 @@
     var id = $('p-id').value.trim();
     var cuerpo = {
       codigo: $('p-codigo').value.trim().toUpperCase(),
+      barcode: $('p-barcode').value.trim().toUpperCase(),
       nombre: $('p-nombre').value.trim(),
       categoria: $('p-cat').value.trim() || 'Repuesto',
       proveedor_id: parseInt($('p-prov').value, 10) || 0,
@@ -175,9 +182,73 @@
       }).catch(function () {});
   }
 
+  /* ------------------------------------------------------- ETIQUETAS */
+  /** Descarga JsBarcode la primera vez que se imprime una etiqueta. */
+  function etiquetaCargarJsBarcode() {
+    if (window.JsBarcode) return Promise.resolve();
+    return new Promise(function (resolver, rechazar) {
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js';
+      s.onload = function () { resolver(); };
+      s.onerror = function () { rechazar(new Error('No se pudo descargar el generador de etiquetas')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /** Etiqueta adhesiva 50×25 mm con el barcode (EAN13 si son 13 dígitos,
+   *  Code 128 en los demás casos) + código interno y precio. N copias.
+   *  Sirve para los productos SIN código de fábrica: se imprime la etiqueta
+   *  con su código interno, se pega al producto/estante y el POS la lee. */
+  function imprimirEtiqueta(p) {
+    var valor = String(p.barcode || p.codigo || '').trim();
+    if (!valor) { window.mostrarToast('El producto no tiene código', 'error'); return; }
+    var cantidad = parseInt(prompt('¿Cuántas etiquetas imprimir?', '1'), 10);
+    if (isNaN(cantidad) || cantidad < 1) return;
+    if (cantidad > 100) cantidad = 100;
+    etiquetaCargarJsBarcode().then(function () {
+      var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      try {
+        window.JsBarcode(svg, valor, { format: 'auto', width: 2, height: 46, displayValue: true, fontSize: 12, margin: 2, background: '#ffffff', lineColor: '#000000' });
+      } catch (e) {
+        window.JsBarcode(svg, valor, { format: 'CODE128', width: 2, height: 46, displayValue: true, fontSize: 12, margin: 2, background: '#ffffff', lineColor: '#000000' });
+      }
+      var svgTexto = new XMLSerializer().serializeToString(svg);
+      var urlImg = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgTexto)));
+      var nombre = String(p.nombre).replace(/[<>&]/g, '');
+      var copias = '';
+      for (var i = 0; i < cantidad; i++) {
+        copias += '<div class="etq"><p class="n">' + nombre + '</p>' +
+          '<img src="' + urlImg + '" alt="">' +
+          '<p class="c">' + p.codigo + ' · $' + fmt(p.precio_venta) + '</p></div>';
+      }
+      var html = '<html><head><title>Etiquetas ' + p.codigo + '</title><style>' +
+        '@page{size:50mm 25mm;margin:0}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000}' +
+        '.etq{width:50mm;height:25mm;padding:1mm 2mm;box-sizing:border-box;page-break-after:always;' +
+        'display:flex;flex-direction:column;justify-content:space-between;align-items:center}' +
+        '.etq:last-child{page-break-after:auto}' +
+        '.etq .n{margin:0;font-size:9px;font-weight:bold;text-align:center;max-width:100%;white-space:nowrap;overflow:hidden}' +
+        '.etq img{height:9mm;max-width:46mm}' +
+        '.etq .c{margin:0;font-size:8px;font-family:monospace}' +
+        '</style></head><body>' + copias + '</body></html>';
+      window.imprimirDocumento(html);
+    }).catch(function (e) {
+      window.mostrarToast(e.message || 'No se pudo generar la etiqueta', 'error');
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     $('btn-guardar').addEventListener('click', guardar);
     $('btn-cancelar').addEventListener('click', limpiarFormulario);
+
+    // Escáner de cámara para capturar el código de barras del producto
+    // (de fábrica o interno); se cierra solo al leer.
+    $('btn-scan-barcode').addEventListener('click', function () {
+      window.LuitechScanner.abrir({
+        titulo: 'Escanea el código de barras del producto',
+        continuo: false,
+        onDetect: function (texto) { $('p-barcode').value = texto; }
+      });
+    });
 
     api('api/auth.php?action=me').then(function (res) {
       mostrarVista(!!res.logueado);

@@ -6,7 +6,7 @@
     <title>Inventario | Luitech</title>
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
-    <link rel="stylesheet" href="assets/css/styles.css?v=mp18">
+    <link rel="stylesheet" href="assets/css/styles.css?v=mp19">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
@@ -47,6 +47,14 @@
             <input type="hidden" id="p-id">
             <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2.5 text-xs">
                 <input type="text" id="p-codigo" placeholder="Código*" maxlength="30" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                <div class="flex gap-2">
+                    <input type="text" id="p-barcode" placeholder="Cód. barras (opcional)" maxlength="32" autocomplete="off"
+                           class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500 flex-1" style="min-width:0">
+                    <button type="button" id="btn-scan-barcode" title="Escanear código de barras con la cámara"
+                            class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 rounded-lg px-3">
+                        <i class="fa-solid fa-barcode"></i>
+                    </button>
+                </div>
                 <input type="text" id="p-nombre" placeholder="Nombre*" maxlength="120" class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
                 <input type="text" id="p-cat" placeholder="Categoría" maxlength="60" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
                 <select id="p-prov" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500"><option value="">— Proveedor —</option></select>
@@ -81,8 +89,8 @@
         </section>
     </main>
 
-    <script src="assets/js/common.js?v=mp18" defer></script>
-    <script src="assets/js/inventario.js?v=mp18" defer></script>
+    <script src="assets/js/common.js?v=mp19" defer></script>
+    <script src="assets/js/inventario.js?v=mp19" defer></script>
 </body>
 </html>
 

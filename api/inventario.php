@@ -3,7 +3,7 @@
  * LUITECH API - Inventario (solo administrador autenticado).
  * Acciones (?action=):
  *   list    GET            -> productos activos (incluye alertas de stock bajo)
- *   create  POST {codigo,nombre,categoria,precio_costo,precio_venta,stock,stock_minimo,controlar_stock}
+ *   create  POST {codigo,barcode,nombre,categoria,precio_costo,precio_venta,stock,stock_minimo,controlar_stock}
  *   update  POST {id,...campos opcionales}
  *   delete  POST {id}      -> baja lógica (activo=0)
  */
@@ -36,6 +36,17 @@ function leer_producto(array $d): array
         }
         $out['nombre'] = $nombre;
     }
+    if (isset($d['barcode'])) {
+        $barcode = strtoupper(trim((string)$d['barcode']));
+        if ($barcode !== '') {
+            if (strlen($barcode) > 32) {
+                responder(['ok' => false, 'error' => 'Código de barras inválido (máx. 32 caracteres)'], 400);
+            }
+            $out['barcode'] = $barcode;
+        } else {
+            $out['barcode'] = null; // vacío = sin código de barras
+        }
+    }
     if (isset($d['categoria'])) {
         $out['categoria'] = trim(mb_substr((string)$d['categoria'], 0, 60)) ?: 'Repuesto';
     }
@@ -61,7 +72,7 @@ switch ($action) {
 
     case 'list':
         $stmt = db()->query(
-            'SELECT pr.id, pr.codigo, pr.nombre, pr.categoria, pr.proveedor, pr.proveedor_id,
+            'SELECT pr.id, pr.codigo, pr.barcode, pr.nombre, pr.categoria, pr.proveedor, pr.proveedor_id,
                     COALESCE(pv.nombre, pr.proveedor) AS proveedor_nombre,
                     pr.precio_costo, pr.precio_venta,
                     pr.stock, pr.stock_minimo, pr.controlar_stock
@@ -85,12 +96,20 @@ switch ($action) {
         if (!isset($d['codigo'], $d['nombre'])) {
             responder(['ok' => false, 'error' => 'Código y Nombre son obligatorios'], 400);
         }
-        $sql = 'INSERT INTO productos (codigo, nombre, categoria, proveedor, proveedor_id, precio_costo, precio_venta, stock, stock_minimo, controlar_stock)
-                VALUES (:codigo, :nombre, :categoria, :proveedor, :proveedor_id, :costo, :venta, :stock, :minimo, :ctrl)';
+        if (!empty($d['barcode'])) {
+            $dupB = db()->prepare('SELECT codigo FROM productos WHERE barcode = ? AND activo = 1 LIMIT 1');
+            $dupB->execute([$d['barcode']]);
+            if ($otro = $dupB->fetch()) {
+                responder(['ok' => false, 'error' => 'Ese código de barras ya lo usa el producto ' . $otro['codigo']], 409);
+            }
+        }
+        $sql = 'INSERT INTO productos (codigo, barcode, nombre, categoria, proveedor, proveedor_id, precio_costo, precio_venta, stock, stock_minimo, controlar_stock)
+                VALUES (:codigo, :barcode, :nombre, :categoria, :proveedor, :proveedor_id, :costo, :venta, :stock, :minimo, :ctrl)';
         $st = db()->prepare($sql);
         try {
             $st->execute([
                 ':codigo' => $d['codigo'],
+                ':barcode' => $d['barcode'] ?? null,
                 ':nombre' => $d['nombre'],
                 ':categoria'   => $d['categoria']   ?? 'Repuesto',
                 ':proveedor'   => $d['proveedor']   ?? null,
@@ -122,6 +141,13 @@ switch ($action) {
         $datos = leer_producto($d);
         if (!$datos) {
             responder(['ok' => false, 'error' => 'Nada que actualizar'], 400);
+        }
+        if (!empty($datos['barcode'])) {
+            $dupB = db()->prepare('SELECT codigo FROM productos WHERE barcode = ? AND activo = 1 AND id <> ? LIMIT 1');
+            $dupB->execute([$datos['barcode'], $id]);
+            if ($otro = $dupB->fetch()) {
+                responder(['ok' => false, 'error' => 'Ese código de barras ya lo usa el producto ' . $otro['codigo']], 409);
+            }
         }
         $set = implode(', ', array_map(fn($k) => "$k = :$k", array_keys($datos)));
         $params = $datos;
