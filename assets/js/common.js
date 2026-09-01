@@ -282,7 +282,15 @@
   function escanerAbrir(opciones) {
     opciones = opciones || {};
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      window.mostrarToast('Este navegador no permite usar la cámara', 'error');
+      // Sin getUserMedia: casi siempre es HTTP (la cámara exige HTTPS) o un
+      // navegador antiguo. Se explica EN PANTALLA, no solo en el toast.
+      escanerConstruirOverlay();
+      _scanTitulo.textContent = opciones.titulo || 'Escáner de códigos de barras';
+      _scanEstado.style.color = '#fca5a5';
+      _scanEstado.textContent = (window.isSecureContext === false)
+        ? '📷 La cámara exige conexión segura: abre el sitio con https:// (ahora estás por ' + location.protocol.replace(':', '') + ') y vuelve a abrir el escáner.'
+        : '📷 Este navegador no permite usar la cámara: actualiza Chrome o Safari y reintenta.';
+      _scanOverlay.style.display = 'flex';
       return;
     }
     escanerConstruirOverlay();
@@ -327,9 +335,18 @@
     }).catch(function (err) {
       if (!_scanOverlay || _scanOverlay.style.display === 'none') return;
       _scanEstado.style.color = '#fca5a5';
-      _scanEstado.textContent = (err && err.name === 'NotAllowedError')
-        ? 'Permiso de cámara denegado: habilítalo en el navegador y reintenta.'
-        : 'No se pudo abrir la cámara. ' + ((err && err.message) || '');
+      var nombre = err && err.name;
+      if (nombre === 'NotAllowedError' || nombre === 'PermissionDeniedError') {
+        // Chrome recuerda el "No" y ya no vuelve a preguntar: hay que
+        // re-habilitarlo desde el candado de la barra de direcciones.
+        _scanEstado.textContent = 'Permiso de cámara DENEGADO. Toca el candado 🔒 o el ⓘ junto a la dirección del sitio → Permisos → Cámara → Permitir, y abre el escáner otra vez. (iPhone: Ajustes → Safari → Cámara → Permitir)';
+      } else if (nombre === 'NotReadableError' || nombre === 'TrackStartError') {
+        _scanEstado.textContent = 'La cámara está ocupada por otra aplicación. Ciérrala y vuelve a abrir el escáner.';
+      } else if (nombre === 'NotFoundError' || nombre === 'OverconstrainedError') {
+        _scanEstado.textContent = 'No se encontró una cámara compatible en este dispositivo.';
+      } else {
+        _scanEstado.textContent = 'No se pudo abrir la cámara. ' + ((err && err.message) || '');
+      }
     });
   }
 
