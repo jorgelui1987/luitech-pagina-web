@@ -235,7 +235,7 @@
     btnPrecio.addEventListener('click', function () {
       var txt = prompt('Tu precio final para ' + c.modelo + '\n\nCosto proveedor: ' + fmt(costoProv) + '\nSugerido con margen ' + catMargen + '%: ' + fmt(precioSugerido(costoProv)) + '\n\nEscribe tu precio (vacío o 0 = volver al precio del proveedor):', fijoVal > 0 ? String(fijoVal) : '');
       if (txt === null) return;
-      fijarPrecioVenta(c.id, parseInt(txt, 10) || 0);
+      fijarPrecioVenta(c.id, parseInt(txt, 10) || 0, c);
     });
     li.appendChild(btnPrecio);
 
@@ -292,7 +292,7 @@
       if (seleccion[k].cant > 0) lineas.push(seleccion[k]);
     });
     if (!lineas.length) {
-      window.mostrarToast('Agrega cantidades con el botón +', 'error');
+      window.mostrarToast('Ponle cantidad con el botón + a los items que vas a cotizar', 'error');
       return;
     }
     lineas.sort(function (a, b) {
@@ -344,12 +344,17 @@
     render(ultimos.catalogo, ultimos.q);
   }
 
-  /** Guarda TU precio final para un item (0 = volver al precio del proveedor). */
-  function fijarPrecioVenta(id, valor) {
+  /** Guarda TU precio final para un item (0 = volver al precio del proveedor).
+   *  Si le das un precio, el item se agrega solo a la cotización (cant. 1). */
+  function fijarPrecioVenta(id, valor, c) {
     api('api/proveedores.php?action=catalogo_fijar_precio', { method: 'POST', body: { id: id, precio_venta: valor } })
       .then(function (res) {
         if (!res.ok) { window.mostrarToast(res.error || 'No se pudo fijar el precio', 'error'); return; }
-        window.mostrarToast(valor > 0 ? 'Tu precio final: ' + fmt(valor) : 'Vuelto al precio del proveedor', 'success');
+        if (c && valor > 0) {
+          var s = seleccion[id] || (seleccion[id] = { c: c, cant: 0, desc: 0 });
+          if (s.cant < 1) s.cant = 1; // queda listo para imprimir/cotizar
+        }
+        window.mostrarToast(valor > 0 ? 'Tu precio final: ' + fmt(valor) + ' — item en la cotización' : 'Vuelto al precio del proveedor', 'success');
         render(ultimos.catalogo, ultimos.q);
       }).catch(function () { window.mostrarToast('Error de conexión con el servidor', 'error'); });
   }
