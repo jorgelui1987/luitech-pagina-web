@@ -37,7 +37,7 @@
     if (logueado) { cargarConfig(); cargarProveedoresCot(); $('cot-buscar').focus(); }
   }
 
-  /** Carga los proveedores en el filtro (para buscar por proveedor exacto). */
+  /** Carga los proveedores en el filtro y los botones de WhatsApp directo. */
   function cargarProveedoresCot() {
     api('api/proveedores.php?action=list').then(function (res) {
       if (!res.ok) return;
@@ -45,10 +45,40 @@
       var sel = $('cot-prov');
       var actual = sel.value;
       sel.replaceChildren(new Option('Todos los proveedores', ''));
-      (res.proveedores || []).forEach(function (p) {
+      listaProveedoresCot.forEach(function (p) {
         sel.add(new Option(p.nombre, String(p.id)));
       });
       sel.value = actual;
+
+      // Botones "Escribir directo": siempre visibles bajo el buscador.
+      // Al tocarlos, el mensaje lleva lo que esté escrito en la búsqueda.
+      var cont = $('cot-wa');
+      cont.replaceChildren();
+      var alguno = false;
+      listaProveedoresCot.forEach(function (p) {
+        var num = telefonoWhatsapp(p.telefono);
+        if (!num) return;
+        alguno = true;
+        var a = document.createElement('a');
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.title = 'Escribirle por WhatsApp';
+        a.innerHTML = '<i class="fa-brands fa-whatsapp text-sm pointer-events-none"></i>' + esc(p.nombre);
+        a.className = 'inline-flex items-center gap-1.5 bg-emerald-950 hover:bg-emerald-800 border border-emerald-800 text-emerald-300 font-bold text-[11px] px-3 py-1.5 rounded-xl transition-all';
+        a.addEventListener('click', function () {
+          var q = $('cot-buscar').value.trim();
+          var msg = q ? ('¡Hola ' + p.nombre + '! ¿Tienen: ' + q + '? ¿Me cotizas precio y disponibilidad?')
+                      : ('¡Hola ' + p.nombre + '! ¿Me cotizas disponibilidad y precio?');
+          a.href = 'https://wa.me/' + num + '?text=' + encodeURIComponent(msg);
+        });
+        cont.appendChild(a);
+      });
+      if (!alguno) {
+        var hint = document.createElement('span');
+        hint.className = 'text-[11px] text-slate-500';
+        hint.textContent = 'Guarda el WhatsApp de tus proveedores en Proveedores → Teléfono / WhatsApp';
+        cont.appendChild(hint);
+      }
     }).catch(function () {});
   }
 
