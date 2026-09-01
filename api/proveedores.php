@@ -250,9 +250,11 @@ switch ($action) {
         $conds = [];
         foreach (preg_split('/\s+/', mb_strtolower($q)) as $palabra) {
             if ($palabra === '') continue;
-            $conds[] = '(LOWER(c.modelo) LIKE ? OR LOWER(c.pieza) LIKE ? OR LOWER(p.nombre) LIKE ?)';
-            $params[] = '%' . $palabra . '%';
-            $params[] = '%' . $palabra . '%';
+            // Cada palabra debe estar en el TEXTO COMPLETO del item (modelo +
+            // pieza + proveedor juntos). Así "pantalla iphone 13" no mezcla un
+            // modelo "A13" de otra marca por el solo número, ni un proveedor
+            // llamado "iPhone…" hace calzar pantallas de otras marcas.
+            $conds[] = "LOWER(CONCAT(c.modelo, ' ', c.pieza, ' ', COALESCE(p.nombre, ''))) LIKE ?";
             $params[] = '%' . $palabra . '%';
         }
         if (count($conds) > 0) {
