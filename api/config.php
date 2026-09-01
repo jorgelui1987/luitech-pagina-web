@@ -378,6 +378,7 @@ function preparar_proveedores(PDO $pdo): void
         modelo          VARCHAR(80)      NOT NULL,
         pieza           VARCHAR(60)      NOT NULL,
         precio          INT UNSIGNED     NOT NULL DEFAULT 0,
+        precio_venta    INT UNSIGNED     NULL,
         disponible      TINYINT(1)       NOT NULL DEFAULT 1,
         actualizado_en  TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_cat_prov (proveedor_id),
@@ -387,6 +388,11 @@ function preparar_proveedores(PDO $pdo): void
     $colUrlLis = $pdo->query("SHOW COLUMNS FROM proveedores LIKE 'url_listado'")->fetch(PDO::FETCH_ASSOC);
     if (!$colUrlLis) {
         $pdo->exec("ALTER TABLE proveedores ADD COLUMN url_listado VARCHAR(500) NULL AFTER notas");
+    }
+    // Compatibilidad: hostings sin migrate — precio de venta fijo por item
+    $colPvCat = $pdo->query("SHOW COLUMNS FROM catalogo_proveedores LIKE 'precio_venta'")->fetch(PDO::FETCH_ASSOC);
+    if (!$colPvCat) {
+        $pdo->exec("ALTER TABLE catalogo_proveedores ADD COLUMN precio_venta INT UNSIGNED NULL AFTER precio");
     }
     $col = $pdo->query("SHOW COLUMNS FROM productos LIKE 'proveedor_id'")->fetch(PDO::FETCH_ASSOC);
     if (!$col) {

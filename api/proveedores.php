@@ -242,7 +242,7 @@ switch ($action) {
         // (modelo, pieza o proveedor). Ej: "pantalla iphone 15" -> solo
         // pantallas del iPhone 15; "iphone 15" -> todas las piezas de ese modelo.
         $q = trim((string)($_GET['q'] ?? ''));
-        $sql = 'SELECT c.id, c.modelo, c.pieza, c.precio, c.disponible, c.actualizado_en,
+        $sql = 'SELECT c.id, c.modelo, c.pieza, c.precio, c.precio_venta, c.disponible, c.actualizado_en,
                        p.nombre AS proveedor_nombre
                 FROM catalogo_proveedores c
                 JOIN proveedores p ON p.id = c.proveedor_id';
@@ -275,6 +275,11 @@ switch ($action) {
         $pieza    = campo_texto($d, 'pieza', 60);
         $precio   = max(0, (int)($d['precio'] ?? 0));
         $disponible = !empty($d['disponible']);
+        $precioVenta = null;
+        if (isset($d['precio_venta'])) {
+            $pv = max(0, (int)$d['precio_venta']);
+            $precioVenta = ($pv > 0) ? $pv : null; // 0/vacío = volver al automático
+        }
         if ($proveedorId <= 0 || $modelo === null || $pieza === null || $precio < 1) {
             responder(['ok' => false, 'error' => 'Proveedor, modelo, pieza y precio son obligatorios'], 400);
         }
@@ -284,12 +289,12 @@ switch ($action) {
             responder(['ok' => false, 'error' => 'El proveedor no existe'], 400);
         }
         if ($id > 0) {
-            db()->prepare('UPDATE catalogo_proveedores SET proveedor_id = ?, modelo = ?, pieza = ?, precio = ?, disponible = ?, actualizado_en = NOW() WHERE id = ?')
-                ->execute([$proveedorId, $modelo, $pieza, $precio, $disponible ? 1 : 0, $id]);
+            db()->prepare('UPDATE catalogo_proveedores SET proveedor_id = ?, modelo = ?, pieza = ?, precio = ?, precio_venta = ?, disponible = ?, actualizado_en = NOW() WHERE id = ?')
+                ->execute([$proveedorId, $modelo, $pieza, $precio, $precioVenta, $disponible ? 1 : 0, $id]);
             responder(['ok' => true, 'id' => $id]);
         }
-        db()->prepare('INSERT INTO catalogo_proveedores (proveedor_id, modelo, pieza, precio, disponible) VALUES (?, ?, ?, ?, ?)')
-            ->execute([$proveedorId, $modelo, $pieza, $precio, $disponible ? 1 : 0]);
+        db()->prepare('INSERT INTO catalogo_proveedores (proveedor_id, modelo, pieza, precio, precio_venta, disponible) VALUES (?, ?, ?, ?, ?, ?)')
+            ->execute([$proveedorId, $modelo, $pieza, $precio, $precioVenta, $disponible ? 1 : 0]);
         responder(['ok' => true, 'id' => (int)db()->lastInsertId()]);
     }
 
@@ -381,6 +386,23 @@ switch ($action) {
         } catch (PDOException $e) {
             responder(['ok' => false, 'error' => 'No se pudo guardar el listado'], 500);
         }
+    }
+
+    case 'catalogo_fijar_precio': {
+        // Fija (o libera) el precio de venta propio de un item del catálogo.
+        // precio_venta 0 = volver al precio sugerido automático.
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            responder(['ok' => false, 'error' => 'Método no permitido'], 405);
+        }
+        $d  = leer_cuerpo();
+        $id = (int)($d['id'] ?? 0);
+        if ($id <= 0) {
+            responder(['ok' => false, 'error' => 'ID inválido'], 400);
+        }
+        $pv = max(0, (int)($d['precio_venta'] ?? 0));
+        db()->prepare('UPDATE catalogo_proveedores SET precio_venta = ?, actualizado_en = NOW() WHERE id = ?')
+            ->execute([$pv > 0 ? $pv : null, $id]);
+        responder(['ok' => true]);
     }
 
     default:

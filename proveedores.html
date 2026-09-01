@@ -6,7 +6,7 @@
     <title>Proveedores | Luitech</title>
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
-    <link rel="stylesheet" href="assets/css/styles.css?v=mp23">
+    <link rel="stylesheet" href="assets/css/styles.css?v=mp24">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
@@ -92,6 +92,25 @@
 
         <section class="sec">
             <h2><i class="fa-solid fa-book mr-1"></i>Catálogo de precios de proveedores (cotiza al instante)</h2>
+
+            <!-- Buscador protagonista: sticky, grande y con foco automático -->
+            <div style="position:sticky; top:0; z-index:30; background:#020617; margin:-6px -6px 10px; padding:8px 6px 10px; border-bottom:1px solid #1e293b;">
+                <label for="cat-buscar" class="sr-only">Buscar pieza o modelo</label>
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                    <input type="search" id="cat-buscar" autocomplete="off" placeholder="Buscar pieza o modelo… (ej: pantalla A54, iphone 15)"
+                           class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-11 pr-4 py-3 text-sm font-semibold text-white focus:outline-none focus:border-cyan-500">
+                </div>
+                <div class="flex flex-wrap items-center gap-2 mt-2 text-[11px]">
+                    <label class="lb mb-0" for="cat-margen">Margen:</label>
+                    <input type="number" id="cat-margen" min="0" max="500" value="40" class="inp" style="width:64px">%
+                    <label class="lb mb-0" for="cat-redondeo">Redondeo:</label>
+                    <select id="cat-redondeo" class="inp" style="width:auto"><option value="0">—</option><option value="100">$100</option><option value="500">$500</option><option value="1000">$1.000</option></select>
+                    <button type="button" id="btn-cat-margen" class="bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold rounded-lg px-3 py-1.5">Guardar</button>
+                    <span id="cat-estado" class="font-bold text-cyan-400 ml-auto"></span>
+                </div>
+            </div>
+
             <input type="hidden" id="cat-id">
             <div class="grid grid-cols-2 md:grid-cols-3 gap-2.5 text-xs">
                 <select id="cat-prov" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500"><option value="">— Proveedor —</option></select>
@@ -102,22 +121,15 @@
                 <button type="button" id="btn-cat-cancelar" class="hidden bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold rounded-lg py-2">Cancelar</button>
                 <button type="button" id="btn-cat" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg py-2 col-span-2 md:col-span-3"><i class="fa-solid fa-plus mr-1"></i>Agregar al catálogo</button>
             </div>
-            <div class="flex flex-wrap items-center gap-2 mt-4 text-xs">
-                <input type="text" id="cat-buscar" placeholder="Buscar modelo o pieza (ej: A54, pantalla)..." class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-cyan-500 flex-1" style="min-width:200px">
-                <label class="lb mb-0" for="cat-margen">Margen:</label>
-                <input type="number" id="cat-margen" min="0" max="500" value="40" class="inp" style="width:70px">%
-                <button type="button" id="btn-cat-margen" class="bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold rounded-lg px-3 py-1.5">Guardar margen</button>
-                <span id="cat-estado" class="font-bold text-cyan-400 ml-auto"></span>
-            </div>
             <div class="overflow-x-auto mt-2">
                 <table class="w-full text-left text-xs" style="min-width:720px">
                     <thead class="text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-800">
-                        <tr><th class="p-2">Pieza</th><th class="p-2">Modelo</th><th class="p-2">Proveedor</th><th class="p-2 text-right">Costo prov.</th><th class="p-2 text-right">Precio sugerido</th><th class="p-2 text-center">Disp.</th><th class="p-2 text-center">Actualizado</th><th class="p-2 text-center">Acciones</th></tr>
+                        <tr><th class="p-2">Pieza</th><th class="p-2">Modelo</th><th class="p-2">Proveedor</th><th class="p-2 text-right">Costo prov.</th><th class="p-2 text-right">Precio de venta</th><th class="p-2 text-center">Disp.</th><th class="p-2 text-center">Actualizado</th><th class="p-2 text-center">Acciones</th></tr>
                     </thead>
                     <tbody id="cat-body"></tbody>
                 </table>
             </div>
-            <p class="nota mt-2">Precio sugerido = costo del proveedor + margen %. Carga el listado que te manda el proveedor y cotiza al cliente <b>sin preguntarle nada por WhatsApp</b>.</p>
+            <p class="nota mt-2"><b>Precio de venta</b> = tu precio fijo si lo definiste (marca FIJO), o el automático: costo del proveedor + margen % con redondeo. Toca el lápiz junto al precio en la tabla para fijar el tuyo, o la ↺ para volver al automático.</p>
             <div class="border-t border-slate-800 pt-3 mt-3">
                 <h3 class="text-xs font-bold text-slate-300 mb-2"><i class="fa-solid fa-file-import mr-1"></i>Importar listado del proveedor (pega el texto)</h3>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs items-center">
@@ -151,7 +163,7 @@
         </section>
     </main>
 
-    <script src="assets/js/common.js?v=mp23" defer></script>
-    <script src="assets/js/proveedores.js?v=mp23" defer></script>
+    <script src="assets/js/common.js?v=mp24" defer></script>
+    <script src="assets/js/proveedores.js?v=mp24" defer></script>
 </body>
 </html>

@@ -45,6 +45,7 @@
 
   /* --------------------------------------------------------- CATÁLOGO */
   var catMargen = 40;
+  var catRedondeo = 0; // 0 = sin redondeo; 100/500/1000 = al múltiplo más cercano
   var catEditando = 0;
 
   function limpiarFormCat() {
@@ -328,19 +329,30 @@
       catMargen = parseInt(empresaCfg.catalogo_margen, 10);
       if (isNaN(catMargen) || catMargen < 0) catMargen = 40;
       $('cat-margen').value = catMargen;
+      catRedondeo = parseInt(empresaCfg.catalogo_redondeo, 10);
+      if (isNaN(catRedondeo) || catRedondeo < 0) catRedondeo = 0;
+      $('cat-redondeo').value = String(catRedondeo);
       cargarCatalogo();
     }).catch(function () { cargarCatalogo(); });
   }
 
   function guardarMargen() {
     var m = parseInt($('cat-margen').value, 10) || 0;
-    api('api/configuracion.php?action=set_many', { method: 'POST', body: { catalogo_margen: m } })
+    var r = parseInt($('cat-redondeo').value, 10) || 0;
+    api('api/configuracion.php?action=set_many', { method: 'POST', body: { catalogo_margen: m, catalogo_redondeo: r } })
       .then(function (res) {
-        if (!res.ok) { window.mostrarToast(res.error || 'No se pudo guardar el margen', 'error'); return; }
-        catMargen = m;
-        window.mostrarToast('Margen de catálogo: ' + m + '%', 'success');
+        if (!res.ok) { window.mostrarToast(res.error || 'No se pudo guardar', 'error'); return; }
+        catMargen = m; catRedondeo = r;
+        window.mostrarToast('Cotización guardada: margen ' + m + '%' + (catRedondeo ? ', redondeo $' + catRedondeo : ''), 'success');
         cargarCatalogo();
       }).catch(function () { window.mostrarToast('Error de conexión con el servidor', 'error'); });
+  }
+
+  /** Precio de venta automático: costo + margen %, con redondeo opcional. */
+  function precioSugerido(costo) {
+    var p = Math.round(costo * (1 + catMargen / 100));
+    if (catRedondeo > 0) p = Math.round(p / catRedondeo) * catRedondeo;
+    return Math.max(0, p);
   }
 
   function guardarCatalogo() {
@@ -375,7 +387,7 @@
 
   /** Abre la cotización imprimible (80mm / PDF desde el diálogo de impresión). */
   function cotizarItem(c) {
-    var sugerido = Math.round(c.precio * (1 + catMargen / 100));
+    var sugerido = (parseInt(c.precio_venta, 10) > 0) ? parseInt(c.precio_venta, 10) : precioSugerido(c.precio);
     var validez = new Date(Date.now() + 7 * 86400000).toLocaleDateString('es-CL');
     var hoy = new Date().toLocaleDateString('es-CL');
     var cfg = empresaCfg || {};
@@ -435,12 +447,42 @@
             return c2;
           }
 
-          var sugerido = Math.round(c.precio * (1 + catMargen / 100));
           tr.appendChild(td(c.pieza, 'p-2 font-bold text-white'));
           tr.appendChild(td(c.modelo, 'p-2 text-cyan-400 font-semibold'));
           tr.appendChild(td(c.proveedor_nombre, 'p-2 text-slate-400'));
           tr.appendChild(td(fmt(c.precio), 'p-2 text-right text-slate-400'));
-          tr.appendChild(td(fmt(sugerido), 'p-2 text-right text-emerald-400 font-bold'));
+
+          // Precio de venta: fijo del negocio (con marca FIJO) o automático
+          var tdPrecio = document.createElement('td');
+          tdPrecio.className = 'p-2 text-right whitespace-nowrap';
+          var precioFijo = parseInt(c.precio_venta, 10) > 0;
+          var spanP = document.createElement('span');
+          spanP.className = 'text-emerald-400 font-bold';
+          spanP.textContent = fmt(precioFijo ? parseInt(c.precio_venta, 10) : precioSugerido(c.precio));
+          tdPrecio.appendChild(spanP);
+          if (precioFijo) {
+            var tag = document.createElement('span');
+            tag.className = 'ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500 text-slate-950 align-middle';
+            tag.textContent = 'FIJO';
+            tdPrecio.appendChild(tag);
+          }
+          var btnP = document.createElement('button');
+          btnP.type = 'button';
+          btnP.title = precioFijo ? 'Cambiar tu precio fijo' : 'Fijar tu propio precio';
+          btnP.innerHTML = '<i class="fa-solid fa-pen pointer-events-none"></i>';
+          btnP.className = 'ml-1 w-6 h-6 rounded bg-slate-800 hover:bg-cyan-600 text-slate-300 text-[10px] transition-all align-middle';
+          btnP.addEventListener('click', function () { editarPrecioVenta(c, tdPrecio); });
+          tdPrecio.appendChild(btnP);
+          if (precioFijo) {
+            var btnAuto = document.createElement('button');
+            btnAuto.type = 'button';
+            btnAuto.title = 'Volver al precio automático';
+            btnAuto.innerHTML = '<i class="fa-solid fa-rotate-left pointer-events-none"></i>';
+            btnAuto.className = 'ml-1 w-6 h-6 rounded bg-slate-800 hover:bg-red-900 text-slate-300 text-[10px] transition-all align-middle';
+            btnAuto.addEventListener('click', function () { fijarPrecioVenta(c.id, 0); });
+            tdPrecio.appendChild(btnAuto);
+          }
+          tr.appendChild(tdPrecio);
 
           var tdDisp = document.createElement('td');
           tdDisp.className = 'p-2 text-center';
@@ -706,6 +748,54 @@
     });
   }
 
+  /* ------------------------------------------------- PRECIO DE VENTA FIJO */
+  /** Guarda el precio de venta propio (0 = volver al automático). */
+  function fijarPrecioVenta(id, valor) {
+    api('api/proveedores.php?action=catalogo_fijar_precio', { method: 'POST', body: { id: id, precio_venta: valor } })
+      .then(function (res) {
+        if (!res.ok) { window.mostrarToast(res.error || 'No se pudo fijar el precio', 'error'); return; }
+        window.mostrarToast(valor > 0 ? 'Precio propio fijado: ' + fmt(valor) : 'Vuelto al precio automático', 'success');
+        cargarCatalogo();
+      }).catch(function () { window.mostrarToast('Error de conexión con el servidor', 'error'); });
+  }
+
+  /** Edición en línea: convierte la celda del precio en un input pequeño. */
+  function editarPrecioVenta(c, celda) {
+    if (celda.querySelector('input')) return;
+    var fijo = parseInt(c.precio_venta, 10) > 0;
+    var valorActual = fijo ? parseInt(c.precio_venta, 10) : precioSugerido(c.precio);
+    celda.replaceChildren();
+
+    var input = document.createElement('input');
+    input.type = 'number';
+    input.min = '0';
+    input.value = String(valorActual);
+    input.className = 'w-20 bg-slate-900 border border-slate-700 rounded px-1 py-0.5 text-right text-xs text-white focus:outline-none focus:border-cyan-500';
+
+    var btnOk = document.createElement('button');
+    btnOk.type = 'button'; btnOk.title = 'Guardar precio';
+    btnOk.innerHTML = '<i class="fa-solid fa-check pointer-events-none"></i>';
+    btnOk.className = 'ml-1 w-6 h-6 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] transition-all align-middle';
+
+    var btnNo = document.createElement('button');
+    btnNo.type = 'button'; btnNo.title = 'Cancelar';
+    btnNo.innerHTML = '<i class="fa-solid fa-xmark pointer-events-none"></i>';
+    btnNo.className = 'ml-1 w-6 h-6 rounded bg-slate-700 hover:bg-slate-600 text-slate-200 text-[10px] transition-all align-middle';
+
+    function guardar() {
+      var v = parseInt(input.value, 10) || 0;
+      fijarPrecioVenta(c.id, v);
+    }
+    btnOk.addEventListener('click', guardar);
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') guardar(); });
+    btnNo.addEventListener('click', function () { cargarCatalogo(); });
+
+    celda.appendChild(input);
+    celda.appendChild(btnOk);
+    celda.appendChild(btnNo);
+    input.focus();
+  }
+
   /* ----------------------------------------------------------- ARRANQUE */
   document.addEventListener('DOMContentLoaded', function () {
     $('btn-prov-guardar').addEventListener('click', guardarProveedor);
@@ -726,6 +816,7 @@
       clearTimeout(busquedaTimer);
       busquedaTimer = setTimeout(cargarCatalogo, 300);
     });
+    if (window.innerWidth >= 768) $('cat-buscar').focus(); // en el teléfono el teclado molesta al abrir
 
     api('api/auth.php?action=me').then(function (res) {
       mostrarVista(!!(res && res.logueado));

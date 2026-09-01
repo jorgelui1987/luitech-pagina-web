@@ -45,6 +45,7 @@ const CONFIG_CLAVES = [
     'mp_access_token'       => ['secreto' => true],
     'mp_point_device'       => ['max' => 80],
     'catalogo_margen'       => ['int' => [0, 500]],
+    'catalogo_redondeo'     => ['int' => [0, 100000]],
 ];
 
 const CONFIG_SECRETAS = ['dte_api_key', 'mp_access_token'];

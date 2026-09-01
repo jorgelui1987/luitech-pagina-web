@@ -327,6 +327,7 @@ $configSemillas = [
     'moneda_simbolo'        => '$',
     'zona_horaria'          => 'America/Santiago',
     'garantia_dias_default' => '30',
+    'catalogo_redondeo'     => '0',
     'terminos_texto'        => '¡Gracias por confiar en Luitech! Conserve este comprobante para hacer efectiva la garantía.',
     'dte_habilitado'        => '0',
     'dte_proveedor'         => '',
@@ -459,6 +460,15 @@ $colUrlLis = $pdo->query("SHOW COLUMNS FROM proveedores LIKE 'url_listado'")->fe
 if (!$colUrlLis) {
     $pdo->exec("ALTER TABLE proveedores ADD COLUMN url_listado VARCHAR(500) NULL AFTER notas");
     echo "[migrate] proveedores.url_listado agregado\n";
+}
+
+// --- Precio de venta fijo por item del catálogo -----------------------------
+// NULL = precio sugerido automático (costo + margen, con redondeo);
+// número = precio propio del negocio, estable aunque cambie el margen.
+$colPvCat = $pdo->query("SHOW COLUMNS FROM catalogo_proveedores LIKE 'precio_venta'")->fetch(PDO::FETCH_ASSOC);
+if (!$colPvCat) {
+    $pdo->exec("ALTER TABLE catalogo_proveedores ADD COLUMN precio_venta INT UNSIGNED NULL AFTER precio");
+    echo "[migrate] catalogo_proveedores.precio_venta agregado\n";
 }
 
 // --- Clientes: registro, ficha e historial --------------------------------
