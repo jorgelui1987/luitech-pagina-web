@@ -61,10 +61,12 @@
     return Math.max(0, p);
   }
 
-  /** Precio efectivo del item: el fijo del negocio si existe, o el automático. */
+  /** Precio efectivo mostrado: el FIJO del negocio si existe; si no, el
+   *  PRECIO DEL PROVEEDOR tal cual. El margen queda solo como sugerencia
+   *  al fijar tu precio final con el lápiz. */
   function precioDe(c) {
     var fijo = parseInt(c.precio_venta, 10);
-    return (fijo > 0) ? fijo : precioSugerido(c.precio);
+    return (fijo > 0) ? fijo : Math.max(0, parseInt(c.precio, 10) || 0);
   }
 
   function buscar() {
@@ -172,7 +174,9 @@
   /** Fila de item con cantidad (−/+), % de descuento y total de la línea. */
   function filaItem(c) {
     var s = seleccion[c.id] || (seleccion[c.id] = { c: c, cant: 0, desc: 0 });
-    var unit = precioDe(c);
+    var unit = precioDe(c); // precio final: TU precio fijo si lo definiste, si no el del proveedor
+    var costoProv = Math.max(0, parseInt(c.precio, 10) || 0);
+    var fijoVal = parseInt(c.precio_venta, 10);
 
     var li = document.createElement('li');
     li.className = 'flex flex-wrap items-center gap-2 px-3 py-2.5 border-b border-slate-800/40 last:border-0';
@@ -216,10 +220,24 @@
     m.textContent = c.modelo;
     var sub = document.createElement('p');
     sub.className = 'text-[10px] text-slate-500';
-    sub.textContent = (c.proveedor_nombre || '') + ' · unit. ' + fmt(unit) + (c.disponible ? '' : ' · NO DISPONIBLE');
+    var detalle = (c.proveedor_nombre || '') + ' · costo ' + fmt(costoProv) + (c.disponible ? '' : ' · NO DISPONIBLE');
+    if (fijoVal > 0) detalle += ' · TU PRECIO ' + fmt(fijoVal);
+    sub.textContent = detalle;
     info.appendChild(m);
     info.appendChild(sub);
     li.appendChild(info);
+
+    var btnPrecio = document.createElement('button');
+    btnPrecio.type = 'button';
+    btnPrecio.title = fijoVal > 0 ? 'Cambiar tu precio final' : 'Fijar tu precio final (sugerido con margen: ' + fmt(precioSugerido(costoProv)) + ' · costo: ' + fmt(costoProv) + ')';
+    btnPrecio.innerHTML = '<i class="fa-solid fa-pen pointer-events-none"></i>';
+    btnPrecio.className = 'w-6 h-6 rounded bg-slate-800 hover:bg-cyan-600 text-slate-300 text-[10px] transition-all';
+    btnPrecio.addEventListener('click', function () {
+      var txt = prompt('Tu precio final para ' + c.modelo + '\n\nCosto proveedor: ' + fmt(costoProv) + '\nSugerido con margen ' + catMargen + '%: ' + fmt(precioSugerido(costoProv)) + '\n\nEscribe tu precio (vacío o 0 = volver al precio del proveedor):', fijoVal > 0 ? String(fijoVal) : '');
+      if (txt === null) return;
+      fijarPrecioVenta(c.id, parseInt(txt, 10) || 0);
+    });
+    li.appendChild(btnPrecio);
 
     var sel = document.createElement('select');
     sel.title = 'Descuento % para esta línea';
@@ -324,6 +342,16 @@
   function limpiarSeleccion() {
     seleccion = {};
     render(ultimos.catalogo, ultimos.q);
+  }
+
+  /** Guarda TU precio final para un item (0 = volver al precio del proveedor). */
+  function fijarPrecioVenta(id, valor) {
+    api('api/proveedores.php?action=catalogo_fijar_precio', { method: 'POST', body: { id: id, precio_venta: valor } })
+      .then(function (res) {
+        if (!res.ok) { window.mostrarToast(res.error || 'No se pudo fijar el precio', 'error'); return; }
+        window.mostrarToast(valor > 0 ? 'Tu precio final: ' + fmt(valor) : 'Vuelto al precio del proveedor', 'success');
+        render(ultimos.catalogo, ultimos.q);
+      }).catch(function () { window.mostrarToast('Error de conexión con el servidor', 'error'); });
   }
 
   /* ----------------------------------------------------------- ARRANQUE */
