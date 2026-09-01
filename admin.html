@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow">
     <meta name="theme-color" content="#020617">
     <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
-    <link rel="stylesheet" href="assets/css/styles.css?v=mp24">
+    <link rel="stylesheet" href="assets/css/styles.css?v=mp25">
     <style>
         /* Acta de recepción: firma táctil, chips de accesorios y miniaturas */
         .lienzo-firma{ touch-action:none; cursor:crosshair; background:#ffffff; display:block; width:100%; height:140px; border-radius:0.5rem; }
@@ -170,6 +170,10 @@
                     <a href="pos.html" rel="noopener" title="Punto de venta"
                        class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg font-semibold transition-all">
                         <i class="fa-solid fa-cash-register mr-1"></i>POS
+                    </a>
+                    <a href="cotizador.html" rel="noopener" title="Cotizador de proveedores"
+                       class="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-2 rounded-lg font-semibold transition-all">
+                        <i class="fa-solid fa-magnifying-glass-dollar mr-1"></i>Cotizador
                     </a>
                     <a href="inventario.html" rel="noopener" title="Inventario"
                        class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-2 rounded-lg font-semibold transition-all">
@@ -557,6 +561,7 @@
         <button type="button" id="bm-mas"><i class="fa-solid fa-ellipsis"></i><span>Más</span></button>
     </nav>
     <div id="mas-panel" class="hidden">
+        <a href="cotizador.html" class="bm-admin"><i class="fa-solid fa-magnifying-glass-dollar mr-1"></i>Cotizador</a>
         <a href="clientes.html" class="bm-admin"><i class="fa-solid fa-users mr-1"></i>Clientes</a>
         <a href="proveedores.html" class="bm-admin"><i class="fa-solid fa-truck-field mr-1"></i>Proveedores</a>
         <a href="tecnicos.html" class="bm-admin"><i class="fa-solid fa-user-gear mr-1"></i>Técnicos</a>
@@ -566,7 +571,7 @@
         <button type="button" id="bm-salir" style="grid-column:1/-1"><i class="fa-solid fa-right-from-bracket mr-1"></i>Salir (<span class="bm-nombre"></span>)</button>
     </div>
 
-    <script src="assets/js/common.js?v=mp24" defer></script>
-    <script src="assets/js/admin.js?v=mp24" defer></script>
+    <script src="assets/js/common.js?v=mp25" defer></script>
+    <script src="assets/js/admin.js?v=mp25" defer></script>
 </body>
 </html>
