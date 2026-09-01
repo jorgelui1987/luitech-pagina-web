@@ -9,6 +9,14 @@
 
   function fmt(n) { return '$ ' + Math.max(0, Math.round(Number(n) || 0)).toLocaleString('es-CL'); }
 
+  /** Limpia el teléfono a formato wa.me (solo dígitos, con país 56). */
+  function telefonoWhatsapp(tel) {
+    var d = String(tel || '').replace(/[^0-9]/g, '');
+    if (!d) return '';
+    if (d.indexOf('56') === 0) return d;
+    return '56' + d;
+  }
+
   var empresaCfg = null; // datos de la empresa para la cotización
 
   /** Escapa texto para incrustarlo en el HTML de la cotización. */
@@ -145,6 +153,19 @@
 
         var tdAcc = document.createElement('td');
         tdAcc.className = 'p-2 text-center';
+
+        var waNum = telefonoWhatsapp(p.telefono);
+        if (waNum) {
+          var btnWa = document.createElement('button');
+          btnWa.type = 'button'; btnWa.title = 'Consultar por WhatsApp';
+          btnWa.innerHTML = '<i class="fa-brands fa-whatsapp pointer-events-none"></i>';
+          btnWa.className = 'w-8 h-8 rounded-lg bg-emerald-950 hover:bg-emerald-800 text-emerald-400 border border-emerald-900 mx-0.5 transition-all';
+          btnWa.addEventListener('click', function () {
+            window.open('https://wa.me/' + waNum + '?text=' + encodeURIComponent('¡Hola ' + p.nombre + '! ¿Me cotizas disponibilidad y precio?'), '_blank');
+          });
+          tdAcc.appendChild(btnWa);
+        }
+
         var btnEd = document.createElement('button');
         btnEd.type = 'button'; btnEd.title = 'Editar';
         btnEd.innerHTML = '<i class="fa-solid fa-pen pointer-events-none"></i>';

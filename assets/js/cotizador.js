@@ -14,8 +14,17 @@
   var timer = null;
   var seleccion = {};   // id -> { c: item, cant: X, desc: Y } items de la cotización
   var ultimos = { catalogo: [], q: '' };
+  var listaProveedoresCot = []; // para consultar por WhatsApp cuando no hay resultados
 
   function fmt(n) { return '$ ' + Math.max(0, Math.round(Number(n) || 0)).toLocaleString('es-CL'); }
+
+  /** Limpia el teléfono a formato wa.me (solo dígitos, con país 56). */
+  function telefonoWhatsapp(tel) {
+    var d = String(tel || '').replace(/[^0-9]/g, '');
+    if (!d) return '';
+    if (d.indexOf('56') === 0) return d;
+    return '56' + d;
+  }
   function esc(t) {
     return String(t === null || t === undefined ? '' : t).replace(/[&<>"]/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
@@ -32,6 +41,7 @@
   function cargarProveedoresCot() {
     api('api/proveedores.php?action=list').then(function (res) {
       if (!res.ok) return;
+      listaProveedoresCot = res.proveedores || [];
       var sel = $('cot-prov');
       var actual = sel.value;
       sel.replaceChildren(new Option('Todos los proveedores', ''));
@@ -94,6 +104,38 @@
       pv.className = 'text-slate-500 italic text-center py-10 text-sm';
       pv.textContent = q ? 'Sin resultados para "' + q + '".' : 'Escribe arriba: ej. "pantalla iphone 13" o "a54".';
       cont.appendChild(pv);
+
+      // ¿No está? Consultar directo por WhatsApp al proveedor
+      if (q) {
+        var conWa = [];
+        listaProveedoresCot.forEach(function (p) {
+          var num = telefonoWhatsapp(p.telefono);
+          if (num) conWa.push({ nombre: p.nombre, num: num });
+        });
+        var cajaWa = document.createElement('div');
+        cajaWa.className = 'bg-slate-950 border border-slate-800 rounded-2xl p-4';
+        var tw = document.createElement('p');
+        tw.className = 'text-xs font-bold text-white mb-2';
+        tw.textContent = '¿No está en la lista? Consúltale directo por WhatsApp:';
+        cajaWa.appendChild(tw);
+        if (conWa.length) {
+          conWa.forEach(function (p) {
+            var a = document.createElement('a');
+            a.href = 'https://wa.me/' + p.num + '?text=' + encodeURIComponent('¡Hola ' + p.nombre + '! ¿Tienen: ' + q + '? ¿Me cotizas precio y disponibilidad?');
+            a.target = '_blank';
+            a.rel = 'noopener';
+            a.className = 'inline-flex items-center gap-2 bg-emerald-950 hover:bg-emerald-800 border border-emerald-800 text-emerald-300 font-bold text-xs px-3 py-2 rounded-xl mr-2 mb-2 transition-all';
+            a.innerHTML = '<i class="fa-brands fa-whatsapp text-base pointer-events-none"></i>' + esc(p.nombre);
+            cajaWa.appendChild(a);
+          });
+        } else {
+          var aviso = document.createElement('p');
+          aviso.className = 'text-[11px] text-slate-500';
+          aviso.textContent = 'Guarda el WhatsApp de tus proveedores en Proveedores → campo "Teléfono / WhatsApp" para consultar desde aquí.';
+          cajaWa.appendChild(aviso);
+        }
+        cont.appendChild(cajaWa);
+      }
       return;
     }
 
