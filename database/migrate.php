@@ -452,6 +452,15 @@ foreach ([
     }
 }
 
+// --- URL de planilla sincronizable (Google Sheets) por proveedor -----------
+// El botón "Sincronizar ahora" del importador descarga e importa el listado
+// desde esta URL sin que el proveedor tenga que mandar archivos.
+$colUrlLis = $pdo->query("SHOW COLUMNS FROM proveedores LIKE 'url_listado'")->fetch(PDO::FETCH_ASSOC);
+if (!$colUrlLis) {
+    $pdo->exec("ALTER TABLE proveedores ADD COLUMN url_listado VARCHAR(500) NULL AFTER notas");
+    echo "[migrate] proveedores.url_listado agregado\n";
+}
+
 // --- Clientes: registro, ficha e historial --------------------------------
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS clientes (

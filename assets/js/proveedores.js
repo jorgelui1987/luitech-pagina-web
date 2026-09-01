@@ -86,9 +86,12 @@
   }
 
   /* -------------------------------------------------- PROVEEDORES (CRUD) */
+  var listaProveedores = []; // cache para la sección de importación (URL guardada)
+
   function cargarProveedores() {
     api('api/proveedores.php?action=list').then(function (res) {
       if (!res.ok) return;
+      listaProveedores = res.proveedores || [];
       var tbody = $('prov-body');
       tbody.replaceChildren();
 
@@ -653,6 +656,56 @@
     });
   }
 
+  /* ------------------------------------------ SINCRONIZACIÓN GOOGLE SHEETS */
+  function proveedorSeleccionadoImport() {
+    var id = parseInt($('imp-prov').value, 10) || 0;
+    for (var i = 0; i < listaProveedores.length; i++) {
+      if (parseInt(listaProveedores[i].id, 10) === id) return listaProveedores[i];
+    }
+    return null;
+  }
+
+  function urlAlCambiarProveedor() {
+    var p = proveedorSeleccionadoImport();
+    $('imp-url').value = (p && p.url_listado) ? p.url_listado : '';
+  }
+
+  function guardarUrlListado() {
+    var p = proveedorSeleccionadoImport();
+    if (!p) { window.mostrarToast('Elige el proveedor primero', 'error'); return; }
+    var url = $('imp-url').value.trim();
+    api('api/proveedores.php?action=update', { method: 'POST', body: { id: p.id, url_listado: url } })
+      .then(function (res) {
+        if (!res.ok) { window.mostrarToast(res.error || 'No se pudo guardar la URL', 'error'); return; }
+        p.url_listado = url || null;
+        window.mostrarToast('URL de planilla guardada para ' + p.nombre, 'success');
+      }).catch(function () { window.mostrarToast('Error de conexión con el servidor', 'error'); });
+  }
+
+  function sincronizarPlanilla() {
+    var p = proveedorSeleccionadoImport();
+    if (!p) { window.mostrarToast('Elige el proveedor primero', 'error'); return; }
+    var urlNueva = $('imp-url').value.trim();
+    if (urlNueva) p.url_listado = urlNueva; // el servidor la guarda junto con la sincronización
+    var boton = $('btn-imp-sync');
+    boton.disabled = true;
+    boton.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Sincronizando…';
+    api('api/proveedores.php?action=catalogo_sincronizar', {
+      method: 'POST',
+      body: { proveedor_id: p.id, url: urlNueva, marcar_no_disp: $('imp-nodisp').checked }
+    }).then(function (res) {
+      boton.disabled = false;
+      boton.innerHTML = '<i class="fa-solid fa-rotate mr-1"></i>Sincronizar ahora';
+      if (!res.ok) { window.mostrarToast(res.error || 'No se pudo sincronizar', 'error'); return; }
+      window.mostrarToast('Planilla sincronizada: ' + res.insertados + ' nuevos, ' + res.actualizados + ' actualizados (' + res.total + ' items)', 'success');
+      cargarCatalogo();
+    }).catch(function () {
+      boton.disabled = false;
+      boton.innerHTML = '<i class="fa-solid fa-rotate mr-1"></i>Sincronizar ahora';
+      window.mostrarToast('Error de conexión con el servidor', 'error');
+    });
+  }
+
   /* ----------------------------------------------------------- ARRANQUE */
   document.addEventListener('DOMContentLoaded', function () {
     $('btn-prov-guardar').addEventListener('click', guardarProveedor);
@@ -665,6 +718,9 @@
     $('btn-imp-prev').addEventListener('click', analizarListado);
     $('btn-imp-confirmar').addEventListener('click', confirmarImportacion);
     $('imp-archivo').addEventListener('change', leerArchivoListado);
+    $('imp-prov').addEventListener('change', urlAlCambiarProveedor);
+    $('btn-imp-url').addEventListener('click', guardarUrlListado);
+    $('btn-imp-sync').addEventListener('click', sincronizarPlanilla);
     var busquedaTimer = null;
     $('cat-buscar').addEventListener('input', function () {
       clearTimeout(busquedaTimer);

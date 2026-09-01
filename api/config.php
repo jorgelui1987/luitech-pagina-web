@@ -356,6 +356,7 @@ function preparar_proveedores(PDO $pdo): void
         rut             VARCHAR(12)      NULL,
         telefono        VARCHAR(40)      NULL,
         notas           VARCHAR(255)     NULL,
+        url_listado     VARCHAR(500)     NULL,
         activo          TINYINT(1)       NOT NULL DEFAULT 1,
         creado_en       TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
@@ -382,6 +383,11 @@ function preparar_proveedores(PDO $pdo): void
         INDEX idx_cat_prov (proveedor_id),
         INDEX idx_cat_modelo (modelo)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    // Compatibilidad: hostings sin migrate — URL de planilla sincronizable
+    $colUrlLis = $pdo->query("SHOW COLUMNS FROM proveedores LIKE 'url_listado'")->fetch(PDO::FETCH_ASSOC);
+    if (!$colUrlLis) {
+        $pdo->exec("ALTER TABLE proveedores ADD COLUMN url_listado VARCHAR(500) NULL AFTER notas");
+    }
     $col = $pdo->query("SHOW COLUMNS FROM productos LIKE 'proveedor_id'")->fetch(PDO::FETCH_ASSOC);
     if (!$col) {
         $pdo->exec("ALTER TABLE productos ADD COLUMN proveedor_id INT UNSIGNED NULL AFTER proveedor");

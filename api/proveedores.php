@@ -10,11 +10,16 @@
  *                         descontar_caja?, nota?}
  *                                       -> suma stock, actualiza costo, egresa de caja
  *   compras          GET ?proveedor_id= -> historial de compras
+ *   catalogo_importar    POST {proveedor_id, items[], marcar_no_disp?} -> importa listado pegado
+ *   catalogo_sincronizar POST {proveedor_id, url?, marcar_no_disp?}  -> descarga la planilla
+ *                        de Google Sheets guardada en el proveedor, la interpreta
+ *                        (grilla con secciones y variantes) y la importa al catálogo
  */
 
 declare(strict_types=1);
 
 require __DIR__ . '/config.php';
+require __DIR__ . '/planillas.php'; // parser de planillas de proveedores (Google Sheets)
 
 iniciar_respuesta_json();
 exigir_admin(); exigir_rol_admin();
@@ -46,14 +51,60 @@ function leer_proveedor(array $d): array
     if (isset($d['nota'])) {
         $out['notas'] = trim(mb_substr((string)$d['nota'], 0, 255)) ?: null;
     }
+    if (isset($d['url_listado'])) {
+        $url = trim((string)$d['url_listado']);
+        if ($url !== '' && !preg_match('#^https?://#i', $url)) {
+            responder(['ok' => false, 'error' => 'La URL del listado debe empezar por http(s)://'], 400);
+        }
+        $out['url_listado'] = ($url === '') ? null : mb_substr($url, 0, 500);
+    }
     return $out;
+}
+
+/** Núcleo de importación: upsert por proveedor+modelo+pieza dentro de una
+ *  transacción. Devuelve [insertados, actualizados]. Lanza PDOException. */
+function importar_items_catalogo(int $proveedorId, array $items, bool $marcarNoDisp): array
+{
+    db()->beginTransaction();
+    try {
+        if ($marcarNoDisp) {
+            db()->prepare('UPDATE catalogo_proveedores SET disponible = 0 WHERE proveedor_id = ?')
+                ->execute([$proveedorId]);
+        }
+        $stSel = db()->prepare('SELECT id FROM catalogo_proveedores WHERE proveedor_id = ? AND LOWER(modelo) = LOWER(?) AND LOWER(pieza) = LOWER(?) LIMIT 1');
+        $stIns = db()->prepare('INSERT INTO catalogo_proveedores (proveedor_id, modelo, pieza, precio, disponible) VALUES (?, ?, ?, ?, 1)');
+        $stUpd = db()->prepare('UPDATE catalogo_proveedores SET precio = ?, disponible = 1, actualizado_en = NOW() WHERE id = ?');
+        $insertados = 0;
+        $actualizados = 0;
+        foreach ($items as $it) {
+            if (!is_array($it)) continue;
+            $modelo = mb_substr(trim((string)($it['modelo'] ?? '')), 0, 80);
+            $pieza  = mb_substr(trim((string)($it['pieza'] ?? '')), 0, 60);
+            $precio = max(0, (int)($it['precio'] ?? 0));
+            if ($modelo === '' || $pieza === '' || $precio < 1) continue;
+            $stSel->execute([$proveedorId, $modelo, $pieza]);
+            $existe = $stSel->fetchColumn();
+            if ($existe) {
+                $stUpd->execute([$precio, (int)$existe]);
+                $actualizados++;
+            } else {
+                $stIns->execute([$proveedorId, $modelo, $pieza, $precio]);
+                $insertados++;
+            }
+        }
+        db()->commit();
+        return [$insertados, $actualizados];
+    } catch (PDOException $e) {
+        db()->rollBack();
+        throw $e;
+    }
 }
 
 switch ($action) {
 
     case 'list':
         $stmt = db()->query(
-            'SELECT p.id, p.nombre, p.rut, p.telefono, p.notas,
+            'SELECT p.id, p.nombre, p.rut, p.telefono, p.notas, p.url_listado,
                     (SELECT COUNT(*) FROM entradas_stock c WHERE c.proveedor_id = p.id) AS compras_total,
                     (SELECT COALESCE(SUM(c.total),0) FROM entradas_stock c WHERE c.proveedor_id = p.id) AS monto_comprado,
                     (SELECT MAX(c.fecha) FROM entradas_stock c WHERE c.proveedor_id = p.id) AS ultima_compra
@@ -261,36 +312,10 @@ switch ($action) {
         if ($stP->fetchColumn() === false) {
             responder(['ok' => false, 'error' => 'El proveedor no existe'], 400);
         }
-        db()->beginTransaction();
         try {
-            if ($marcarNoDisp) {
-                db()->prepare('UPDATE catalogo_proveedores SET disponible = 0 WHERE proveedor_id = ?')
-                    ->execute([$proveedorId]);
-            }
-            $stSel = db()->prepare('SELECT id FROM catalogo_proveedores WHERE proveedor_id = ? AND LOWER(modelo) = LOWER(?) AND LOWER(pieza) = LOWER(?) LIMIT 1');
-            $stIns = db()->prepare('INSERT INTO catalogo_proveedores (proveedor_id, modelo, pieza, precio, disponible) VALUES (?, ?, ?, ?, 1)');
-            $stUpd = db()->prepare('UPDATE catalogo_proveedores SET precio = ?, disponible = 1, actualizado_en = NOW() WHERE id = ?');
-            $insertados = 0; $actualizados = 0;
-            foreach ($items as $it) {
-                if (!is_array($it)) continue;
-                $modelo = mb_substr(trim((string)($it['modelo'] ?? '')), 0, 80);
-                $pieza  = mb_substr(trim((string)($it['pieza'] ?? '')), 0, 60);
-                $precio = max(0, (int)($it['precio'] ?? 0));
-                if ($modelo === '' || $pieza === '' || $precio < 1) continue;
-                $stSel->execute([$proveedorId, $modelo, $pieza]);
-                $existe = $stSel->fetchColumn();
-                if ($existe) {
-                    $stUpd->execute([$precio, (int)$existe]);
-                    $actualizados++;
-                } else {
-                    $stIns->execute([$proveedorId, $modelo, $pieza, $precio]);
-                    $insertados++;
-                }
-            }
-            db()->commit();
+            [$insertados, $actualizados] = importar_items_catalogo($proveedorId, $items, $marcarNoDisp);
             responder(['ok' => true, 'insertados' => $insertados, 'actualizados' => $actualizados]);
         } catch (PDOException $e) {
-            db()->rollBack();
             responder(['ok' => false, 'error' => 'No se pudo importar el listado'], 500);
         }
     }
@@ -305,6 +330,57 @@ switch ($action) {
         }
         db()->prepare('DELETE FROM catalogo_proveedores WHERE id = ?')->execute([$id]);
         responder(['ok' => true]);
+    }
+
+    case 'catalogo_sincronizar': {
+        // Descarga la planilla de Google Sheets del proveedor (URL guardada o
+        // enviada ahora), la interpreta con el parser de grillas y la importa.
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            responder(['ok' => false, 'error' => 'Método no permitido'], 405);
+        }
+        $d = leer_cuerpo();
+        $proveedorId = (int)($d['proveedor_id'] ?? 0);
+        $marcarNoDisp = !isset($d['marcar_no_disp']) ? true : !empty($d['marcar_no_disp']);
+        if ($proveedorId <= 0) {
+            responder(['ok' => false, 'error' => 'Proveedor obligatorio'], 400);
+        }
+        $stP = db()->prepare('SELECT nombre, url_listado FROM proveedores WHERE id = ? AND activo = 1 LIMIT 1');
+        $stP->execute([$proveedorId]);
+        $prov = $stP->fetch();
+        if (!$prov) {
+            responder(['ok' => false, 'error' => 'El proveedor no existe'], 400);
+        }
+        $url = trim((string)($d['url'] ?? ''));
+        if ($url !== '') {
+            if (!preg_match('#^https?://#i', $url)) {
+                responder(['ok' => false, 'error' => 'La URL debe empezar por https://'], 400);
+            }
+            db()->prepare('UPDATE proveedores SET url_listado = ? WHERE id = ?')
+                ->execute([mb_substr($url, 0, 500), $proveedorId]);
+        } else {
+            $url = trim((string)($prov['url_listado'] ?? ''));
+        }
+        if ($url === '') {
+            responder(['ok' => false, 'error' => 'Este proveedor no tiene URL de planilla guardada. Pégala en el campo de URL y reintenta.'], 400);
+        }
+        $csvUrl = url_a_csv_google($url);
+        if ($csvUrl === null) {
+            responder(['ok' => false, 'error' => 'La URL no es de una planilla de Google Sheets'], 400);
+        }
+        $csv = descargar_texto_url($csvUrl);
+        if (trim($csv) === '' || stripos($csv, '<!DOCTYPE') !== false || stripos($csv, '<html') !== false) {
+            responder(['ok' => false, 'error' => 'No se pudo leer la planilla. Verifica que esté compartida como «Cualquiera con el link»'], 400);
+        }
+        $items = parsear_planilla_google($csv);
+        if (count($items) === 0) {
+            responder(['ok' => false, 'error' => 'La planilla no tiene items con precio que se puedan leer'], 400);
+        }
+        try {
+            [$insertados, $actualizados] = importar_items_catalogo($proveedorId, $items, $marcarNoDisp);
+            responder(['ok' => true, 'insertados' => $insertados, 'actualizados' => $actualizados, 'total' => count($items)]);
+        } catch (PDOException $e) {
+            responder(['ok' => false, 'error' => 'No se pudo guardar el listado'], 500);
+        }
     }
 
     default:
