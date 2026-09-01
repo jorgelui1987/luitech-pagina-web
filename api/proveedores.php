@@ -276,7 +276,7 @@ switch ($action) {
         if (count($conds) > 0) {
             $sql .= ' WHERE ' . implode(' AND ', $conds);
         }
-        $sql .= ' ORDER BY c.disponible DESC, c.precio ASC, c.modelo ASC LIMIT 2000';
+        $sql .= ' ORDER BY c.disponible DESC, c.precio ASC, c.modelo ASC LIMIT 5000';
         $stmt = db()->prepare($sql);
         $stmt->execute($params);
         responder(['ok' => true, 'catalogo' => $stmt->fetchAll()]);
