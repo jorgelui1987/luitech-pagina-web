@@ -180,6 +180,7 @@
   window.imprimirDocumento = imprimirDocumento;
   window.abrirExterno = abrirExterno;
   window.LUITECH_WA = WHATSAPP_LUITECH;
+  window.toggleMobileMenu = toggleMobileMenu; // menú de las 3 rayitas (sitio público)
 
   /* ================== PWA: service worker + botón instalar ================== */
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
