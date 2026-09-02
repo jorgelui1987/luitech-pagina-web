@@ -203,6 +203,26 @@ function exigir_admin(): void
     }
 }
 
+/** Token CSRF de la sesión (se genera una vez y se reutiliza). */
+function csrf_token(): string
+{
+    iniciar_sesion();
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+/** Exige un token CSRF válido en el cuerpo (para acciones destructivas).
+ *  El JS lo pide primero con ?action=csrf_token (misma sesión, mismo origen). */
+function exigir_csrf(array $d): void
+{
+    $token = (string)($d['csrf'] ?? '');
+    if ($token === '' || !hash_equals(csrf_token(), $token)) {
+        responder(['ok' => false, 'error' => 'Token de seguridad inválido. Recarga la página e inténtalo de nuevo.'], 403);
+    }
+}
+
 // --- Utilidades JSON --------------------------------------------------
 function responder(array $datos, int $codigo_http = 200): never
 {

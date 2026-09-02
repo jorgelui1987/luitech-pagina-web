@@ -854,12 +854,15 @@
     var p = proveedorSeleccionadoImport();
     if (!p) { window.mostrarToast('Elige el proveedor primero', 'error'); return; }
     if (!confirm('¿BORRAR TODOS los items del catálogo de "' + p.nombre + '"?\n\nSirve para empezar limpio y volver a sincronizar con el formato correcto. NO se puede deshacer.')) return;
-    api('api/proveedores.php?action=catalogo_vaciar', { method: 'POST', body: { proveedor_id: p.id } })
-      .then(function (res) {
-        if (!res.ok) { window.mostrarToast(res.error || 'No se pudo vaciar', 'error'); return; }
-        window.mostrarToast('Catálogo de ' + p.nombre + ' vaciado (' + (res.borrados || 0) + ' items). Ahora sincroniza o importa de nuevo.', 'success');
-        cargarCatalogo();
-      }).catch(function () { window.mostrarToast('Error de conexión con el servidor', 'error'); });
+    api('api/proveedores.php?action=csrf_token').then(function (r) {
+      if (!r || !r.ok || !r.csrf) { window.mostrarToast('No se pudo validar la seguridad', 'error'); return; }
+      return api('api/proveedores.php?action=catalogo_vaciar', { method: 'POST', body: { proveedor_id: p.id, csrf: r.csrf } });
+    }).then(function (res) {
+      if (!res) return;
+      if (!res.ok) { window.mostrarToast(res.error || 'No se pudo vaciar', 'error'); return; }
+      window.mostrarToast('Catálogo de ' + p.nombre + ' vaciado (' + (res.borrados || 0) + ' items). Ahora sincroniza o importa de nuevo.', 'success');
+      cargarCatalogo();
+    }).catch(function () { window.mostrarToast('Error de conexión con el servidor', 'error'); });
   }
 
   /* ----------------------------------------------------------- ARRANQUE */

@@ -428,6 +428,11 @@ switch ($action) {
         responder(['ok' => true]);
     }
 
+    case 'csrf_token': {
+        // Token de sesión para confirmar acciones destructivas desde el JS.
+        responder(['ok' => true, 'csrf' => csrf_token()]);
+    }
+
     case 'catalogo_vaciar': {
         // Borra TODOS los items del catálogo de un proveedor. Útil para
         // empezar limpio (ej. tras importaciones de prueba) y volver a
@@ -435,7 +440,9 @@ switch ($action) {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
-        $proveedorId = (int)(leer_cuerpo()['proveedor_id'] ?? 0);
+        $d = leer_cuerpo();
+        exigir_csrf($d);
+        $proveedorId = (int)($d['proveedor_id'] ?? 0);
         if ($proveedorId <= 0) {
             responder(['ok' => false, 'error' => 'Proveedor obligatorio'], 400);
         }

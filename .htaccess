@@ -20,6 +20,7 @@ Options -Indexes
     # vacía) bloqueaba la cámara por completo y Chrome NUNCA mostraba el
     # aviso de permiso — ni en incognito ni desde el candado.
     Header set Permissions-Policy "geolocation=(self), microphone=(), camera=(self)"
+    Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://cdnjs.cloudflare.com; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https:; worker-src 'self' blob: https://cdnjs.cloudflare.com; connect-src 'self'; frame-ancestors 'self'; object-src 'none'; base-uri 'self'"
     # Las páginas y el service worker SIEMPRE se revalidan: en el teléfono
     # nunca se sirve una versión vieja guardada por el navegador.
     <FilesMatch "\.(html)$">
