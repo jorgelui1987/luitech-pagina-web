@@ -148,6 +148,17 @@ function generar_iconos_pwa_desde_logo(string $relativa): array
     if (count($generados) !== 2) {
         return ['ok' => false, 'error' => 'No se pudieron generar los iconos'];
     }
+
+    // favicon.svg también se regenera (la pestaña del navegador y el primer
+    // icono del manifest lo usan): SVG que incrusta el icono 512 en base64.
+    $png512 = @file_get_contents(__DIR__ . '/../assets/img/icon-512.png');
+    if ($png512 !== false) {
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">'
+             . '<image width="512" height="512" href="data:image/png;base64,' . base64_encode($png512) . '"/>'
+             . '</svg>';
+        @file_put_contents(__DIR__ . '/../assets/img/favicon.svg', $svg);
+    }
+
     return ['ok' => true, 'iconos' => $generados, 'fondo' => ($fondo === [255, 255, 255]) ? 'blanco' : 'oscuro'];
 }
 
