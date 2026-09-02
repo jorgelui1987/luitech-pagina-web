@@ -237,22 +237,32 @@ function generar_iconos_pwa_desde_logo(string $relativa): array
     $src = @imagecreatefromstring($contenido);
     if (!$src) return ['ok' => false, 'error' => 'El logo no es una imagen válida'];
 
-    // Muestra pequeña para medir la luminancia (¿logo claro u oscuro?)
-    $mini = imagecreatetruecolor(48, 48);
-    imagefilledrectangle($mini, 0, 0, 47, 47, imagecolorallocate($mini, 255, 255, 255));
-    imagecopyresampled($mini, $src, 0, 0, 0, 0, 48, 48, imagesx($src), imagesy($src));
-    $suma = 0.0;
-    $peso = 0;
-    for ($y = 0; $y < 48; $y++) {
-        for ($x = 0; $x < 48; $x++) {
-            $rgb = imagecolorat($mini, $x, $y);
-            $suma += 0.299 * (($rgb >> 16) & 0xFF) + 0.587 * (($rgb >> 8) & 0xFF) + 0.114 * ($rgb & 0xFF);
-            $peso++;
+    // Fondo del icono = el color de las ESQUINAS del logo (se ve integrado,
+    // como si el logo ocupara todo el icono). Si las esquinas son
+    // transparentes: blanco con logo oscuro, azul noche con logo claro.
+    $anchoSrc = imagesx($src);
+    $altoSrc  = imagesy($src);
+    $rgbEsquina = imagecolorat($src, 2, 2);
+    $esquinaTransparente = ((($rgbEsquina >> 24) & 0x7F) >= 120);
+    if ($esquinaTransparente) {
+        $mini = imagecreatetruecolor(48, 48);
+        imagefilledrectangle($mini, 0, 0, 47, 47, imagecolorallocate($mini, 255, 255, 255));
+        imagecopyresampled($mini, $src, 0, 0, 0, 0, 48, 48, $anchoSrc, $altoSrc);
+        $suma = 0.0;
+        $peso = 0;
+        for ($y = 0; $y < 48; $y++) {
+            for ($x = 0; $x < 48; $x++) {
+                $rgb = imagecolorat($mini, $x, $y);
+                $suma += 0.299 * (($rgb >> 16) & 0xFF) + 0.587 * (($rgb >> 8) & 0xFF) + 0.114 * ($rgb & 0xFF);
+                $peso++;
+            }
         }
+        imagedestroy($mini);
+        $luminancia = $peso > 0 ? $suma / $peso : 0;
+        $fondo = ($luminancia > 150) ? [15, 23, 42] : [255, 255, 255];
+    } else {
+        $fondo = [($rgbEsquina >> 16) & 0xFF, ($rgbEsquina >> 8) & 0xFF, $rgbEsquina & 0xFF];
     }
-    imagedestroy($mini);
-    $luminancia = $peso > 0 ? $suma / $peso : 0;
-    $fondo = ($luminancia > 150) ? [15, 23, 42] : [255, 255, 255];
 
     $generados = [];
     foreach ([512, 192] as $lado) {
