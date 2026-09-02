@@ -140,6 +140,7 @@ switch ($action) {
     // ---------------------------------------------------------------- ME
     case 'me':
         if (es_admin()) {
+            regenerar_iconos_si_corresponde(); // iconos PWA con el logo (auto, 1 vez por cambio de logo)
             $st = db()->prepare('SELECT rol, totp_enabled FROM usuarios_admin WHERE id = ? LIMIT 1');
             $st->execute([(int)$_SESSION['admin_id']]);
             $u = $st->fetch() ?: [];
