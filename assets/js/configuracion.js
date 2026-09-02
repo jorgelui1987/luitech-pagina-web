@@ -134,7 +134,12 @@
     function verificarGuardado(resSubida) {
       api('api/configuracion.php?action=get_all').then(function (res) {
         if (res.ok && res.config && res.config.empresa_logo) {
-          window.mostrarToast('Logo actualizado', 'success');
+          var iconos = resSubida && resSubida.iconos;
+          if (iconos && iconos.ok) {
+            window.mostrarToast('Logo actualizado — iconos de la app regenerados. Desinstala y reinstala la app para verlos', 'success');
+          } else {
+            window.mostrarToast('Logo actualizado', 'success');
+          }
           cargar();
           return;
         }

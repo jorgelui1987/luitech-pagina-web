@@ -98,6 +98,59 @@ function config_enmascarar(string $valor): string
     return '••••' . $cola;
 }
 
+/** Genera los iconos PWA (icon-192.png e icon-512.png) a partir del logo
+ *  subido, para que la app instalada muestre el logo de la empresa.
+ *  Cuadrado con fondo: blanco si el logo es oscuro; azul noche si es claro.
+ *  Requiere GD en el servidor; si falta, devuelve ok=false sin romper nada. */
+function generar_iconos_pwa_desde_logo(string $relativa): array
+{
+    if (!function_exists('imagecreatetruecolor')) {
+        return ['ok' => false, 'error' => 'El servidor no tiene la librería de imágenes (GD)'];
+    }
+    $ruta = __DIR__ . '/../' . $relativa;
+    $contenido = @file_get_contents($ruta);
+    if ($contenido === false) return ['ok' => false, 'error' => 'No se pudo leer el logo'];
+    $src = @imagecreatefromstring($contenido);
+    if (!$src) return ['ok' => false, 'error' => 'El logo no es una imagen válida'];
+
+    // Muestra pequeña para medir la luminancia (¿logo claro u oscuro?)
+    $mini = imagecreatetruecolor(48, 48);
+    imagefilledrectangle($mini, 0, 0, 47, 47, imagecolorallocate($mini, 255, 255, 255));
+    imagecopyresampled($mini, $src, 0, 0, 0, 0, 48, 48, imagesx($src), imagesy($src));
+    $suma = 0.0;
+    $peso = 0;
+    for ($y = 0; $y < 48; $y++) {
+        for ($x = 0; $x < 48; $x++) {
+            $rgb = imagecolorat($mini, $x, $y);
+            $suma += 0.299 * (($rgb >> 16) & 0xFF) + 0.587 * (($rgb >> 8) & 0xFF) + 0.114 * ($rgb & 0xFF);
+            $peso++;
+        }
+    }
+    imagedestroy($mini);
+    $luminancia = $peso > 0 ? $suma / $peso : 0;
+    $fondo = ($luminancia > 150) ? [15, 23, 42] : [255, 255, 255];
+
+    $generados = [];
+    foreach ([512, 192] as $lado) {
+        $lienzo = imagecreatetruecolor($lado, $lado);
+        imagefilledrectangle($lienzo, 0, 0, $lado, $lado, imagecolorallocate($lienzo, $fondo[0], $fondo[1], $fondo[2]));
+        $ajuste = (int)($lado * 0.78); // el logo ocupa el 78% del icono, centrado
+        $escala = $ajuste / max(1, max(imagesx($src), imagesy($src)));
+        $ancho  = max(1, (int)(imagesx($src) * $escala));
+        $alto   = max(1, (int)(imagesy($src) * $escala));
+        imagealphablending($lienzo, true);
+        imagecopyresampled($lienzo, $src, (int)(($lado - $ancho) / 2), (int)(($lado - $alto) / 2), 0, 0, $ancho, $alto, imagesx($src), imagesy($src));
+        $ok = @imagepng($lienzo, __DIR__ . '/../assets/img/icon-' . $lado . '.png', 6);
+        imagedestroy($lienzo);
+        if ($ok) $generados[] = $lado;
+    }
+    imagedestroy($src);
+    if (count($generados) !== 2) {
+        return ['ok' => false, 'error' => 'No se pudieron generar los iconos'];
+    }
+    return ['ok' => true, 'iconos' => $generados, 'fondo' => ($fondo === [255, 255, 255]) ? 'blanco' : 'oscuro'];
+}
+
 switch ($action) {
 
     case 'get':
@@ -235,8 +288,13 @@ switch ($action) {
                        ON DUPLICATE KEY UPDATE valor = VALUES(valor)')
             ->execute(['empresa_logo', $relativa]);
 
+        // Iconos PWA automáticos: la app instalada mostrará el logo de la
+        // empresa (requiere desinstalar/reinstalar la app para refrescar).
+        $iconos = generar_iconos_pwa_desde_logo($relativa);
+
         // Verificación inmediata en la MISMA conexión + identificación de la BD
         responder(['ok' => true, 'logo' => $relativa,
+                   'iconos' => $iconos,
                    'verificado' => config_valor(db(), 'empresa_logo', ''),
                    'db' => DB_NAME . '@' . DB_HOST]);
     }
