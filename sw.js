@@ -2,7 +2,7 @@
    - Interfaz (páginas, CSS, JS, imágenes): red primero + caché de respaldo
    - API (/api/): SIEMPRE red — los datos del taller nunca se cachean
    Al publicar una actualización, sube la constante CACHE (ej: luitech-v2). */
-var CACHE = 'luitech-v18'; // v18: el numero del codigo sale UNA sola vez (bajo las barras) — se elimino la linea de texto repetida; precio grande aparte
+var CACHE = 'luitech-v19'; // v19: FIX — urlSeguimiento cortaba el sufijo del codigo al armar el QR/link (el QR de la boleta llevaba ?c=1032 sin sufijo y la API lo rechazaba)
 var NUCLEO = [
   'admin.html', 'pos.html', 'inventario.html', 'proveedores.html', 'cotizador.html',
   'clientes.html', 'tecnicos.html', 'finanzas.html', 'configuracion.html',

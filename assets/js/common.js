@@ -25,12 +25,13 @@
      de WhatsApp y el portal quedan apuntando bien. */
   var SITIO_LUITECH = 'https://www.tallerluitech.fun/';
 
-  /** Link de seguimiento con el código precargado → www.tallerluitech.fun/?c=1024
-   *  El portal.js lee el parámetro ?c= y muestra el tracker sin que el cliente
-   *  escriba nada. Sin código devuelve la home del sitio. */
+  /** Link de seguimiento con el código precargado → www.tallerluitech.fun/?c=1029-K7X2
+   *  Acepta 'LUH-1029-K7X2' o '1029-K7X2'. El sufijo anti-enumeración viaja
+   *  COMPLETO: sin él la API rechaza la consulta (formato viejo ya no existe). */
   function urlSeguimiento(codigo) {
-    var digitos = String(codigo || '').replace(/\D/g, '');
-    return SITIO_LUITECH + (digitos ? '?c=' + digitos : '');
+    var limpio = String(codigo || '').toUpperCase().trim()
+      .replace(/^LUH-/, '').replace(/[^A-Z0-9\-]/g, '');
+    return limpio ? SITIO_LUITECH + '?c=' + limpio : SITIO_LUITECH;
   }
 
   /** Dominio legible para imprimir en papel (ej: www.tallerluitech.fun).
