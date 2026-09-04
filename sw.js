@@ -2,7 +2,7 @@
    - Interfaz (páginas, CSS, JS, imágenes): red primero + caché de respaldo
    - API (/api/): SIEMPRE red — los datos del taller nunca se cachean
    Al publicar una actualización, sube la constante CACHE (ej: luitech-v2). */
-var CACHE = 'luitech-v14'; // v14: JsBarcode y ZXing locales (vendor) — etiquetas y escáner funcionan sin internet y sin chocar con la CSP
+var CACHE = 'luitech-v15'; // v15: etiqueta recalibrada a 40×30 mm (rollo estándar de la Phomemo M110)
 var NUCLEO = [
   'admin.html', 'pos.html', 'inventario.html', 'proveedores.html', 'cotizador.html',
   'clientes.html', 'tecnicos.html', 'finanzas.html', 'configuracion.html',

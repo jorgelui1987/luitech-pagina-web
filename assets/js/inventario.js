@@ -196,10 +196,11 @@
     });
   }
 
-  /** Etiqueta adhesiva 50×25 mm con el barcode (EAN13 si son 13 dígitos,
-   *  Code 128 en los demás casos) + código interno y precio. N copias.
-   *  Sirve para los productos SIN código de fábrica: se imprime la etiqueta
-   *  con su código interno, se pega al producto/estante y el POS la lee. */
+  /** Etiqueta adhesiva 40×30 mm (rollo estándar de la Phomemo M110) con el
+   *  barcode (EAN13 si son 13 dígitos, Code 128 en los demás casos) + código
+   *  interno y precio. N copias. Sirve para los productos SIN código de
+   *  fábrica: se imprime la etiqueta con su código interno, se pega al
+   *  producto/estante y el POS la lee. */
   function imprimirEtiqueta(p) {
     var valor = String(p.barcode || p.codigo || '').trim();
     if (!valor) { window.mostrarToast('El producto no tiene código', 'error'); return; }
@@ -222,13 +223,15 @@
           '<img src="' + urlImg + '" alt="">' +
           '<p class="c">' + p.codigo + ' · $' + fmt(p.precio_venta) + '</p></div>';
       }
+      // Calibrada para rollo 40×30 mm (el estándar de la Phomemo M110).
+      // Si tu rollo es de otra medida, ajusta @page/.etq/img a esa medida.
       var html = '<html><head><title>Etiquetas ' + p.codigo + '</title><style>' +
-        '@page{size:50mm 25mm;margin:0}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000}' +
-        '.etq{width:50mm;height:25mm;padding:1mm 2mm;box-sizing:border-box;page-break-after:always;' +
+        '@page{size:40mm 30mm;margin:0}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000}' +
+        '.etq{width:40mm;height:30mm;padding:1mm;box-sizing:border-box;page-break-after:always;' +
         'display:flex;flex-direction:column;justify-content:space-between;align-items:center}' +
         '.etq:last-child{page-break-after:auto}' +
         '.etq .n{margin:0;font-size:9px;font-weight:bold;text-align:center;max-width:100%;white-space:nowrap;overflow:hidden}' +
-        '.etq img{height:9mm;max-width:46mm}' +
+        '.etq img{height:10mm;max-width:36mm}' +
         '.etq .c{margin:0;font-size:8px;font-family:monospace}' +
         '</style></head><body>' + copias + '</body></html>';
       window.imprimirDocumento(html);
