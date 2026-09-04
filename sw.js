@@ -2,11 +2,12 @@
    - Interfaz (páginas, CSS, JS, imágenes): red primero + caché de respaldo
    - API (/api/): SIEMPRE red — los datos del taller nunca se cachean
    Al publicar una actualización, sube la constante CACHE (ej: luitech-v2). */
-var CACHE = 'luitech-v13'; // v13: CSS con las clases del banner de promoción (from-amber-400/to-orange-500/py-2.5 faltaban en el build compilado)
+var CACHE = 'luitech-v14'; // v14: JsBarcode y ZXing locales (vendor) — etiquetas y escáner funcionan sin internet y sin chocar con la CSP
 var NUCLEO = [
   'admin.html', 'pos.html', 'inventario.html', 'proveedores.html', 'cotizador.html',
   'clientes.html', 'tecnicos.html', 'finanzas.html', 'configuracion.html',
   'assets/css/styles.css', 'assets/js/common.js', 'assets/js/admin.js',
+  'assets/js/vendor/JsBarcode.all.min.js', 'assets/js/vendor/zxing-0.21.3.min.js',
   'assets/img/icon-192.png', 'assets/img/icon-512.png', 'assets/img/logo-luitech.png'
 ];
 

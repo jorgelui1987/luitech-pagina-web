@@ -183,14 +183,15 @@
   }
 
   /* ------------------------------------------------------- ETIQUETAS */
-  /** Descarga JsBarcode la primera vez que se imprime una etiqueta. */
+  /** Carga JsBarcode desde el proyecto (vendor): sin depender de internet ni
+   *  de la lista blanca CSP de scripts externos. */
   function etiquetaCargarJsBarcode() {
     if (window.JsBarcode) return Promise.resolve();
     return new Promise(function (resolver, rechazar) {
       var s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js';
+      s.src = 'assets/js/vendor/JsBarcode.all.min.js';
       s.onload = function () { resolver(); };
-      s.onerror = function () { rechazar(new Error('No se pudo descargar el generador de etiquetas')); };
+      s.onerror = function () { rechazar(new Error('No se pudo cargar el generador de etiquetas')); };
       document.head.appendChild(s);
     });
   }

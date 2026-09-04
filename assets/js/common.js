@@ -257,14 +257,14 @@
     } catch (e) { return false; }
   }
 
-  /** Descarga ZXing la primera vez que se usa el escáner (no pesa al arrancar). */
+  /** Carga ZXing local (vendor) la primera vez que se usa el escáner. */
   function escanerCargarZxing() {
     if (window.ZXing) return Promise.resolve();
     return new Promise(function (resolver, rechazar) {
       var s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';
+      s.src = 'assets/js/vendor/zxing-0.21.3.min.js';
       s.onload = function () { resolver(); };
-      s.onerror = function () { rechazar(new Error('No se pudo descargar el lector de códigos (revisa tu conexión)')); };
+      s.onerror = function () { rechazar(new Error('No se pudo cargar el lector de códigos (recarga la página e intenta de nuevo)')); };
       document.head.appendChild(s);
     });
   }
