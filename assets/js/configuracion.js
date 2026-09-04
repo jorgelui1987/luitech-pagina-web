@@ -399,6 +399,11 @@
       guardarSeccion({ tv_clave: 'cfg-tv_clave' }, 'cfg-btn-tv');
     });
     $('cfg-tv_clave').addEventListener('input', actualizarEnlaceTV);
+    $('cfg-btn-promo').addEventListener('click', function () {
+      guardarSeccion({
+        promo_texto: 'cfg-promo_texto', promo_activa: 'cfg-promo_activa', promo_vence: 'cfg-promo_vence'
+      }, 'cfg-btn-promo');
+    });
     $('cfg-logo-file').addEventListener('change', function () {
       var archivo = this.files && this.files[0];
       this.value = '';

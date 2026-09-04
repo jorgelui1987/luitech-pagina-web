@@ -6,7 +6,7 @@
     <title>Configuración | Luitech</title>
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg?v=2">
-    <link rel="stylesheet" href="assets/css/styles.css?v=mp47">
+    <link rel="stylesheet" href="assets/css/styles.css?v=mp48">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
@@ -159,6 +159,24 @@
                 <button type="button" id="cfg-btn-tv" class="btn mt-3">Guardar clave de la TV</button>
             </section>
 
+            <!-- Promoción en el sitio web -->
+            <section class="sec">
+                <h2><i class="fa-solid fa-bullhorn mr-1"></i>Promoción en el sitio web</h2>
+                <label class="lb">Texto del banner (máx. 120 caracteres)</label>
+                <input class="inp" id="cfg-promo_texto" maxlength="120" placeholder="Ej: 20% OFF en mantenciones preventivas este mes">
+                <div class="fila mt-2">
+                    <div>
+                        <label class="flex items-center gap-2 text-slate-300 text-xs"><input type="checkbox" id="cfg-promo_activa" class="chk"> Banner activo</label>
+                    </div>
+                    <div>
+                        <label class="lb mb-0">Vence (opcional)</label>
+                        <input type="date" id="cfg-promo_vence" class="inp">
+                    </div>
+                </div>
+                <p class="nota mt-2">Aparece como franja arriba del portal para todos los visitantes. Se oculta sola al llegar la fecha de vencimiento (o al desactivarla).</p>
+                <button type="button" id="cfg-btn-promo" class="btn mt-3">Guardar promoción</button>
+            </section>
+
             <section class="sec">
                 <h2><i class="fa-solid fa-database mr-1"></i>Respaldo de datos</h2>
                 <p class="nota mb-3">Descarga un ZIP con <b>toda la base de datos</b> (órdenes, ventas, comisiones, técnicos, configuración) más las <b>fotos, firmas y logo</b>. Genera también una copia protegida en el servidor (se conservan las últimas 10). Recomendación: descárgalo antes de cada cambio importante y guárdalo en tu PC.</p>
@@ -249,7 +267,7 @@
         </div>
     </main>
 
-    <script src="assets/js/common.js?v=mp47" defer></script>
-    <script src="assets/js/configuracion.js?v=mp47" defer></script>
+    <script src="assets/js/common.js?v=mp48" defer></script>
+    <script src="assets/js/configuracion.js?v=mp48" defer></script>
 </body>
 </html>

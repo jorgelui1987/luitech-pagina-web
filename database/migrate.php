@@ -343,6 +343,9 @@ $configSemillas = [
     'mp_public_key'         => '',
     'mp_access_token'       => '',
     'mp_point_device'       => '',
+    'promo_activa'          => '0',
+    'promo_texto'           => '',
+    'promo_vence'           => '',
 ];
 $stmtCfg = $pdo->prepare('INSERT IGNORE INTO configuraciones (clave, valor) VALUES (?, ?)');
 foreach ($configSemillas as $claveCfg => $valorCfg) {

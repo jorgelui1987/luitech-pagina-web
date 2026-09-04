@@ -220,6 +220,17 @@
         }
       } catch (e) { /* navegadores muy antiguos: queda la consulta manual */ }
     }
+
+    /* Banner de promoción (Configuración → Promoción): público y opcional. */
+    api('api/configuracion.php?action=promo').then(function (res) {
+      if (!res.ok || !res.promo || !res.promo.visible) return;
+      var banner = $('banner-promo');
+      var texto = $('banner-promo-texto');
+      if (!banner || !texto) return;
+      texto.textContent = res.promo.texto; // seguro: textContent
+      banner.classList.remove('hidden');
+    }).catch(function () {});
+
     var fecha = $('agenda-fecha');
     if (fecha) fecha.min = new Date().toISOString().slice(0, 10); // no permite fechas pasadas
     if ($('form-agendar')) $('form-agendar').addEventListener('submit', procesarAgenda);

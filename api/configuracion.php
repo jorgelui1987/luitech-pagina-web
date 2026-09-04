@@ -2,6 +2,7 @@
 /**
  * LUITECH API - Configuraciones globales del sistema (solo administrador).
  * Acciones (?action=):
+ *   promo     GET                      -> {promo:{visible,texto}}          (PÚBLICO: banner del sitio)
  *   get       GET                      -> { iva_porcentaje }               (compatibilidad POS)
  *   set       POST {iva_porcentaje}    -> guarda la tasa (0..100)          (compatibilidad POS)
  *   get_all   GET                      -> todas las claves (secretos enmascarados)
@@ -15,11 +16,16 @@ declare(strict_types=1);
 require __DIR__ . '/config.php';
 
 iniciar_respuesta_json();
-exigir_admin(); exigir_rol_admin();
-
-preparar_configuraciones(); // garantiza la tabla aunque el hosting no ejecute migrate
 
 $action = $_GET['action'] ?? '';
+
+// Solo el banner público ('promo') no exige sesión: entrega únicamente el
+// texto y el estado de la promoción, jamás claves ni datos sensibles.
+if ($action !== 'promo') {
+    exigir_admin(); exigir_rol_admin();
+}
+
+preparar_configuraciones(); // garantiza la tabla aunque el hosting no ejecute migrate
 
 /** Lista blanca de claves editables y sus reglas de validación. */
 const CONFIG_CLAVES = [
@@ -45,6 +51,9 @@ const CONFIG_CLAVES = [
     'mp_access_token'       => ['secreto' => true],
     'mp_point_device'       => ['max' => 80],
     'tv_clave'              => ['max' => 40, 'no_vacio' => true],
+    'promo_activa'          => ['flag' => true],
+    'promo_texto'           => ['max' => 120],
+    'promo_vence'           => ['fecha' => true],
     'catalogo_margen'       => ['int' => [0, 500]],
     'catalogo_redondeo'     => ['int' => [0, 100000]],
 ];
@@ -82,6 +91,11 @@ function config_validar(string $clave, $valor): array
             return [false, 'Zona horaria no válida (ej: America/Santiago)'];
         }
     }
+    if (isset($regla['fecha']) && $valor !== '') {
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $valor) !== 1 || strtotime($valor) === false) {
+            return [false, 'La fecha no es válida (formato AAAA-MM-DD)'];
+        }
+    }
     if (isset($regla['rut']) && $valor !== '') {
         if (!validar_rut_chileno($valor)) {
             return [false, 'RUT de la empresa inválido'];
@@ -105,6 +119,19 @@ function config_enmascarar(string $valor): string
 }
 
 switch ($action) {
+
+    /* ------------------------------------------------------------ PROMO */
+    case 'promo': {
+        // PÚBLICO: alimenta el banner de promoción del sitio (index.html).
+        // Entrega SOLO visible/texto; cualquier otra clave sigue protegida
+        // por login y el resto de acciones sigue exigiendo administrador.
+        aplicar_zona_horaria();
+        $activa  = config_valor(db(), 'promo_activa', '0') === '1';
+        $texto   = trim(config_valor(db(), 'promo_texto', ''));
+        $vence   = trim(config_valor(db(), 'promo_vence', ''));
+        $visible = $activa && $texto !== '' && ($vence === '' || $vence >= date('Y-m-d'));
+        responder(['ok' => true, 'promo' => ['visible' => $visible, 'texto' => $texto]]);
+    }
 
     case 'get':
         responder(['ok' => true, 'iva_porcentaje' => (int)config_valor(db(), 'iva_porcentaje', '19')]);
