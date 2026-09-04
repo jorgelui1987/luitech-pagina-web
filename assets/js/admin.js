@@ -104,6 +104,13 @@
       simboloMoneda = (empresaCfg.moneda_simbolo || '$').slice(0, 5);
       var gd = parseInt(empresaCfg.garantia_dias_default, 10);
       if (!isNaN(gd) && gd > 0) $('new-garantia').value = String(gd);
+      // El botón "Modo TV" abre la pantalla con la clave de sala incluida:
+      // sin clave, la API rechaza la lista de turnos y la TV queda en aviso.
+      var enlaceTV = $('btn-modo-tv');
+      if (enlaceTV && empresaCfg.tv_clave) {
+        enlaceTV.href = 'tv.html?clave=' + encodeURIComponent(empresaCfg.tv_clave);
+        enlaceTV.title = 'Abrir pantalla de sala de espera (con clave de sala)';
+      }
     }).catch(function () {});
   }
 

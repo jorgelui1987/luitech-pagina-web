@@ -2,7 +2,7 @@
    - Interfaz (páginas, CSS, JS, imágenes): red primero + caché de respaldo
    - API (/api/): SIEMPRE red — los datos del taller nunca se cachean
    Al publicar una actualización, sube la constante CACHE (ej: luitech-v2). */
-var CACHE = 'luitech-v10'; // v10: tv_clave guardable desde Configuración (estaba fuera de la lista blanca de set_many) + enlace directo a tv.html?clave=...
+var CACHE = 'luitech-v11'; // v11: el botón Modo TV del panel abre tv.html?clave=... automáticamente (con la clave de sala)
 var NUCLEO = [
   'admin.html', 'pos.html', 'inventario.html', 'proveedores.html', 'cotizador.html',
   'clientes.html', 'tecnicos.html', 'finanzas.html', 'configuracion.html',
