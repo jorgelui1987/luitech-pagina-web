@@ -50,6 +50,33 @@
       } else {
         caja.classList.add('hidden');
       }
+      // Resumen de inversión: costo × stock de lo que hay en estante (solo
+      // productos físicos; los servicios sin stock no inmovilizan dinero).
+      var inversion = 0, ventaPot = 0, unidades = 0, sinCosto = 0;
+      res.productos.forEach(function (p) {
+        var stock = parseInt(p.stock, 10) || 0;
+        if (stock <= 0 || !p.controlar_stock) return;
+        unidades += stock;
+        var costo = parseInt(p.precio_costo, 10) || 0;
+        var venta = parseInt(p.precio_venta, 10) || 0;
+        if (costo > 0) { inversion += costo * stock; } else { sinCosto++; }
+        if (venta > 0) ventaPot += venta * stock;
+      });
+      var cajaInv = $('resumen-inversion');
+      if (cajaInv) {
+        if (res.productos.length) cajaInv.classList.remove('hidden'); else cajaInv.classList.add('hidden');
+        $('inv-total').textContent = '$' + fmt(inversion);
+        $('inv-venta').textContent = '$' + fmt(ventaPot);
+        $('inv-ganancia').textContent = '$' + fmt(Math.max(0, ventaPot - inversion));
+        $('inv-unidades').textContent = 'Unidades en estante: ' + unidades;
+        var avisoInv = $('inv-aviso');
+        if (sinCosto > 0) {
+          avisoInv.textContent = '⚠ ' + sinCosto + ' producto(s) con stock sin costo definido: no cuentan en la inversión (edítalos y llena el costo)';
+          avisoInv.classList.remove('hidden');
+        } else {
+          avisoInv.classList.add('hidden');
+        }
+      }
       renderTabla(res.productos);
     }).catch(function () {});
   }
