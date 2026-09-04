@@ -382,8 +382,8 @@
         '<p class="t">TOTAL $' + fmt(v.total) + '</p>' +
         '<div class="c" style="margin-top:10px">¡Gracias por tu compra!<br>Garantía por escrito en tu orden.</div>' +
         '<div class="c" style="margin-top:8px">' +
-        '<img alt="QR del sitio web" src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=' + encodeURIComponent(window.LUITECH_WEB || 'https://tallerluitech.fun/') + '" style="width:22mm;height:22mm;display:block;margin:0 auto 3px">' +
-        'Seguimiento de reparaciones y más en<br><b>' + esc(window.LUITECH_WEB_TEXTO || 'tallerluitech.fun') + '</b>' +
+        '<img alt="QR del sitio web" src="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=' + encodeURIComponent(window.LUITECH_WEB || 'https://www.tallerluitech.fun/') + '" style="width:22mm;height:22mm;display:block;margin:0 auto 3px">' +
+        'Seguimiento de reparaciones y más en<br><b>' + esc(window.LUITECH_WEB_TEXTO || 'www.tallerluitech.fun') + '</b>' +
         '</div>' +
         '</body></html>'
       );

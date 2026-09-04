@@ -1736,9 +1736,9 @@
            encodeURIComponent(window.LUITECH_URL_SEGUIMIENTO(codigo));
   }
 
-  /** Dominio legible para imprimir en el papel (ej: tallerluitech.fun). */
+  /** Dominio legible para imprimir en el papel (ej: www.tallerluitech.fun). */
   function sitioImpreso() {
-    return window.LUITECH_WEB_TEXTO || 'tallerluitech.fun';
+    return window.LUITECH_WEB_TEXTO || 'www.tallerluitech.fun';
   }
 
   /** Comprobante de ingreso imprimible (ticket 80mm): se imprime al crear la

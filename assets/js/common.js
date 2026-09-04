@@ -20,11 +20,12 @@
 
   var WHATSAPP_LUITECH = '56982209690';
   /* Sitio público donde el cliente sigue su reparación (Consulta Express).
-     Si el dominio cambia algún día, se edita SOLO esta línea: los QR de las
-     boletas, los mensajes de WhatsApp y el portal quedan apuntando bien. */
-  var SITIO_LUITECH = 'https://tallerluitech.fun/';
+     Es el dominio canónico (el .htaccess fuerza www). Si el dominio cambia
+     algún día, se edita SOLO esta línea: los QR de las boletas, los mensajes
+     de WhatsApp y el portal quedan apuntando bien. */
+  var SITIO_LUITECH = 'https://www.tallerluitech.fun/';
 
-  /** Link de seguimiento con el código precargado → tallerluitech.fun/?c=1024
+  /** Link de seguimiento con el código precargado → www.tallerluitech.fun/?c=1024
    *  El portal.js lee el parámetro ?c= y muestra el tracker sin que el cliente
    *  escriba nada. Sin código devuelve la home del sitio. */
   function urlSeguimiento(codigo) {
@@ -32,9 +33,11 @@
     return SITIO_LUITECH + (digitos ? '?c=' + digitos : '');
   }
 
-  /** Dominio legible para imprimir en papel (ej: tallerluitech.fun). */
+  /** Dominio legible para imprimir en papel (ej: www.tallerluitech.fun).
+   *  Si algún día SITIO_LUITECH se define sin www, el prefijo se agrega solo. */
   function sitioTexto() {
-    return SITIO_LUITECH.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+    var host = SITIO_LUITECH.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+    return host.indexOf('www.') === 0 ? host : 'www.' + host;
   }
 
   /** Atajo por id */

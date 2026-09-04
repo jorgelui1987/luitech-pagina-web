@@ -102,9 +102,10 @@ entrega impreso y clicable.
 - **Boleta del POS:** al final lleva el QR del sitio (publicidad del portal).
 - **WhatsApp:** el aviso de estado incluye el link directo de seguimiento.
 - **Autoconsulta:** el QR y el link llevan el código precargado
-  (`https://tallerluitech.fun/?c=1024`). `assets/js/portal.js` lee el
+  (`https://www.tallerluitech.fun/?c=1024`). `assets/js/portal.js` lee el
   parámetro `?c=`, llena la Consulta Express y muestra el tracker solo.
 - **Dominio en un solo lugar:** `assets/js/common.js` → constante
-  `SITIO_LUITECH`. Si cambia el dominio, se edita esa línea y QR, WhatsApp
-  y portal quedan apuntando bien.
+  `SITIO_LUITECH` (con `www`, igual que el canónico del `.htaccess`). Si
+  cambia el dominio, se edita esa línea y QR, WhatsApp y portal quedan
+  apuntando bien.
 
