@@ -4,6 +4,11 @@
 .hover\:bg-amber-300:hover{background-color:#fcd34d}
 .shadow-amber-500\/20{box-shadow:0 10px 15px -3px rgba(251,191,36,.2),0 4px 6px -4px rgba(251,191,36,.2)}
 
+/* ===== Clases del banner de promoción (faltantes del build, agregadas a mano) ===== */
+.from-amber-400{--tw-gradient-from:#fbbf24 var(--tw-gradient-from-position);--tw-gradient-to:rgba(251,191,36,0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from),var(--tw-gradient-to)}
+.to-orange-500{--tw-gradient-to:#f97316 var(--tw-gradient-to-position)}
+.py-2\.5{padding-top:.625rem;padding-bottom:.625rem}
+
 /* ===== Responsive faltantes auto-generados (2026-08-31) ===== */
 img{max-width:100%}
 @media(min-width:640px){.sm\:grid-cols-6{grid-template-columns:repeat(6,minmax(0,1fr))}}

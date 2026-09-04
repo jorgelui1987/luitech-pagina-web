@@ -2,7 +2,7 @@
    - Interfaz (páginas, CSS, JS, imágenes): red primero + caché de respaldo
    - API (/api/): SIEMPRE red — los datos del taller nunca se cachean
    Al publicar una actualización, sube la constante CACHE (ej: luitech-v2). */
-var CACHE = 'luitech-v12'; // v12: banner de promoción configurable (Configuración → Promoción; API pública action=promo)
+var CACHE = 'luitech-v13'; // v13: CSS con las clases del banner de promoción (from-amber-400/to-orange-500/py-2.5 faltaban en el build compilado)
 var NUCLEO = [
   'admin.html', 'pos.html', 'inventario.html', 'proveedores.html', 'cotizador.html',
   'clientes.html', 'tecnicos.html', 'finanzas.html', 'configuracion.html',
