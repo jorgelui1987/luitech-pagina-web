@@ -2,7 +2,7 @@
    - Interfaz (páginas, CSS, JS, imágenes): red primero + caché de respaldo
    - API (/api/): SIEMPRE red — los datos del taller nunca se cachean
    Al publicar una actualización, sube la constante CACHE (ej: luitech-v2). */
-var CACHE = 'luitech-v20'; // v20: tarjeta de inversion en stock en Inventario (costo x stock, venta potencial, ganancia potencial)
+var CACHE = 'luitech-v21'; // v21: la tarjeta de inversion SIEMPRE visible (con $0 y guia si el inventario esta vacio)
 var NUCLEO = [
   'admin.html', 'pos.html', 'inventario.html', 'proveedores.html', 'cotizador.html',
   'clientes.html', 'tecnicos.html', 'finanzas.html', 'configuracion.html',

@@ -64,7 +64,7 @@
       });
       var cajaInv = $('resumen-inversion');
       if (cajaInv) {
-        if (res.productos.length) cajaInv.classList.remove('hidden'); else cajaInv.classList.add('hidden');
+        cajaInv.classList.remove('hidden'); // SIEMPRE visible (con $0 si el inventario está vacío)
         $('inv-total').textContent = '$' + fmt(inversion);
         $('inv-venta').textContent = '$' + fmt(ventaPot);
         $('inv-ganancia').textContent = '$' + fmt(Math.max(0, ventaPot - inversion));
@@ -72,6 +72,9 @@
         var avisoInv = $('inv-aviso');
         if (sinCosto > 0) {
           avisoInv.textContent = '⚠ ' + sinCosto + ' producto(s) con stock sin costo definido: no cuentan en la inversión (edítalos y llena el costo)';
+          avisoInv.classList.remove('hidden');
+        } else if (!res.productos.length) {
+          avisoInv.textContent = 'La inversión se calcula con el costo × stock de cada producto. Agrega tu primer producto arriba para verla en acción.';
           avisoInv.classList.remove('hidden');
         } else {
           avisoInv.classList.add('hidden');
