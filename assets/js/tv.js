@@ -82,7 +82,9 @@
     [listo, proceso].forEach(function (cont) {
       if (!cont) return;
       cont.replaceChildren(Object.assign(document.createElement('p'), {
-        textContent: 'Pantalla sin clave: ábrela como tv.html?clave=TU-CLAVE (Configuración → Pantalla TV).',
+        textContent: CLAVE_SALA === ''
+          ? 'Esta pantalla se abrió SIN clave: la clave viaja en la dirección. Ábrela como tv.html?clave=TU-CLAVE (cópiala desde Configuración → Pantalla TV).'
+          : 'Clave incorrecta en la dirección: ábrela como tv.html?clave=TU-CLAVE (la copias desde Configuración → Pantalla TV).',
         className: 'text-amber-400 text-sm font-bold py-2'
       }));
     });

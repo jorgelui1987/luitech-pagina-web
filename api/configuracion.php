@@ -44,6 +44,7 @@ const CONFIG_CLAVES = [
     'mp_public_key'         => ['max' => 120],
     'mp_access_token'       => ['secreto' => true],
     'mp_point_device'       => ['max' => 80],
+    'tv_clave'              => ['max' => 40, 'no_vacio' => true],
     'catalogo_margen'       => ['int' => [0, 500]],
     'catalogo_redondeo'     => ['int' => [0, 100000]],
 ];
@@ -60,6 +61,11 @@ function config_validar(string $clave, $valor): array
     $valor = trim((string)$valor);
     if (isset($regla['secreto'])) {
         return [true, $valor]; // vacío = mantener; 'BORRAR' = limpiar (resuelto en set_many)
+    }
+    if (isset($regla['no_vacio']) && $valor === '') {
+        // La clave de la pantalla TV es la protección de la lista de turnos:
+        // dejarla vacía dejaría el endpoint resumen en fail-closed (TV muerta).
+        return [false, 'La clave de la pantalla TV no puede quedar vacía'];
     }
     if (isset($regla['flag'])) {
         return [true, (!empty($valor) && $valor !== '0') ? '1' : '0'];

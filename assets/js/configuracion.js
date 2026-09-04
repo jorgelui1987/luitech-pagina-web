@@ -41,6 +41,7 @@
         }
         el.value = cfg[clave];
       });
+      actualizarEnlaceTV(); // el enlace de la TV se arma con la clave cargada
       if (cfg.empresa_logo) {
         $('cfg-logo-img').src = cfg.empresa_logo;
         $('cfg-logo-img').classList.remove('hidden');
@@ -98,6 +99,23 @@
         boton.disabled = false;
         window.mostrarToast('Error de conexión con el servidor', 'error');
       });
+  }
+
+  /** Enlace listo para abrir la TV con la clave escrita (se actualiza al vivo:
+   *  al cargar la página y mientras se escribe la clave). */
+  function actualizarEnlaceTV() {
+    var enlace = $('cfg-tv-url');
+    var campo = $('cfg-tv_clave');
+    if (!enlace || !campo) return;
+    var clave = campo.value.trim();
+    if (!clave) {
+      enlace.textContent = '—';
+      enlace.removeAttribute('href');
+      return;
+    }
+    var url = 'tv.html?clave=' + encodeURIComponent(clave);
+    enlace.textContent = url;
+    enlace.href = url;
   }
 
   /** Redimensiona el logo en el navegador (máx. 600px, PNG) antes de enviarlo:
@@ -380,6 +398,7 @@
     $('cfg-btn-tv').addEventListener('click', function () {
       guardarSeccion({ tv_clave: 'cfg-tv_clave' }, 'cfg-btn-tv');
     });
+    $('cfg-tv_clave').addEventListener('input', actualizarEnlaceTV);
     $('cfg-logo-file').addEventListener('change', function () {
       var archivo = this.files && this.files[0];
       this.value = '';

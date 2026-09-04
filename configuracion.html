@@ -6,7 +6,7 @@
     <title>Configuración | Luitech</title>
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg?v=2">
-    <link rel="stylesheet" href="assets/css/styles.css?v=mp45">
+    <link rel="stylesheet" href="assets/css/styles.css?v=mp46">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
@@ -153,7 +153,9 @@
                 <h2><i class="fa-solid fa-tv mr-1"></i>Pantalla TV de sala de espera</h2>
                 <label class="lb">Clave de acceso de la pantalla (protege la lista de turnos en internet)</label>
                 <input class="inp" id="cfg-tv_clave" maxlength="40" placeholder="Ej: K7X2-9MQ4">
-                <p class="nota mt-1">La TV se abre así: <b>tv.html?clave=ESTA-CLAVE</b>. Sin la clave correcta, nadie puede ver la lista de turnos desde internet.</p>
+                <p class="nota mt-1">Abre la pantalla de la sala con este enlace exacto (guárdalo como página de inicio de la TV):</p>
+                <p style="margin:4px 0 0"><a id="cfg-tv-url" href="#" target="luitech-ext" rel="noopener" style="color:#67e8f9; font-weight:700; word-break:break-all">—</a></p>
+                <p class="nota mt-1">Sin la clave correcta en la dirección, nadie puede ver la lista de turnos desde internet.</p>
                 <button type="button" id="cfg-btn-tv" class="btn mt-3">Guardar clave de la TV</button>
             </section>
 
@@ -247,7 +249,7 @@
         </div>
     </main>
 
-    <script src="assets/js/common.js?v=mp45" defer></script>
-    <script src="assets/js/configuracion.js?v=mp45" defer></script>
+    <script src="assets/js/common.js?v=mp46" defer></script>
+    <script src="assets/js/configuracion.js?v=mp46" defer></script>
 </body>
 </html>
