@@ -196,11 +196,11 @@
     });
   }
 
-  /** Etiqueta adhesiva 40×30 mm (rollo estándar de la Phomemo M110) con el
-   *  barcode (EAN13 si son 13 dígitos, Code 128 en los demás casos) + código
-   *  interno y precio. N copias. Sirve para los productos SIN código de
-   *  fábrica: se imprime la etiqueta con su código interno, se pega al
-   *  producto/estante y el POS la lee. */
+  /** Etiquetas para papel térmico adhesivo de 80mm: tira continua con todas
+   *  las copias separadas por línea de corte punteada (SIN saltos de página,
+   *  así no se va papel en blanco; se corta a tijera). Barcode EAN13 si son
+   *  13 dígitos, Code 128 en los demás casos. Sirve para los productos SIN
+   *  código de fábrica: se pega al producto/estante y el POS la lee. */
   function imprimirEtiqueta(p) {
     var valor = String(p.barcode || p.codigo || '').trim();
     if (!valor) { window.mostrarToast('El producto no tiene código', 'error'); return; }
@@ -219,20 +219,20 @@
       var nombre = String(p.nombre).replace(/[<>&]/g, '');
       var copias = '';
       for (var i = 0; i < cantidad; i++) {
+        if (i > 0) copias += '<div class="corte"></div>'; // línea de corte entre etiquetas
         copias += '<div class="etq"><p class="n">' + nombre + '</p>' +
           '<img src="' + urlImg + '" alt="">' +
           '<p class="c">' + p.codigo + ' · $' + fmt(p.precio_venta) + '</p></div>';
       }
-      // Calibrada para rollo 40×30 mm (el estándar de la Phomemo M110).
-      // Si tu rollo es de otra medida, ajusta @page/.etq/img a esa medida.
+      // Papel térmico de 80mm: tira continua (página de alto automático, sin
+      // saltos de página) con línea de corte punteada entre cada etiqueta.
       var html = '<html><head><title>Etiquetas ' + p.codigo + '</title><style>' +
-        '@page{size:40mm 30mm;margin:0}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000}' +
-        '.etq{width:40mm;height:30mm;padding:1mm;box-sizing:border-box;page-break-after:always;' +
-        'display:flex;flex-direction:column;justify-content:space-between;align-items:center}' +
-        '.etq:last-child{page-break-after:auto}' +
-        '.etq .n{margin:0;font-size:9px;font-weight:bold;text-align:center;max-width:100%;white-space:nowrap;overflow:hidden}' +
-        '.etq img{height:10mm;max-width:36mm}' +
-        '.etq .c{margin:0;font-size:8px;font-family:monospace}' +
+        '@page{size:80mm auto;margin:0}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000;width:76mm}' +
+        '.etq{width:76mm;padding:2mm 2mm 1mm;box-sizing:border-box;text-align:center;page-break-inside:avoid}' +
+        '.etq .n{margin:0 0 1mm;font-size:11px;font-weight:bold;white-space:nowrap;overflow:hidden}' +
+        '.etq img{height:14mm;max-width:70mm;display:block;margin:0 auto}' +
+        '.etq .c{margin:1mm 0 0;font-size:9px;font-family:monospace}' +
+        '.corte{border-top:1px dashed #000;margin:2mm 0}' +
         '</style></head><body>' + copias + '</body></html>';
       window.imprimirDocumento(html);
     }).catch(function (e) {

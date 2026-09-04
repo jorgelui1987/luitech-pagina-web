@@ -2,7 +2,7 @@
    - Interfaz (páginas, CSS, JS, imágenes): red primero + caché de respaldo
    - API (/api/): SIEMPRE red — los datos del taller nunca se cachean
    Al publicar una actualización, sube la constante CACHE (ej: luitech-v2). */
-var CACHE = 'luitech-v15'; // v15: etiqueta recalibrada a 40×30 mm (rollo estándar de la Phomemo M110)
+var CACHE = 'luitech-v16'; // v16: etiquetas en papel térmico 80mm — tira continua con línea de corte (sin saltos de página, sin papel en blanco)
 var NUCLEO = [
   'admin.html', 'pos.html', 'inventario.html', 'proveedores.html', 'cotizador.html',
   'clientes.html', 'tecnicos.html', 'finanzas.html', 'configuracion.html',
