@@ -19,6 +19,23 @@
   } catch (e) {}
 
   var WHATSAPP_LUITECH = '56982209690';
+  /* Sitio público donde el cliente sigue su reparación (Consulta Express).
+     Si el dominio cambia algún día, se edita SOLO esta línea: los QR de las
+     boletas, los mensajes de WhatsApp y el portal quedan apuntando bien. */
+  var SITIO_LUITECH = 'https://tallerluitech.fun/';
+
+  /** Link de seguimiento con el código precargado → tallerluitech.fun/?c=1024
+   *  El portal.js lee el parámetro ?c= y muestra el tracker sin que el cliente
+   *  escriba nada. Sin código devuelve la home del sitio. */
+  function urlSeguimiento(codigo) {
+    var digitos = String(codigo || '').replace(/\D/g, '');
+    return SITIO_LUITECH + (digitos ? '?c=' + digitos : '');
+  }
+
+  /** Dominio legible para imprimir en papel (ej: tallerluitech.fun). */
+  function sitioTexto() {
+    return SITIO_LUITECH.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+  }
 
   /** Atajo por id */
   function $(id) {
@@ -180,6 +197,9 @@
   window.imprimirDocumento = imprimirDocumento;
   window.abrirExterno = abrirExterno;
   window.LUITECH_WA = WHATSAPP_LUITECH;
+  window.LUITECH_WEB = SITIO_LUITECH;              // URL del sitio público
+  window.LUITECH_WEB_TEXTO = sitioTexto();         // dominio para imprimir (sin https://)
+  window.LUITECH_URL_SEGUIMIENTO = urlSeguimiento; // link con ?c= (código precargado)
   window.toggleMobileMenu = toggleMobileMenu; // menú de las 3 rayitas (sitio público)
 
   /* ================== PWA: service worker + botón instalar ================== */

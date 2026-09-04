@@ -204,6 +204,16 @@
       input.addEventListener('keydown', function (ev) {
         if (ev.key === 'Enter') buscarOrdenExpress();
       });
+      /* Link/QR con el código precargado (tallerluitech.fun/?c=1024): el cliente
+         toca el enlace o escanea el QR de su boleta y el tracker se muestra solo. */
+      try {
+        var precarga = new URLSearchParams(location.search).get('c');
+        var digitos = String(precarga || '').replace(/\D/g, '');
+        if (digitos && /^\d{3,8}$/.test(digitos)) {
+          input.value = digitos;
+          buscarOrdenExpress();
+        }
+      } catch (e) { /* navegadores muy antiguos: queda la consulta manual */ }
     }
     var fecha = $('agenda-fecha');
     if (fecha) fecha.min = new Date().toISOString().slice(0, 10); // no permite fechas pasadas

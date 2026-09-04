@@ -88,3 +88,23 @@ npx tailwindcss -c tailwind.config.js -i ./assets/css/input.css -o ./assets/css/
   producto/estante y el POS la lee con la cámara.
 - Base de datos: columna `productos.barcode` (única entre productos activos,
   NULL = sin barcode). Migración idempotente en `database/migrate.php`.
+
+## 🔎 Seguimiento para el cliente (QR + código en las boletas)
+
+El cliente no necesita que le digan "a qué página entrar": el sistema se lo
+entrega impreso y clicable.
+
+- **Comprobante de ingreso (automático):** al crear una orden en `admin.html`
+  se imprime un ticket 80mm con el código `LUH-XXXX` en grande, el QR de
+  seguimiento y la dirección del sitio. Es la "boleta de ingreso" que el
+  portal le pide digitar al cliente.
+- **Recibo de entrega:** al final lleva QR + URL de seguimiento.
+- **Boleta del POS:** al final lleva el QR del sitio (publicidad del portal).
+- **WhatsApp:** el aviso de estado incluye el link directo de seguimiento.
+- **Autoconsulta:** el QR y el link llevan el código precargado
+  (`https://tallerluitech.fun/?c=1024`). `assets/js/portal.js` lee el
+  parámetro `?c=`, llena la Consulta Express y muestra el tracker solo.
+- **Dominio en un solo lugar:** `assets/js/common.js` → constante
+  `SITIO_LUITECH`. Si cambia el dominio, se edita esa línea y QR, WhatsApp
+  y portal quedan apuntando bien.
+

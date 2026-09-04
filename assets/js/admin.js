@@ -902,6 +902,7 @@
         }
         var codigoCreado = res.orden.codigo;
         window.mostrarToast('Orden ' + codigoCreado + ' creada para ' + res.orden.cliente, 'success');
+        imprimirComprobanteIngreso(res.orden); // boleta para el cliente: código grande + QR de seguimiento
 
         // Egreso de la compra de la pieza (si se marcó la casilla y hay costo)
         if (costoRepN > 0 && $('new-costo-egreso').checked) {
@@ -1185,7 +1186,9 @@
     var frase = frases[o.estado] || 'te escribimos por tu orden ' + o.codigo;
     var saldoN = saldoDe(o);
     var extra = saldoN > 0 ? ' Saldo pendiente: ' + monto(saldoN) + '.' : '';
-    var msg = 'Hola ' + o.cliente + ', ' + frase + '. Orden ' + o.codigo + '.' + extra + ' — Luitech';
+    var link = window.LUITECH_URL_SEGUIMIENTO ? window.LUITECH_URL_SEGUIMIENTO(o.codigo) : '';
+    var msg = 'Hola ' + o.cliente + ', ' + frase + '. Orden ' + o.codigo + '.' +
+              (link ? ' Sigue el avance aquí: ' + link : '') + extra + ' — Luitech';
     window.abrirExterno('https://wa.me/' + soloDigitos + '?text=' + encodeURIComponent(msg));
   }
 
@@ -1727,6 +1730,73 @@
       });
   }
 
+  /** QR (imagen) del link de seguimiento de una orden (código precargado). */
+  function urlQrSeguimiento(codigo) {
+    return 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=' +
+           encodeURIComponent(window.LUITECH_URL_SEGUIMIENTO(codigo));
+  }
+
+  /** Dominio legible para imprimir en el papel (ej: tallerluitech.fun). */
+  function sitioImpreso() {
+    return window.LUITECH_WEB_TEXTO || 'tallerluitech.fun';
+  }
+
+  /** Comprobante de ingreso imprimible (ticket 80mm): se imprime al crear la
+   *  orden y le entrega al cliente su código grande + QR que abre el portal
+   *  con la orden ya cargada. Es la "boleta de ingreso" del seguimiento. */
+  function imprimirComprobanteIngreso(o) {
+    if (!o) return;
+    var totalN = parseInt(o.total, 10) || 0;
+    var gd = parseInt(o.garantia_dias, 10) || 0;
+    var filaIngreso = function (etiqueta, valor) {
+      return '<tr><th>' + escapar(etiqueta) + '</th><td>' + valor + '</td></tr>';
+    };
+    var html =
+      '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Comprobante ' + escapar(o.codigo) + '</title>' +
+      '<style>' +
+      '@page{size:80mm auto;margin:0}' +
+      'body{font-family:monospace;font-size:12px;line-height:1.25;padding:3mm 2mm;color:#000;width:74mm;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+      'h1{text-align:center;margin:2px 0;font-size:14px}' +
+      'img.logo{width:46mm;margin:0 auto 3px;display:block}' +
+      '.c{text-align:center}.d{border-top:1px dashed #000;margin:5px 0;padding:5px 0;border-bottom:1px dashed #000}' +
+      'table{width:100%;border-collapse:collapse}th,td{padding:1px 0;font-size:11px;vertical-align:top;text-align:left;font-weight:normal}' +
+      'th{width:34%}td{font-weight:bold}' +
+      '.etq{font-size:9px;font-weight:bold;text-align:center;margin:0 0 3px}' +
+      '.codigo{border:2px dashed #000;border-radius:4px;padding:4px 0;text-align:center;font-size:20px;font-weight:bold;letter-spacing:2px}' +
+      'img.qr{width:26mm;height:26mm;display:block;margin:5px auto 3px;background:#fff}' +
+      '.n{font-size:9px;text-align:center;margin-top:6px}' +
+      '</style></head><body>' +
+      (empresaCfg && empresaCfg.empresa_logo
+        ? '<img class="logo" src="' + escapar(new URL(empresaCfg.empresa_logo, location.href).href) + '">'
+        : '') +
+      '<h1>' + escapar(empresaCfg && empresaCfg.empresa_nombre ? empresaCfg.empresa_nombre : 'LUITECH — SERVICIO TÉCNICO') + '</h1>' +
+      '<div class="c">' +
+      (empresaCfg && empresaCfg.empresa_rut ? 'RUT ' + escapar(empresaCfg.empresa_rut) + '<br>' : '') +
+      (empresaCfg && empresaCfg.empresa_direccion ? escapar(empresaCfg.empresa_direccion) + '<br>' : '') +
+      (empresaCfg && empresaCfg.empresa_telefono ? 'WhatsApp ' + escapar(empresaCfg.empresa_telefono) : '') +
+      '</div>' +
+      '<div class="d c"><b>COMPROBANTE DE INGRESO</b><br>' +
+      escapar(String(o.fecha_ingreso || '').slice(0, 16)) + '</div>' +
+      '<table>' +
+      filaIngreso('Cliente', escapar(o.cliente)) +
+      filaIngreso('Equipo', escapar(o.equipo)) +
+      filaIngreso('Reporte', escapar(o.falla)) +
+      (o.accesorios ? filaIngreso('Accesorios', escapar(o.accesorios)) : '') +
+      (totalN > 0 ? filaIngreso('Presupuesto', escapar(monto(totalN))) : '') +
+      (gd > 0 ? filaIngreso('Garantía', escapar(gd + ' días')) : '') +
+      '</table>' +
+      '<div class="d">' +
+      '<p class="etq">TU CÓDIGO DE SEGUIMIENTO</p>' +
+      '<div class="codigo">' + escapar(o.codigo) + '</div>' +
+      '<img class="qr" src="' + escapar(urlQrSeguimiento(o.codigo)) + '" alt="QR de seguimiento">' +
+      '<p class="c" style="font-size:10px">Escanea el QR o entra a<br><b>' + escapar(sitioImpreso()) + '</b><br>con tu código y mira el avance.</p>' +
+      '</div>' +
+      '<p class="n">Conserve este comprobante: presenta este código para retirar su equipo y consultarlo.</p>' +
+      '</body></html>';
+
+    window.imprimirDocumento(html);
+  }
+
   /** Recibo de entrega imprimible (ventana nueva con estilos propios). */
   function imprimirRecibo(o) {
     if (!o) return;
@@ -1761,6 +1831,7 @@
       'th{width:38%}td{font-weight:bold}' +
       '.t{font-size:13.5px;font-weight:bold;text-align:right;margin-top:4px}' +
       'img.f{max-height:14mm;display:block;margin:2px 0}' +
+      'img.q{width:24mm;height:24mm;display:block;margin:4px auto 0;background:#fff}' +
       '.n{font-size:9px;text-align:center;margin-top:6px}' +
       '</style></head><body>' +
       (empresaCfg && empresaCfg.empresa_logo
@@ -1796,6 +1867,10 @@
       '</div>' +
       (o.firma_entrega ? '<img class="f" src="' + escapar(o.firma_entrega) + '" alt="Firma de retiro">' : '') +
       '<p class="n">' + escapar(empresaCfg && empresaCfg.terminos_texto ? empresaCfg.terminos_texto : '¡Gracias por confiar en Luitech! Conserve este recibo para hacer efectiva la garantía.') + '</p>' +
+      '<div class="d" style="border-bottom:0">' +
+      '<img class="q" src="' + escapar(urlQrSeguimiento(o.codigo)) + '" alt="QR de seguimiento">' +
+      '<p class="n" style="margin-top:3px">Sigue tus reparaciones en<br><b>' + escapar(sitioImpreso()) + '</b></p>' +
+      '</div>' +
       '</body></html>';
 
     window.imprimirDocumento(html);
