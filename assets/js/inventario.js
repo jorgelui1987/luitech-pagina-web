@@ -222,7 +222,9 @@
         if (i > 0) copias += '<div class="corte"></div>'; // línea de corte entre etiquetas
         copias += '<div class="etq"><p class="n">' + nombre + '</p>' +
           '<img src="' + urlImg + '" alt="">' +
-          '<p class="c">' + p.codigo + ' · $' + fmt(p.precio_venta) + '</p></div>';
+          '<p class="c">' + p.codigo + '</p>' +
+          (parseInt(p.precio_venta, 10) > 0 ? '<p class="p">$' + fmt(p.precio_venta) + '</p>' : '') +
+          '</div>';
       }
       // Papel térmico de 80mm: tira continua (página de alto automático, sin
       // saltos de página) con línea de corte punteada entre cada etiqueta.
@@ -232,6 +234,7 @@
         '.etq .n{margin:0 0 1mm;font-size:11px;font-weight:bold;white-space:nowrap;overflow:hidden}' +
         '.etq img{height:14mm;max-width:70mm;display:block;margin:0 auto}' +
         '.etq .c{margin:1mm 0 0;font-size:9px;font-family:monospace}' +
+        '.etq .p{margin:1mm 0 0;font-size:16px;font-weight:bold;line-height:1.15}' +
         '.corte{border-top:1px dashed #000;margin:2mm 0}' +
         '</style></head><body>' + copias + '</body></html>';
       window.imprimirDocumento(html);
