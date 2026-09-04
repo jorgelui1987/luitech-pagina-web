@@ -34,3 +34,4 @@ Desktop.ini
 
 # Respaldos de datos (contienen informacion de clientes: NUNCA a GitHub)
 backups/*.zip
+backups/*.sql

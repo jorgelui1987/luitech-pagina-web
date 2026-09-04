@@ -10,12 +10,19 @@
   var $ = function (id) { return document.getElementById(id); };
 
   /* --------------------------------------------------- CONSULTA EXPRESS */
+  /** Normaliza el código del cliente: acepta '1029-K7X2' o 'LUH-1029-K7X2'.
+   *  Devuelve la parte después de LUH- ('1029-K7X2') o '' si es inválido. */
+  function normalizarCodigo(valor) {
+    var c = String(valor || '').toUpperCase().trim().replace(/^LUH-/, '').replace(/[^A-Z0-9\-]/g, '');
+    return /^(\d{3,8})(-[A-Z0-9]{4})?$/.test(c) ? c : '';
+  }
+
   function buscarOrdenExpress() {
     var input = $('express-code');
-    var valor = input.value.trim();
+    var valor = normalizarCodigo(input.value);
 
-    if (!/^\d{3,8}$/.test(valor)) {
-      window.mostrarToast('Ingresa solo el número de tu código (ej: 1024).', 'error');
+    if (!valor) {
+      window.mostrarToast('Ingresa tu código completo (ej: 1029-K7X2).', 'error');
       input.focus();
       return;
     }
@@ -68,9 +75,8 @@
 
   function cargarDatosEnTracker(o) {
     $('track-ticket-id').textContent   = o.codigo;
-    $('track-equipo-desc').textContent = o.equipo;              // sin nombre de cliente (privacidad)
+    $('track-equipo-desc').textContent = o.equipo;      // sin nombre de cliente ni falla (privacidad)
     $('track-tecnico').textContent     = o.tecnico;
-    $('track-falla').textContent       = o.falla;
     $('track-fecha').textContent       = formatearFecha(o.fecha_ingreso);
 
     // Si ya fue entregada (tiene fecha de entrega), eso manda sobre el estado
@@ -207,10 +213,9 @@
       /* Link/QR con el código precargado (tallerluitech.fun/?c=1024): el cliente
          toca el enlace o escanea el QR de su boleta y el tracker se muestra solo. */
       try {
-        var precarga = new URLSearchParams(location.search).get('c');
-        var digitos = String(precarga || '').replace(/\D/g, '');
-        if (digitos && /^\d{3,8}$/.test(digitos)) {
-          input.value = digitos;
+        var precarga = normalizarCodigo(new URLSearchParams(location.search).get('c'));
+        if (precarga) {
+          input.value = precarga;
           buscarOrdenExpress();
         }
       } catch (e) { /* navegadores muy antiguos: queda la consulta manual */ }

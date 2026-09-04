@@ -67,7 +67,7 @@ foreach ([
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS ordenes (
         id             INT UNSIGNED      AUTO_INCREMENT PRIMARY KEY,
-        codigo         VARCHAR(12)       NOT NULL UNIQUE,
+        codigo         VARCHAR(20)       NOT NULL UNIQUE,
         cliente        VARCHAR(120)      NOT NULL,
         equipo         VARCHAR(120)      NOT NULL,
         tipo           ENUM('Celular','PC/Notebook','Otro') NOT NULL DEFAULT 'Celular',
@@ -197,6 +197,9 @@ $pdo->exec("
         INDEX idx_of_orden (orden_codigo)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 ");
+// Semilla demo SOLO si la tabla está vacía (nunca duplica ni pisa datos
+// reales) y con sufijo anti-enumeración, para que una instalación nueva
+// nazca segura: 'LUH-1024-K7X2'.
 $semillas = [
     ['LUH-1024', 'Carlos Mendoza',    'iPhone 13 Pro',          'Celular',     'Cambio de Pantalla OLED',          'Listo para Retiro', 100, 'Sebastián R.', '2026-07-16'],
     ['LUH-1025', 'María Paz Rojas',   'Notebook Asus ROG',      'PC/Notebook', 'Mantenimiento térmico y limpieza', 'En Reparación',      60, 'Alexis M.',    '2026-07-16'],
@@ -204,8 +207,12 @@ $semillas = [
     ['LUH-1027', 'Valentina Silva',   'PC de Escritorio Gamer', 'PC/Notebook', 'Instalación de Sistema y SSD',     'Listo para Retiro', 100, 'Alexis M.',    '2026-07-15'],
     ['LUH-1028', 'Pedro Aguilera',    'Xiaomi Redmi Note 11',   'Celular',     'Cambio de batería',                'Ingresado',          10, 'Por Asignar',  '2026-07-17'],
 ];
-foreach ($semillas as $s) {
-    $ordenStmt->execute($s);
+if ((int)$pdo->query('SELECT COUNT(*) FROM ordenes')->fetchColumn() === 0) {
+    foreach ($semillas as $s) {
+        $s[0] = $s[0] . '-' . sufijo_aleatorio();
+        $ordenStmt->execute($s);
+    }
+    echo "[migrate] Órdenes demo sembradas con sufijo anti-enumeración\n";
 }
 
 // --- Tabla de inventario ----------------------------------------------
@@ -522,13 +529,105 @@ $pdo->exec("
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 ");
 
-// Semillas de gastos demo (usando fechas reales para el reporte mensual)
-$pdo->prepare("INSERT IGNORE INTO gastos (concepto, categoria, monto, fecha) VALUES (?, ?, ?, CURDATE())")
-    ->execute(['Gastos comunes taller', 'General', 5000]);
-$pdo->prepare("INSERT IGNORE INTO gastos (concepto, categoria, monto, fecha) VALUES (?, ?, ?, CURDATE())")
-    ->execute(['Repuestos comprados al proveedor', 'Mercaderia', 30000]);
+// Semillas de gastos demo (usando fechas reales para el reporte mensual).
+// Solo si la tabla está vacía: sin clave única, un INSERT IGNORE aquí
+// duplicaría estas filas en cada despliegue.
+if ((int)$pdo->query('SELECT COUNT(*) FROM gastos')->fetchColumn() === 0) {
+    $pdo->prepare("INSERT INTO gastos (concepto, categoria, monto, fecha) VALUES (?, ?, ?, CURDATE())")
+        ->execute(['Gastos comunes taller', 'General', 5000]);
+    $pdo->prepare("INSERT INTO gastos (concepto, categoria, monto, fecha) VALUES (?, ?, ?, CURDATE())")
+        ->execute(['Repuestos comprados al proveedor', 'Mercaderia', 30000]);
+    echo "[migrate] Gastos demo sembrados\n";
+}
 
 
 $ordenes = (int)$pdo->query('SELECT COUNT(*) FROM ordenes')->fetchColumn();
 echo "[migrate] Esquema verificado. Órdenes en BD: {$ordenes}\n";
+
+// --- Códigos con sufijo aleatorio anti-enumeración (LUH-1029-K7X2) --------
+// 'LUH-1029-K7X2' son 13 caracteres: la columna original VARCHAR(12) se queda
+// corta. Se amplían TODAS las columnas que guardan códigos de orden y, como
+// hay claves foráneas hacia ordenes.codigo (comisiones, bitácora, fotos), se
+// sueltan antes del ALTER y se recrean con sus mismas reglas al terminar.
+$columnasCodigo = [
+    ['ordenes',        'codigo'],
+    ['comisiones',     'orden_codigo'],
+    ['orden_bitacora', 'orden_codigo'],
+    ['orden_fotos',    'orden_codigo'],
+    ['ventas',         'orden_codigo'],
+    ['garantias',      'ref_codigo'],
+];
+// Detecta las que aún necesitan ampliación (idempotencia: si ninguna la
+// necesita, no se toca ninguna FK).
+$porAmpliar = [];
+foreach ($columnasCodigo as [$tabla, $col]) {
+    try {
+        $def = $pdo->query("SHOW COLUMNS FROM `{$tabla}` LIKE '{$col}'")->fetch(PDO::FETCH_ASSOC);
+        if (!$def || preg_match('/^varchar\((\d+)\)$/i', (string)$def['Type'], $mLargo) !== 1) {
+            continue; // tabla/columna inexistente o no varchar: nada que hacer
+        }
+        if ((int)$mLargo[1] < 20) {
+            $porAmpliar[] = [$tabla, $col, ($def['Null'] === 'NO') ? 'NOT NULL' : 'NULL'];
+        }
+    } catch (Throwable $e) {
+        echo "[migrate] aviso: no se pudo revisar {$tabla}.{$col}: " . $e->getMessage() . "\n";
+    }
+}
+
+if (count($porAmpliar) > 0) {
+    $fksOrdenes = $pdo->query(
+        "SELECT k.TABLE_NAME AS tabla, k.CONSTRAINT_NAME AS nombre, k.COLUMN_NAME AS col,
+                r.UPDATE_RULE AS upd, r.DELETE_RULE AS del
+         FROM information_schema.KEY_COLUMN_USAGE k
+         JOIN information_schema.REFERENTIAL_CONSTRAINTS r
+           ON r.CONSTRAINT_SCHEMA = k.CONSTRAINT_SCHEMA
+          AND r.TABLE_NAME = k.TABLE_NAME
+          AND r.CONSTRAINT_NAME = k.CONSTRAINT_NAME
+         WHERE k.TABLE_SCHEMA = DATABASE()
+           AND k.REFERENCED_TABLE_NAME = 'ordenes'
+           AND k.REFERENCED_COLUMN_NAME = 'codigo'"
+    )->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($fksOrdenes as $fk) {
+        $t = str_replace('`', '', (string)$fk['tabla']);
+        $n = str_replace('`', '', (string)$fk['nombre']);
+        $pdo->exec("ALTER TABLE `{$t}` DROP FOREIGN KEY `{$n}`");
+        echo "[migrate] FK {$n} soltada ({$t})\n";
+    }
+    foreach ($porAmpliar as [$tabla, $col, $nulabilidad]) {
+        $pdo->exec("ALTER TABLE `{$tabla}` MODIFY `{$col}` VARCHAR(20) {$nulabilidad}");
+        echo "[migrate] {$tabla}.{$col} ampliada a VARCHAR(20)\n";
+    }
+    foreach ($fksOrdenes as $fk) {
+        $t = str_replace('`', '', (string)$fk['tabla']);
+        $n = str_replace('`', '', (string)$fk['nombre']);
+        $c = str_replace('`', '', (string)$fk['col']);
+        $pdo->exec("ALTER TABLE `{$t}` ADD CONSTRAINT `{$n}` FOREIGN KEY (`{$c}`) REFERENCES ordenes(`codigo`) ON UPDATE {$fk['upd']} ON DELETE {$fk['del']}");
+        echo "[migrate] FK {$n} recreada ({$t})\n";
+    }
+}
+
+$faltanSufijo = $pdo->query(
+    "SELECT codigo FROM ordenes WHERE codigo NOT REGEXP '^LUH-[0-9]{3,8}-[A-Z0-9]{4}$'"
+)->fetchAll(PDO::FETCH_COLUMN);
+foreach ($faltanSufijo as $codViejo) {
+    $pdo->prepare('UPDATE ordenes SET codigo = ? WHERE codigo = ?')
+        ->execute([(string)$codViejo . '-' . sufijo_aleatorio(), (string)$codViejo]);
+}
+if (count($faltanSufijo) > 0) {
+    echo "[migrate] " . count($faltanSufijo) . " código(s) migrado(s) con sufijo aleatorio\n";
+}
+
+// --- Clave de la pantalla TV de sala (protege el endpoint resumen) --------
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS configuraciones (
+        clave          VARCHAR(50)  PRIMARY KEY,
+        valor          VARCHAR(100) NOT NULL,
+        actualizado_en TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
+                       ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+");
+$pdo->prepare("INSERT IGNORE INTO configuraciones (clave, valor) VALUES ('tv_clave', ?)")
+    ->execute([sufijo_aleatorio(8)]);
+$claveTv = (string)$pdo->query("SELECT valor FROM configuraciones WHERE clave = 'tv_clave'")->fetchColumn();
+echo "[migrate] Clave de la sala (ábrela así: tv.html?clave={$claveTv})\n";
 

@@ -377,6 +377,9 @@
     $('cfg-btn-term').addEventListener('click', function () {
       guardarSeccion({ terminos_texto: 'cfg-terminos_texto' }, 'cfg-btn-term');
     });
+    $('cfg-btn-tv').addEventListener('click', function () {
+      guardarSeccion({ tv_clave: 'cfg-tv_clave' }, 'cfg-btn-tv');
+    });
     $('cfg-logo-file').addEventListener('change', function () {
       var archivo = this.files && this.files[0];
       this.value = '';

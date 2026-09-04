@@ -547,6 +547,21 @@ function config_valor(PDO $pdo, string $clave, string $fallback): string
     return ($valor === false || $valor === null) ? $fallback : (string)$valor;
 }
 
+/** Sufijo aleatorio anti-enumeración para códigos públicos (LUH-1029-K7X2).
+ *  Alfabeto sin caracteres confusos (0/O, 1/I/L). Con 4 caracteres hay ~920 mil
+ *  combinaciones por orden: adivinar "la orden vecina" se vuelve inviable,
+ *  especialmente con el límite de consultas por IP de los endpoints públicos. */
+function sufijo_aleatorio(int $largo = 4): string
+{
+    $alfabeto = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    $max = strlen($alfabeto) - 1;
+    $salida = '';
+    for ($i = 0; $i < $largo; $i++) {
+        $salida .= $alfabeto[random_int(0, $max)];
+    }
+    return $salida;
+}
+
 /** Valida un RUT chileno (acepta con/sin puntos y guion; dígito verificador módulo 11). */
 function validar_rut_chileno(string $rut): bool
 {

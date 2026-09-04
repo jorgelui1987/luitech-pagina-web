@@ -6,7 +6,7 @@
     <title>Configuración | Luitech</title>
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg?v=2">
-    <link rel="stylesheet" href="assets/css/styles.css?v=mp44">
+    <link rel="stylesheet" href="assets/css/styles.css?v=mp45">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
@@ -148,6 +148,15 @@
                 <button type="button" id="cfg-btn-term" class="btn mt-3">Guardar términos</button>
             </section>
 
+            <!-- Pantalla TV de sala de espera -->
+            <section class="sec">
+                <h2><i class="fa-solid fa-tv mr-1"></i>Pantalla TV de sala de espera</h2>
+                <label class="lb">Clave de acceso de la pantalla (protege la lista de turnos en internet)</label>
+                <input class="inp" id="cfg-tv_clave" maxlength="40" placeholder="Ej: K7X2-9MQ4">
+                <p class="nota mt-1">La TV se abre así: <b>tv.html?clave=ESTA-CLAVE</b>. Sin la clave correcta, nadie puede ver la lista de turnos desde internet.</p>
+                <button type="button" id="cfg-btn-tv" class="btn mt-3">Guardar clave de la TV</button>
+            </section>
+
             <section class="sec">
                 <h2><i class="fa-solid fa-database mr-1"></i>Respaldo de datos</h2>
                 <p class="nota mb-3">Descarga un ZIP con <b>toda la base de datos</b> (órdenes, ventas, comisiones, técnicos, configuración) más las <b>fotos, firmas y logo</b>. Genera también una copia protegida en el servidor (se conservan las últimas 10). Recomendación: descárgalo antes de cada cambio importante y guárdalo en tu PC.</p>
@@ -238,7 +247,7 @@
         </div>
     </main>
 
-    <script src="assets/js/common.js?v=mp44" defer></script>
-    <script src="assets/js/configuracion.js?v=mp44" defer></script>
+    <script src="assets/js/common.js?v=mp45" defer></script>
+    <script src="assets/js/configuracion.js?v=mp45" defer></script>
 </body>
 </html>

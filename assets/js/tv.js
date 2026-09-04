@@ -22,6 +22,12 @@
   var consejoIndex = 0;
   var codigosListosPrevios = [];
 
+  /** Clave de sala (Configuración → Pantalla TV) leída de la URL: tv.html?clave=XXXX */
+  var CLAVE_SALA = (function () {
+    try { return String(new URLSearchParams(location.search).get('clave') || ''); }
+    catch (e) { return ''; }
+  })();
+
   /* -------------------------------------------------------------- RELOJ */
   function tickReloj() {
     var ahora = new Date();
@@ -69,9 +75,29 @@
     return fila;
   }
 
+  /** Aviso visible cuando la pantalla se abrió sin clave o con clave errada. */
+  function avisoClaveInvalida() {
+    var listo = $('tv-ready-list');
+    var proceso = $('tv-process-list');
+    [listo, proceso].forEach(function (cont) {
+      if (!cont) return;
+      cont.replaceChildren(Object.assign(document.createElement('p'), {
+        textContent: 'Pantalla sin clave: ábrela como tv.html?clave=TU-CLAVE (Configuración → Pantalla TV).',
+        className: 'text-amber-400 text-sm font-bold py-2'
+      }));
+    });
+    var cr = $('tv-count-ready');
+    var cp = $('tv-count-process');
+    if (cr) cr.textContent = '0';
+    if (cp) cp.textContent = '0';
+  }
+
   function cargarDatosTV() {
-    api('api/ordenes.php?action=resumen').then(function (res) {
-      if (!res.ok) return;
+    api('api/ordenes.php?action=resumen&clave=' + encodeURIComponent(CLAVE_SALA)).then(function (res) {
+      if (!res.ok) {
+        if (res.error && String(res.error).indexOf('clave') !== -1) avisoClaveInvalida();
+        return;
+      }
 
       var listaListos  = [];
       var listaProceso = [];

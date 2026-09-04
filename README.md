@@ -109,3 +109,16 @@ entrega impreso y clicable.
   cambia el dominio, se edita esa línea y QR, WhatsApp y portal quedan
   apuntando bien.
 
+### 🔐 Privacidad del seguimiento (anti-enumeración)
+
+- **Códigos con sufijo aleatorio:** los códigos son `LUH-1029-K7X2`. La parte
+  numérica queda como secuencia interna; el sufijo (`-XXXX`, sin caracteres
+  confusos) impide adivinar la orden vecina desde el portal. La migración
+  idempotente de `database/migrate.php` amplía `ordenes.codigo` a VARCHAR(20)
+  y agrega el sufijo a los códigos existentes.
+- **Sin falla al público:** el tracker (`track`) ya no entrega la descripción
+  de la falla reportada, solo equipo, estado, avance, técnico y fechas.
+- **TV de sala con clave:** el endpoint `resumen` exige la clave guardada en
+  Configuración → "Pantalla TV de sala de espera" (`tv_clave`) y también tiene
+  límite por IP. La TV se abre como `tv.html?clave=LA-CLAVE`.
+

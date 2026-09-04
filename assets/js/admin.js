@@ -1912,6 +1912,7 @@
     $('mo-btn-cobro').addEventListener('click', function () { guardarCobroModal(false); });
     $('mo-btn-cobro-total').addEventListener('click', function () { guardarCobroModal(true); });
     $('mo-btn-recibo').addEventListener('click', function () { imprimirRecibo(ordenActualModal()); });
+    $('mo-btn-comprobante').addEventListener('click', function () { imprimirComprobanteIngreso(ordenActualModal()); });
     $('mo-btn-entrega').addEventListener('click', confirmarEntrega);
     $('mo-btn-nota').addEventListener('click', agregarNota);
     $('mo-nota').addEventListener('keydown', function (e) {

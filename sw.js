@@ -2,7 +2,7 @@
    - Interfaz (páginas, CSS, JS, imágenes): red primero + caché de respaldo
    - API (/api/): SIEMPRE red — los datos del taller nunca se cachean
    Al publicar una actualización, sube la constante CACHE (ej: luitech-v2). */
-var CACHE = 'luitech-v8'; // v8: el dominio impreso/en QR/link es www.tallerluitech.fun (canónico del .htaccess)
+var CACHE = 'luitech-v9'; // v9: seguridad del seguimiento — códigos con sufijo aleatorio (LUH-1029-K7X2), falla oculta al público y TV de sala con clave
 var NUCLEO = [
   'admin.html', 'pos.html', 'inventario.html', 'proveedores.html', 'cotizador.html',
   'clientes.html', 'tecnicos.html', 'finanzas.html', 'configuracion.html',

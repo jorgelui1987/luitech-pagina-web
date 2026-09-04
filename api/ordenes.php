@@ -2,8 +2,8 @@
 /**
  * LUITECH API - Órdenes de trabajo.
  * Acciones (GET param ?action=):
- *   track  (GET)  ?codigo=LUH-1024   Público: consulta individual (sin datos personales)
- *   resumen(GET)                     Público: lista ligera para pantalla TV de sala
+ *   track  (GET)  ?codigo=LUH-1024-K7X2  Público: consulta individual (sin datos personales ni falla)
+ *   resumen(GET)  ?clave=XXXX            Público SOLO con la clave de sala: lista ligera para la TV
  *   list   (GET)                     Solo admin: todas las órdenes completas
  *   create (POST)                    Solo admin: nueva orden (+ acta de recepción)
  *   update (POST)                    Solo admin: cambia estado/avance u otros campos
@@ -131,12 +131,17 @@ switch ($action) {
             responder(['ok' => false, 'error' => 'Demasiadas consultas. Intenta más tarde.'], 429);
         }
         $codigo = strtoupper(trim($_GET['codigo'] ?? ''));
-        if (!preg_match('/^LUH-\d{3,8}$/', $codigo)) {
-            responder(['ok' => false, 'error' => 'Formato de código inválido (ej: LUH-1024)'], 400);
+        // El sufijo (-XXXX) es obligatorio: es la capa anti-enumeración. La
+        // migración agregó el sufijo a todos los códigos, así que los viejos
+        // 'LUH-nnnn' sin sufijo ya no corresponden a ninguna orden.
+        if (!preg_match('/^LUH-\d{3,8}-[A-Z0-9]{4}$/', $codigo)) {
+            responder(['ok' => false, 'error' => 'Código inválido: usa el código completo de tu boleta (ej: 1029-K7X2)'], 400);
         }
 
+        // Privacidad: la falla reportada NO viaja al portal público (nadie debe
+        // enterarse de qué servicio llevó el equipo de otra persona).
         $stmt = db()->prepare(
-            'SELECT codigo, equipo, falla, estado, avance, tecnico, fecha_ingreso, fecha_entrega
+            'SELECT codigo, equipo, estado, avance, tecnico, fecha_ingreso, fecha_entrega
              FROM ordenes WHERE codigo = ? LIMIT 1'
         );
         $stmt->execute([$codigo]);
@@ -152,6 +157,24 @@ switch ($action) {
 
     /* ---------------------------------------------------------- RESUMEN */
     case 'resumen': {
+        // Pantalla TV de sala: protegida con límite por IP + clave de sala
+        // (Configuración → Pantalla TV). Sin la clave correcta, nadie puede
+        // descargar la lista de turnos desde internet.
+        if (!limitar_ip('resumen', 30, 300)) {
+            responder(['ok' => false, 'error' => 'Demasiadas consultas. Intenta más tarde.'], 429);
+        }
+        $claveSala = '';
+        try {
+            preparar_configuraciones();
+            $claveSala = config_valor(db(), 'tv_clave', '');
+        } catch (Throwable $e) {
+            $claveSala = ''; // fail closed: si no se puede verificar, se niega
+        }
+        $claveRecibida = (string)($_GET['clave'] ?? '');
+        if ($claveSala === '' || !hash_equals($claveSala, $claveRecibida)) {
+            responder(['ok' => false, 'error' => 'Acceso denegado: clave de sala inválida'], 403);
+        }
+
         $stmt = db()->query(
             "SELECT codigo, equipo, estado, avance FROM ordenes
              WHERE estado IN ('Listo para Retiro','En Reparación','En Diagnóstico')
@@ -237,11 +260,18 @@ switch ($action) {
             responder(['ok' => false, 'error' => 'El código debe tener formato LUH-número (ej: LUH-1029)'], 400);
         }
         if ($codigo === '') {
+            // SUBSTRING_INDEX recorta un eventual sufijo anti-enumeración del
+            // código anterior ('LUH-1029-K7X2' → '1029') antes del CAST.
             $siguiente = (int)(db()->query(
-                "SELECT COALESCE(MAX(CAST(SUBSTRING(codigo, 5) AS UNSIGNED)), 1023) AS m FROM ordenes"
+                "SELECT COALESCE(MAX(CAST(SUBSTRING_INDEX(SUBSTRING(codigo, 5), '-', 1) AS UNSIGNED)), 1023) AS m FROM ordenes"
             )->fetch()['m'] ?? 1023) + 1;
             $codigo = 'LUH-' . $siguiente;
         }
+
+        // Sufijo aleatorio anti-enumeración (siempre, incluso con código manual):
+        // el código público queda 'LUH-1029-K7X2' y adivinar la orden vecina
+        // exige acertar entre ~920 mil sufijos, inviable con el límite de consultas.
+        $codigo .= '-' . sufijo_aleatorio();
 
         try {
             $fecha    = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)($d['fecha'] ?? '')) ? $d['fecha'] : date('Y-m-d');

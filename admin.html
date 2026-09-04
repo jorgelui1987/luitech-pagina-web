@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow">
     <meta name="theme-color" content="#020617">
     <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg?v=2">
-    <link rel="stylesheet" href="assets/css/styles.css?v=mp44">
+    <link rel="stylesheet" href="assets/css/styles.css?v=mp45">
     <style>
         /* Acta de recepción: firma táctil, chips de accesorios y miniaturas */
         .lienzo-firma{ touch-action:none; cursor:crosshair; background:#ffffff; display:block; width:100%; height:140px; border-radius:0.5rem; }
@@ -51,6 +51,7 @@
         body.rol-tecnico #mo-btn-mp,
         body.rol-tecnico #mo-btn-point,
         body.rol-tecnico #mo-btn-recibo,
+        body.rol-tecnico #mo-btn-comprobante,
         body.rol-tecnico #mo-entrega-form,
         body.rol-tecnico #mo-btn-entrega,
         body.rol-tecnico #mo-btn-nota { display:none !important; }
@@ -499,6 +500,9 @@
                     <button type="button" id="mo-btn-recibo" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold py-2 px-3 rounded-lg transition-all">
                         <i class="fa-solid fa-print mr-1"></i> Recibo
                     </button>
+                    <button type="button" id="mo-btn-comprobante" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold py-2 px-3 rounded-lg transition-all" title="Imprime el comprobante de ingreso con el código de seguimiento y su QR">
+                        <i class="fa-solid fa-receipt mr-1"></i> Comprobante
+                    </button>
                 </div>
                 <div id="mp-panel" class="hidden text-center" style="border:1px dashed #334155; border-radius:0.5rem; padding:10px;">
                     <img id="mp-qr" alt="QR de pago Mercado Pago" style="width:180px; height:180px; margin:0 auto 8px; display:block; background:#fff; padding:6px; border-radius:0.5rem;">
@@ -571,7 +575,7 @@
         <button type="button" id="bm-salir" style="grid-column:1/-1"><i class="fa-solid fa-right-from-bracket mr-1"></i>Salir (<span class="bm-nombre"></span>)</button>
     </div>
 
-    <script src="assets/js/common.js?v=mp44" defer></script>
-    <script src="assets/js/admin.js?v=mp44" defer></script>
+    <script src="assets/js/common.js?v=mp45" defer></script>
+    <script src="assets/js/admin.js?v=mp45" defer></script>
 </body>
 </html>

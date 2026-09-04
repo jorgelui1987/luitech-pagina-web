@@ -25,7 +25,7 @@
     <meta property="og:locale" content="es_CL">
 
     <!-- Tailwind compilado localmente (ver README.md) -->
-    <link rel="stylesheet" href="assets/css/styles.css?v=mp44">
+    <link rel="stylesheet" href="assets/css/styles.css?v=mp45">
 
     <!-- Tipografía de marca -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -144,14 +144,14 @@
                         <h2 class="text-xl font-bold mb-2 flex items-center gap-2">
                             <i class="fa-solid fa-route text-cyan-400"></i> Consulta Express
                         </h2>
-                        <p class="text-sm text-slate-400 mb-6">¿Dejaste tu equipo con nosotros? Digita el código impreso en tu boleta para ver el avance actual.</p>
+                        <p class="text-sm text-slate-400 mb-6">¿Dejaste tu equipo con nosotros? Digita el código completo de tu boleta (ej: 1029-K7X2) para ver el avance actual.</p>
 
                         <form onsubmit="buscarOrdenExpress(); return false;">
                             <label for="express-code" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Código de Reparación</label>
                             <div class="relative mb-3">
                                 <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-500 font-bold pointer-events-none">LUH-</span>
-                                <input type="text" id="express-code" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
-                                       placeholder="1024" maxlength="8"
+                                <input type="text" id="express-code" autocomplete="off" spellcheck="false"
+                                       placeholder="1029-K7X2" maxlength="13"
                                        class="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 pl-14 pr-4 text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 uppercase tracking-widest font-bold text-base">
                             </div>
                             <button type="submit" class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-2">
@@ -223,10 +223,6 @@
 
                 <!-- Detalle de la Falla y Fechas -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-900 border border-slate-800 p-5 rounded-xl text-sm">
-                    <div>
-                        <span class="text-slate-500 font-semibold block uppercase text-[10px] tracking-wider mb-1">Detalle del Requerimiento</span>
-                        <p id="track-falla" class="text-slate-200 font-medium">—</p>
-                    </div>
                     <div>
                         <span class="text-slate-500 font-semibold block uppercase text-[10px] tracking-wider mb-1">Fecha de Ingreso</span>
                         <p id="track-fecha" class="text-slate-200 font-medium">—</p>
@@ -582,9 +578,9 @@
 
     <!-- Scripts (orden garantizado) -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous" defer></script>
-    <script src="assets/js/common.js?v=mp44" defer></script>
-    <script src="assets/js/portal.js?v=mp44" defer></script>
-    <script src="assets/js/tools.js?v=mp44" defer></script>
+    <script src="assets/js/common.js?v=mp45" defer></script>
+    <script src="assets/js/portal.js?v=mp45" defer></script>
+    <script src="assets/js/tools.js?v=mp45" defer></script>
 </body>
 </html>
 
