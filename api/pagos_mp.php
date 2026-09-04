@@ -185,7 +185,7 @@ switch ($action) {
             responder(['ok' => false, 'error' => 'Mercado Pago no está habilitado en Configuración'], 409);
         }
         $codigo = strtoupper(trim((string)(leer_cuerpo()['codigo'] ?? '')));
-        if (preg_match('/^LUH-\d{3,8}$/', $codigo) !== 1) {
+        if (preg_match('/^LUH-\d{3,8}(-[A-Z0-9]{4})?$/', $codigo) !== 1) {
             responder(['ok' => false, 'error' => 'Código inválido'], 400);
         }
         $st = db()->prepare('SELECT cliente, total, abono FROM ordenes WHERE codigo = ?');
@@ -273,7 +273,7 @@ switch ($action) {
             responder(['ok' => false, 'error' => 'Mercado Pago no está habilitado'], 409);
         }
         $codigo = strtoupper(trim((string)(leer_cuerpo()['codigo'] ?? '')));
-        if (preg_match('/^LUH-\d{3,8}$/', $codigo) !== 1) {
+        if (preg_match('/^LUH-\d{3,8}(-[A-Z0-9]{4})?$/', $codigo) !== 1) {
             responder(['ok' => false, 'error' => 'Código inválido'], 400);
         }
         $st = db()->prepare('SELECT total, abono, cliente FROM ordenes WHERE codigo = ?');
@@ -365,7 +365,7 @@ switch ($action) {
                 $montoPagado += (int)round((float)($pago['paid_amount'] ?? 0));
             }
         }
-        if ($isPaid && preg_match('/^LUH-\d{3,8}$/', $referencia) === 1 && $montoPagado > 0) {
+        if ($isPaid && preg_match('/^LUH-\d{3,8}(-[A-Z0-9]{4})?$/', $referencia) === 1 && $montoPagado > 0) {
             mp_aplicar_pago_orden(db(), $referencia, $montoPagado, 'mp-order-' . $orderId);
         }
         responder(['ok' => true, 'estado' => $status, 'pagada' => $isPaid, 'monto' => $montoPagado]);
@@ -395,7 +395,7 @@ switch ($action) {
             $referencia  = (string)($intent['additional_info']['external_reference'] ?? '');
             $montoIntent = (int)round((float)($intent['amount'] ?? ($intent['payment']['transaction_amount'] ?? 0)));
             $aprobado    = (($intent['status'] ?? '') === 'approved' || (($intent['payment']['status'] ?? '') === 'approved'));
-            if ($aprobado && preg_match('/^LUH-\d{3,8}$/', $referencia) === 1 && $montoIntent > 0) {
+            if ($aprobado && preg_match('/^LUH-\d{3,8}(-[A-Z0-9]{4})?$/', $referencia) === 1 && $montoIntent > 0) {
                 mp_aplicar_pago_orden(db(), $referencia, $montoIntent, (string)($intent['payment']['id'] ?? $pagoId));
             }
             responder(['ok' => true]);
@@ -423,7 +423,7 @@ switch ($action) {
                 }
             }
             $aprobado = in_array($status, ['processed', 'accredited', 'closed', 'approved'], true);
-            if ($aprobado && preg_match('/^LUH-\d{3,8}$/', $referencia) === 1 && $montoPagado > 0) {
+            if ($aprobado && preg_match('/^LUH-\d{3,8}(-[A-Z0-9]{4})?$/', $referencia) === 1 && $montoPagado > 0) {
                 mp_aplicar_pago_orden(db(), $referencia, $montoPagado, 'mp-order-' . $orderId);
             }
             responder(['ok' => true]);
@@ -438,7 +438,7 @@ switch ($action) {
         $referencia = (string)($pago['external_reference'] ?? '');
         $monto = (int)round((float)($pago['transaction_amount'] ?? 0));
         if ($codigoHttp === 200 && $estado === 'approved'
-            && preg_match('/^LUH-\d{3,8}$/', $referencia) === 1 && $monto > 0) {
+            && preg_match('/^LUH-\d{3,8}(-[A-Z0-9]{4})?$/', $referencia) === 1 && $monto > 0) {
             mp_aplicar_pago_orden(db(), $referencia, $monto, $pagoId);
         }
         responder(['ok' => true]);
@@ -499,7 +499,7 @@ switch ($action) {
         // webhook o buscando directamente en Mercado Pago), responde pagada.
         exigir_admin(); exigir_rol_admin();
         $codigo = strtoupper(trim((string)($_GET['codigo'] ?? '')));
-        if (preg_match('/^LUH-\d{3,8}$/', $codigo) !== 1) {
+        if (preg_match('/^LUH-\d{3,8}(-[A-Z0-9]{4})?$/', $codigo) !== 1) {
             responder(['ok' => false, 'error' => 'Código inválido'], 400);
         }
         $orden = db()->prepare('SELECT total, abono, estado_pago FROM ordenes WHERE codigo = ? LIMIT 1');

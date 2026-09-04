@@ -141,7 +141,10 @@ switch ($action) {
                     ['LUH-1028', 'Pedro Aguilera',    'Xiaomi Redmi Note 11',   'Celular',     'Cambio de batería',                'Ingresado',          10, 'Por Asignar',  '2026-07-17'],
                 ];
                 $st = $pdo->prepare('INSERT INTO ordenes (codigo, cliente, equipo, tipo, falla, estado, avance, tecnico, fecha_ingreso) VALUES (?,?,?,?,?,?,?,?,?)');
-                foreach ($semillas as $s) { $st->execute($s); }
+                foreach ($semillas as $s) {
+                    $s[0] = $s[0] . '-' . sufijo_aleatorio(); // demo también con sufijo anti-enumeración
+                    $st->execute($s);
+                }
                 $demo = count($semillas);
             }
             $pdo->commit();

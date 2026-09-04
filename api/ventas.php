@@ -75,7 +75,7 @@ switch ($action) {
         $medioPago  = in_array(($d['medio_pago'] ?? ''), ['Efectivo','Debito','Credito','Transferencia','Mercado Pago'], true)
                       ? $d['medio_pago'] : 'Efectivo';
         $ordenCod   = strtoupper(trim((string)($d['orden_codigo'] ?? '')));
-        $ordenFinal = preg_match('/^LUH-\d{3,8}$/', $ordenCod) ? $ordenCod : null;
+        $ordenFinal = preg_match('/^LUH-\d{3,8}(-[A-Z0-9]{4})?$/', $ordenCod) ? $ordenCod : null;
 
         $pdo = db();
         $pdo->beginTransaction();

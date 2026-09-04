@@ -337,7 +337,7 @@ switch ($action) {
 
         $d      = leer_cuerpo();
         $codigo = strtoupper(trim((string)($d['codigo'] ?? '')));
-        if (!preg_match('/^LUH-\d{3,8}$/', $codigo)) {
+        if (!preg_match('/^LUH-\d{3,8}(-[A-Z0-9]{4})?$/', $codigo)) {
             responder(['ok' => false, 'error' => 'Código inválido'], 400);
         }
 
@@ -568,7 +568,7 @@ switch ($action) {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
         $codigo = strtoupper(trim((string)(leer_cuerpo()['codigo'] ?? '')));
-        if (!preg_match('/^LUH-\d{3,8}$/', $codigo)) {
+        if (!preg_match('/^LUH-\d{3,8}(-[A-Z0-9]{4})?$/', $codigo)) {
             responder(['ok' => false, 'error' => 'Código inválido'], 400);
         }
         $st = db()->prepare('SELECT costo_repuesto, cliente FROM ordenes WHERE codigo = ?');
@@ -609,7 +609,7 @@ switch ($action) {
         }
         $d      = leer_cuerpo();
         $codigo = strtoupper(trim((string)($d['codigo'] ?? '')));
-        if (!preg_match('/^LUH-\d{3,8}$/', $codigo)) {
+        if (!preg_match('/^LUH-\d{3,8}(-[A-Z0-9]{4})?$/', $codigo)) {
             responder(['ok' => false, 'error' => 'Código inválido'], 400);
         }
 
@@ -654,7 +654,7 @@ switch ($action) {
     case 'fotos': {
         exigir_admin(); exigir_rol_admin();
         $codigo = strtoupper(trim($_GET['codigo'] ?? ''));
-        if (!preg_match('/^LUH-\d{3,8}$/', $codigo)) {
+        if (!preg_match('/^LUH-\d{3,8}(-[A-Z0-9]{4})?$/', $codigo)) {
             responder(['ok' => false, 'error' => 'Código inválido'], 400);
         }
         $stmt = db()->prepare(
@@ -672,7 +672,7 @@ switch ($action) {
         }
 
         $codigo = strtoupper(trim((string)($_POST['codigo'] ?? '')));
-        if (!preg_match('/^LUH-\d{3,8}$/', $codigo)) {
+        if (!preg_match('/^LUH-\d{3,8}(-[A-Z0-9]{4})?$/', $codigo)) {
             responder(['ok' => false, 'error' => 'Código inválido'], 400);
         }
         $existe = db()->prepare('SELECT 1 FROM ordenes WHERE codigo = ?');
@@ -765,7 +765,7 @@ switch ($action) {
         }
         $d      = leer_cuerpo();
         $codigo = strtoupper(trim((string)($d['codigo'] ?? '')));
-        if (!preg_match('/^LUH-\d{3,8}$/', $codigo)) {
+        if (!preg_match('/^LUH-\d{3,8}(-[A-Z0-9]{4})?$/', $codigo)) {
             responder(['ok' => false, 'error' => 'Código inválido'], 400);
         }
         $nota = campo_texto($d, 'nota', 500);
@@ -787,7 +787,7 @@ switch ($action) {
     case 'bitacora': {
         exigir_admin(); exigir_rol_admin();
         $codigo = strtoupper(trim($_GET['codigo'] ?? ''));
-        if (!preg_match('/^LUH-\d{3,8}$/', $codigo)) {
+        if (!preg_match('/^LUH-\d{3,8}(-[A-Z0-9]{4})?$/', $codigo)) {
             responder(['ok' => false, 'error' => 'Código inválido'], 400);
         }
         $stmt = db()->prepare(
