@@ -2,7 +2,7 @@
    - Interfaz (páginas, CSS, JS, imágenes): red primero + caché de respaldo
    - API (/api/): SIEMPRE red — los datos del taller nunca se cachean
    Al publicar una actualización, sube la constante CACHE (ej: luitech-v2). */
-var CACHE = 'luitech-v17'; // v17: precio GRANDE en negrita en su propia linea de la etiqueta 80mm (codigo separado; sin linea de precio si vale $0)
+var CACHE = 'luitech-v18'; // v18: el numero del codigo sale UNA sola vez (bajo las barras) — se elimino la linea de texto repetida; precio grande aparte
 var NUCLEO = [
   'admin.html', 'pos.html', 'inventario.html', 'proveedores.html', 'cotizador.html',
   'clientes.html', 'tecnicos.html', 'finanzas.html', 'configuracion.html',
