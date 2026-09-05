@@ -9,38 +9,122 @@
 
   function fmt(n) { return Number(n).toLocaleString('es-CL'); }
 
-  /* ------- Categorías autoguardadas (sugerencias + última usada) -------
-     Cada categoría usada al guardar un producto queda en localStorage y
-     aparece como sugerencia; la última usada viene pre-escrita en el
-     formulario, así no hay que tipearla en cada producto nuevo. */
-  var CLAVE_CATS = 'luitech-inv-cats';   // lista de categorías vistas
-  var CLAVE_ULT  = 'luitech-inv-ultima-cat'; // última categoría guardada
+  /* ------- Categorías autoguardadas -------
+     La lista de sugerencias sale SIEMPRE de los productos guardados en la
+     base de datos: se arma y se limpia sola (corrige o renombra la categoría
+     de un producto y la errada desaparece de la lista). En localStorage solo
+     se recuerda la ÚLTIMA usada para que venga pre-escrita en el formulario. */
+  var CLAVE_ULT = 'luitech-inv-ultima-cat';
+  var productosCache = []; // última lista de productos (para chips y renombrar)
 
-  function agregarCat(cat, esUltima) {
-    cat = String(cat || '').trim();
-    if (!cat) return;
-    var lista = [];
-    try { lista = JSON.parse(localStorage.getItem(CLAVE_CATS)) || []; } catch (e) { /* dato corrupto: se parte de cero */ }
-    var existe = lista.some(function (c) { return c.toLowerCase() === cat.toLowerCase(); });
-    if (!existe) lista.push(cat);
-    try {
-      localStorage.setItem(CLAVE_CATS, JSON.stringify(lista));
-      if (esUltima) localStorage.setItem(CLAVE_ULT, cat);
-    } catch (e) { /* modo privado: vive solo en esta sesión */ }
+  // Lista vieja acumulada en localStorage (versión anterior): ya no se usa,
+  // las sugerencias ahora salen de los productos reales.
+  try { localStorage.removeItem('luitech-inv-cats'); } catch (e) { /* nada */ }
+
+  function recordarUltimaCat(cat) {
+    try { localStorage.setItem(CLAVE_ULT, String(cat || '').trim()); } catch (e) { /* modo privado */ }
   }
 
   function leerUltimaCat() {
     try { return localStorage.getItem(CLAVE_ULT) || ''; } catch (e) { return ''; }
   }
 
-  function llenarCats() {
+  /** Agrupa las categorías de los productos sin distinguir mayúsculas/minúsculas
+   *  (así "accesorio" y "Accesorio" cuentan como una) → [{nombre, n}] alfabético. */
+  function contarCats(productos) {
+    var grupos = {}, orden = [];
+    (productos || []).forEach(function (p) {
+      var cat = String(p.categoria || '').trim();
+      if (!cat) return;
+      var k = cat.toLowerCase();
+      if (!grupos[k]) { grupos[k] = { nombre: cat, n: 0 }; orden.push(k); }
+      grupos[k].n++;
+    });
+    return orden.map(function (k) { return grupos[k]; })
+                .sort(function (a, b) { return a.nombre.localeCompare(b.nombre, 'es'); });
+  }
+
+  /** Sugerencias del campo Categoría (datalist) desde las categorías en uso. */
+  function llenarCats(grupos) {
     var dl = $('lista-cats');
     if (!dl) return;
-    var lista = [];
-    try { lista = JSON.parse(localStorage.getItem(CLAVE_CATS)) || []; } catch (e) { /* sin lista */ }
-    lista.sort(function (a, b) { return a.localeCompare(b, 'es'); });
     dl.replaceChildren();
-    lista.forEach(function (c) { dl.appendChild(new Option(c)); });
+    (grupos || []).forEach(function (g) { dl.appendChild(new Option(g.nombre)); });
+  }
+
+  /** Chips bajo el formulario: clic escribe la categoría en el formulario y el
+   *  lápiz la cambia en TODOS los productos que la usan (corrige o elimina un
+   *  error de tipeo en un solo paso). */
+  function pintarChips(grupos) {
+    var caja = $('cats-guardadas');
+    if (!caja) return;
+    caja.replaceChildren();
+    if (!(grupos || []).length) { caja.classList.add('hidden'); return; }
+    caja.classList.remove('hidden');
+
+    var titulo = document.createElement('span');
+    titulo.className = 'text-slate-500 font-semibold';
+    titulo.textContent = 'Categorías en uso:';
+    caja.appendChild(titulo);
+
+    grupos.forEach(function (g) {
+      var chip = document.createElement('span');
+      chip.className = 'inline-flex items-center gap-1.5 bg-slate-900 border border-slate-700 text-slate-200 rounded-full pl-2.5 pr-1.5 py-1';
+
+      var usar = document.createElement('button');
+      usar.type = 'button';
+      usar.className = 'font-semibold hover:text-cyan-400 transition-colors';
+      usar.textContent = g.nombre + ' (' + g.n + ')';
+      usar.title = 'Escribir "' + g.nombre + '" en el formulario';
+      usar.addEventListener('click', function () { $('p-cat').value = g.nombre; });
+
+      var editar = document.createElement('button');
+      editar.type = 'button';
+      editar.title = 'Renombrar "' + g.nombre + '" en todos sus productos (corrige el error o la junta con otra categoría)';
+      editar.innerHTML = '<i class="fa-solid fa-pen text-[9px] pointer-events-none"></i>';
+      editar.className = 'w-5 h-5 rounded-full bg-slate-800 hover:bg-amber-500 text-slate-400 hover:text-slate-950 flex items-center justify-center transition-colors';
+      editar.addEventListener('click', function () { renombrarCat(g.nombre); });
+
+      chip.appendChild(usar);
+      chip.appendChild(editar);
+      caja.appendChild(chip);
+    });
+  }
+
+  /** Cambia una categoría en todos los productos que la usan. Es la forma de
+   *  "eliminar" una categoría errada: se renombra (o se junta con otra) y
+   *  desaparece de las sugerencias sola. */
+  function renombrarCat(vieja) {
+    var nueva = prompt('Cambiar la categoría "' + vieja + '" por:', vieja);
+    if (nueva === null) return; // cancelado
+    nueva = nueva.trim();
+    if (!nueva) { window.mostrarToast('El nuevo nombre no puede quedar vacío', 'error'); return; }
+    if (nueva.toLowerCase() === vieja.toLowerCase()) return; // sin cambios
+
+    var afectados = productosCache.filter(function (p) {
+      return String(p.categoria || '').trim().toLowerCase() === vieja.toLowerCase();
+    });
+    if (!afectados.length) return;
+    if (!confirm('Se cambiará "' + vieja + '" por "' + nueva + '" en ' + afectados.length + ' producto(s).')) return;
+
+    var hechos = 0, errores = 0, i = 0;
+    (function siguiente() {
+      if (i >= afectados.length) {
+        if (errores) {
+          window.mostrarToast('Categoría cambiada en ' + hechos + ' producto(s); ' + errores + ' fallaron. Revisa la tabla.', 'error');
+        } else {
+          window.mostrarToast('Categoría "' + nueva + '" aplicada a ' + hechos + ' producto(s)', 'success');
+        }
+        if (leerUltimaCat().toLowerCase() === vieja.toLowerCase()) recordarUltimaCat(nueva);
+        cargar(); // refresca tabla, sugerencias y chips
+        return;
+      }
+      var p = afectados[i++];
+      api('api/inventario.php?action=update', { method: 'POST', body: { id: p.id, categoria: nueva } })
+        .then(function (res) { if (res.ok) { hechos++; } else { errores++; } })
+        .catch(function () { errores++; })
+        .finally(siguiente);
+    })();
   }
 
   function mostrarVista(logueado) {
@@ -78,10 +162,12 @@
 
       var bajos = res.productos.filter(function (p) { return p.stock_bajo; });
 
-      // Categorías ya usadas en los productos → se suman a las sugerencias
-      // autoguardadas (sin cambiar la "última usada", esa solo la fija guardar()).
-      res.productos.forEach(function (p) { agregarCat(p.categoria); });
-      llenarCats();
+      // Sugerencias y chips de categorías: se reconstruyen de los productos
+      // reales (así una categoría corregida desaparece sola de la lista).
+      productosCache = res.productos;
+      var gruposCats = contarCats(res.productos);
+      llenarCats(gruposCats);
+      pintarChips(gruposCats);
 
       var caja = $('alertas-stock');
       if (bajos.length) {
@@ -236,10 +322,7 @@
     $('btn-guardar').disabled = true;
     api(url, { method: 'POST', body: cuerpo }).then(function (res) {
       if (!res.ok) { window.mostrarToast(res.error || 'Error al guardar', 'error'); return; }
-      // La categoría usada queda autoguardada: será sugerencia y la que
-      // venga pre-escrita en el siguiente producto.
-      agregarCat(cuerpo.categoria, true);
-      llenarCats();
+      recordarUltimaCat(cuerpo.categoria); // viene pre-escrita en el siguiente producto
       window.mostrarToast(id ? 'Producto actualizado' : 'Producto "' + cuerpo.nombre + '" creado', 'success');
       limpiarFormulario();
       cargar();
@@ -321,8 +404,7 @@
     $('btn-guardar').addEventListener('click', guardar);
     $('btn-cancelar').addEventListener('click', limpiarFormulario);
 
-    // Sugerencias ya guardadas + última categoría pre-escrita desde el inicio
-    llenarCats();
+    // La última categoría usada ya viene escrita desde el arranque
     $('p-cat').value = leerUltimaCat();
 
     // Escáner de cámara para capturar el código de barras del producto
