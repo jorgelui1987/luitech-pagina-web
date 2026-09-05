@@ -100,6 +100,15 @@
             <p id="inv-aviso" class="hidden text-center text-[11px] text-amber-400 mt-3"></p>
         </section>
 
+        <!-- Buscador: filtra la tabla mientras escribes (útil para hallar el
+             producto y mandar su etiqueta de código de barras a imprimir) -->
+        <section class="flex flex-wrap items-center gap-2 bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-3">
+            <i class="fa-solid fa-magnifying-glass text-slate-500" aria-hidden="true"></i>
+            <input type="text" id="inv-buscar" placeholder="Buscar producto: código, nombre, categoría o proveedor…" autocomplete="off"
+                   class="flex-grow min-w-[200px] bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-cyan-500">
+            <span id="inv-contador" class="hidden text-[11px] text-slate-500 font-semibold"></span>
+        </section>
+
         <!-- Tabla -->
         <section class="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
             <div class="overflow-x-auto">
@@ -119,7 +128,7 @@
     </main>
 
     <script src="assets/js/common.js?v=mp55" defer></script>
-    <script src="assets/js/inventario.js?v=mp57" defer></script>
+    <script src="assets/js/inventario.js?v=mp58" defer></script>
 </body>
 </html>
 

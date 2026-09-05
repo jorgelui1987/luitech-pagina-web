@@ -208,19 +208,48 @@
           avisoInv.classList.add('hidden');
         }
       }
-      renderTabla(res.productos);
+      renderInv();
     }).catch(function () {});
   }
 
-  function renderTabla(productos) {
+  /** Buscador: filtra productosCache mientras escribes (cada palabra debe
+   *  coincidir en código, nombre, categoría, código de barras o proveedor;
+   *  sin distinguir mayúsculas/minúsculas). La tabla se repinta sola. */
+  function renderInv() {
+    var q = ($('inv-buscar') ? $('inv-buscar').value : '').toLowerCase().trim();
+    var palabras = q ? q.split(/\s+/) : [];
+    var lista = productosCache.filter(function (p) {
+      var texto = ((p.codigo || '') + ' ' + (p.nombre || '') + ' ' + (p.categoria || '') + ' ' +
+                   (p.barcode || '') + ' ' + (p.proveedor_nombre || p.proveedor || '')).toLowerCase();
+      for (var i = 0; i < palabras.length; i++) {
+        if (texto.indexOf(palabras[i]) === -1) return false;
+      }
+      return true;
+    });
+
+    var contador = $('inv-contador');
+    if (contador) {
+      if (palabras.length) {
+        contador.textContent = lista.length + ' de ' + productosCache.length + ' producto(s)';
+        contador.classList.remove('hidden');
+      } else {
+        contador.classList.add('hidden');
+      }
+    }
+    renderTabla(lista, palabras.length > 0);
+  }
+
+  function renderTabla(productos, buscando) {
     var tbody = $('inv-body');
     tbody.replaceChildren();
 
     if (!productos.length) {
       var vacio = document.createElement('td');
-      vacio.colSpan = 7;
+      vacio.colSpan = 8; // la tabla tiene 8 columnas (Código…Acciones)
       vacio.className = 'p-6 text-center text-slate-500 italic';
-      vacio.textContent = 'Inventario vacío. Agrega tu primer producto arriba.';
+      vacio.textContent = buscando
+        ? 'Ningún producto coincide con la búsqueda.'
+        : 'Inventario vacío. Agrega tu primer producto arriba.';
       var trv = document.createElement('tr'); trv.appendChild(vacio); tbody.appendChild(trv);
       return;
     }
@@ -325,6 +354,10 @@
       recordarUltimaCat(cuerpo.categoria); // viene pre-escrita en el siguiente producto
       window.mostrarToast(id ? 'Producto actualizado' : 'Producto "' + cuerpo.nombre + '" creado', 'success');
       limpiarFormulario();
+      if (!id) { // producto recién creado: quita el filtro para que se vea en la tabla
+        var buscador = $('inv-buscar');
+        if (buscador) buscador.value = '';
+      }
       cargar();
     }).catch(function () {
       window.mostrarToast('Error de conexión con el servidor', 'error');
@@ -403,6 +436,9 @@
   document.addEventListener('DOMContentLoaded', function () {
     $('btn-guardar').addEventListener('click', guardar);
     $('btn-cancelar').addEventListener('click', limpiarFormulario);
+
+    // Buscador en vivo: la tabla se filtra mientras escribes
+    $('inv-buscar').addEventListener('input', renderInv);
 
     // La última categoría usada ya viene escrita desde el arranque
     $('p-cat').value = leerUltimaCat();
