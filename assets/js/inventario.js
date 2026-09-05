@@ -9,6 +9,40 @@
 
   function fmt(n) { return Number(n).toLocaleString('es-CL'); }
 
+  /* ------- Categorías autoguardadas (sugerencias + última usada) -------
+     Cada categoría usada al guardar un producto queda en localStorage y
+     aparece como sugerencia; la última usada viene pre-escrita en el
+     formulario, así no hay que tipearla en cada producto nuevo. */
+  var CLAVE_CATS = 'luitech-inv-cats';   // lista de categorías vistas
+  var CLAVE_ULT  = 'luitech-inv-ultima-cat'; // última categoría guardada
+
+  function agregarCat(cat, esUltima) {
+    cat = String(cat || '').trim();
+    if (!cat) return;
+    var lista = [];
+    try { lista = JSON.parse(localStorage.getItem(CLAVE_CATS)) || []; } catch (e) { /* dato corrupto: se parte de cero */ }
+    var existe = lista.some(function (c) { return c.toLowerCase() === cat.toLowerCase(); });
+    if (!existe) lista.push(cat);
+    try {
+      localStorage.setItem(CLAVE_CATS, JSON.stringify(lista));
+      if (esUltima) localStorage.setItem(CLAVE_ULT, cat);
+    } catch (e) { /* modo privado: vive solo en esta sesión */ }
+  }
+
+  function leerUltimaCat() {
+    try { return localStorage.getItem(CLAVE_ULT) || ''; } catch (e) { return ''; }
+  }
+
+  function llenarCats() {
+    var dl = $('lista-cats');
+    if (!dl) return;
+    var lista = [];
+    try { lista = JSON.parse(localStorage.getItem(CLAVE_CATS)) || []; } catch (e) { /* sin lista */ }
+    lista.sort(function (a, b) { return a.localeCompare(b, 'es'); });
+    dl.replaceChildren();
+    lista.forEach(function (c) { dl.appendChild(new Option(c)); });
+  }
+
   function mostrarVista(logueado) {
     $('view-nologin').classList.toggle('hidden', logueado);
     $('view-inv').classList.toggle('hidden', !logueado);
@@ -22,6 +56,8 @@
     $('p-ctrl').checked = true;
     $('btn-cancelar').classList.add('hidden');
     $('btn-guardar').disabled = false;
+    // La última categoría usada ya viene escrita (ej. "Accesorio")
+    $('p-cat').value = leerUltimaCat();
   }
 
   function cargar() {
@@ -41,6 +77,12 @@
       }).catch(function () {});
 
       var bajos = res.productos.filter(function (p) { return p.stock_bajo; });
+
+      // Categorías ya usadas en los productos → se suman a las sugerencias
+      // autoguardadas (sin cambiar la "última usada", esa solo la fija guardar()).
+      res.productos.forEach(function (p) { agregarCat(p.categoria); });
+      llenarCats();
+
       var caja = $('alertas-stock');
       if (bajos.length) {
         caja.textContent = '⚠ Stock bajo: ' + bajos.map(function (p) {
@@ -194,6 +236,10 @@
     $('btn-guardar').disabled = true;
     api(url, { method: 'POST', body: cuerpo }).then(function (res) {
       if (!res.ok) { window.mostrarToast(res.error || 'Error al guardar', 'error'); return; }
+      // La categoría usada queda autoguardada: será sugerencia y la que
+      // venga pre-escrita en el siguiente producto.
+      agregarCat(cuerpo.categoria, true);
+      llenarCats();
       window.mostrarToast(id ? 'Producto actualizado' : 'Producto "' + cuerpo.nombre + '" creado', 'success');
       limpiarFormulario();
       cargar();
@@ -274,6 +320,10 @@
   document.addEventListener('DOMContentLoaded', function () {
     $('btn-guardar').addEventListener('click', guardar);
     $('btn-cancelar').addEventListener('click', limpiarFormulario);
+
+    // Sugerencias ya guardadas + última categoría pre-escrita desde el inicio
+    llenarCats();
+    $('p-cat').value = leerUltimaCat();
 
     // Escáner de cámara para capturar el código de barras del producto
     // (de fábrica o interno); se cierra solo al leer.

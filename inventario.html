@@ -56,7 +56,10 @@
                     </button>
                 </div>
                 <input type="text" id="p-nombre" placeholder="Nombre*" maxlength="120" class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
-                <input type="text" id="p-cat" placeholder="Categoría" maxlength="60" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                <input type="text" id="p-cat" placeholder="Categoría" maxlength="60" list="lista-cats" autocomplete="off"
+                       title="Elige una categoría usada o escribe una nueva; se guarda sola para la próxima"
+                       class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+                <datalist id="lista-cats"></datalist>
                 <select id="p-prov" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500"><option value="">— Proveedor —</option></select>
                 <input type="number" id="p-costo" min="0" placeholder="Costo $" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
                 <input type="number" id="p-venta" min="0" placeholder="Venta $*" class="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500">
@@ -112,7 +115,7 @@
     </main>
 
     <script src="assets/js/common.js?v=mp55" defer></script>
-    <script src="assets/js/inventario.js?v=mp55" defer></script>
+    <script src="assets/js/inventario.js?v=mp56" defer></script>
 </body>
 </html>
 
