@@ -83,7 +83,9 @@
   }
 
   function cargarConfig() {
-    api('api/configuracion.php?action=get_all').then(function (res) {
+    // 'pos' entrega SOLO los datos no sensibles del negocio (empresa, IVA y
+    // margen/redondeo del catálogo): funciona igual para admin y encargado.
+    api('api/configuracion.php?action=pos').then(function (res) {
       if (!res.ok) { buscar(); return; }
       empresaCfg = res.config || {};
       catMargen = parseInt(empresaCfg.catalogo_margen, 10);

@@ -3,7 +3,7 @@
  * LUITECH API - Configuraciones globales del sistema (solo administrador).
  * Acciones (?action=):
  *   promo     GET                      -> {promo:{visible,texto}}          (PÚBLICO: banner del sitio)
- *   pos       GET                      -> datos NO sensibles para el POS   (admin + tecnico)
+ *   pos       GET  -> datos NO sensibles para POS y Cotizador (admin + tecnico)
  *   get       GET                      -> { iva_porcentaje }               (compatibilidad POS)
  *   set       POST {iva_porcentaje}    -> guarda la tasa (0..100)          (compatibilidad POS)
  *   get_all   GET                      -> todas las claves (secretos enmascarados)
@@ -142,13 +142,15 @@ switch ($action) {
     }
 
     case 'pos': {
-        // Lista blanca de claves NO sensibles que el POS usa para la boleta
-        // (empresa, moneda e IVA). Sustituye a get_all para el rol técnico:
-        // jamás incluye tokens, claves API ni la clave de la pantalla TV.
+        // Lista blanca de claves NO sensibles: el POS las usa para la boleta
+        // (empresa, moneda e IVA) y el COTIZADOR para el margen/redondeo del
+        // catálogo. Sustituye a get_all para el rol técnico: jamás incluye
+        // tokens, claves API ni la clave de la pantalla TV.
         $clavesPOS = [
             'empresa_nombre', 'empresa_rut', 'empresa_giro', 'empresa_direccion',
             'empresa_telefono', 'empresa_email', 'empresa_logo', 'moneda',
             'moneda_simbolo', 'iva_porcentaje', 'terminos_texto', 'garantia_dias_default',
+            'catalogo_margen', 'catalogo_redondeo',
         ];
         $salida = [];
         foreach ($clavesPOS as $clave) {
