@@ -10,6 +10,7 @@
   var productos = [];
   var carrito = [];
   var ivaTasa = 19; // se carga desde la BD (configuraciones.iva_porcentaje)
+  var sesionNombre = ''; // nombre del usuario logueado (se muestra como vendedor)
   var empresaCfg = null; // datos de la empresa para la boleta
   var posTimer = null;      // monitoreo del cobro Point en el POS
   var esperandoPoint = false;
@@ -28,6 +29,12 @@
     $('view-nologin').classList.toggle('hidden', logueado);
     $('view-pos').classList.toggle('hidden', !logueado);
     if (!logueado) return;
+    // Badge "Vendedor: <nombre>": la venta se atribuye al usuario de la sesión
+    var badge = $('pos-vendedor');
+    if (badge) {
+      badge.textContent = sesionNombre ? ('Vendedor: ' + sesionNombre) : '';
+      badge.classList.toggle('hidden', !sesionNombre);
+    }
     cargarProductos();
     cargarResumenDia();
     cargarConfig();
@@ -139,7 +146,9 @@
   /** Configuración: tasa de IVA + datos de la empresa para la boleta.
    *  (La tasa se edita en Configuración; aquí solo se muestra el desglose.) */
   function cargarConfig() {
-    api('api/configuracion.php?action=get_all').then(function (res) {
+    // 'pos' entrega SOLO los datos no sensibles del negocio (empresa, moneda,
+    // IVA): funciona igual para admin y para el rol técnico-vendedor.
+    api('api/configuracion.php?action=pos').then(function (res) {
       if (!res.ok) return;
       empresaCfg = res.config || {};
       ivaTasa = parseInt(empresaCfg.iva_porcentaje, 10);
@@ -437,6 +446,7 @@
     });
 
     api('api/auth.php?action=me').then(function (res) {
+      sesionNombre = (res && res.logueado && res.nombre) ? String(res.nombre) : '';
       mostrarVista(!!res.logueado);
     }).catch(function () { mostrarVista(false); });
   });

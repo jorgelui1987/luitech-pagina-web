@@ -13,7 +13,7 @@ declare(strict_types=1);
 require __DIR__ . '/config.php';
 
 iniciar_respuesta_json();
-exigir_admin(); exigir_rol_admin();
+exigir_admin(); // cualquier sesión del panel; el rol se exige por acción
 preparar_proveedores(db()); // tablas de proveedores auto-reparables
 
 $action = $_GET['action'] ?? '';
@@ -71,6 +71,9 @@ function leer_producto(array $d): array
 switch ($action) {
 
     case 'list':
+        // Lectura necesaria para el catálogo del POS (el técnico-vendedor
+        // necesita ver productos y precios, pero NO gestionar el inventario).
+        exigir_rol(['admin', 'tecnico']);
         $stmt = db()->query(
             'SELECT pr.id, pr.codigo, pr.barcode, pr.nombre, pr.categoria, pr.proveedor, pr.proveedor_id,
                     COALESCE(pv.nombre, pr.proveedor) AS proveedor_nombre,
@@ -89,6 +92,7 @@ switch ($action) {
         responder(['ok' => true, 'productos' => $productos]);
 
     case 'create': {
+        exigir_rol(['admin']); // crear productos: solo administrador
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
@@ -130,6 +134,7 @@ switch ($action) {
     }
 
     case 'update': {
+        exigir_rol(['admin']); // escribir inventario: solo administrador
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
@@ -165,6 +170,7 @@ switch ($action) {
     }
 
     case 'delete': {
+        exigir_rol(['admin']); // dar de baja productos: solo administrador
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }

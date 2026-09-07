@@ -1,11 +1,12 @@
 <?php
 /**
- * LUITECH API - Punto de Venta (solo administrador autenticado).
+ * LUITECH API - Punto de Venta (admin y técnico-vendedor).
  * Acciones (?action=):
  *   create      POST {items:[{producto_id?,descripcion,cantidad,precio_unitario}],
  *                      cliente?,vendedor?,medio_pago?,orden_codigo?}
  *                   -> transacción: cabecera + detalle + descuento de stock
- *   list        GET  -> últimas 50 ventas
+ *                   -> rol tecnico: la venta queda SIEMPRE a nombre del técnico logueado
+ *   list        GET  -> últimas 50 ventas                            (solo admin)
  *   resumen_dia GET  -> total del día agrupado por medio de pago
  *   ticket      GET  ?numero=VT-000001 -> datos para boleta imprimible
  */
@@ -17,7 +18,7 @@ require __DIR__ . '/config.php';
 aplicar_zona_horaria();
 
 iniciar_respuesta_json();
-exigir_admin(); exigir_rol_admin();
+exigir_admin(); // cualquier sesión del panel; el rol se exige por acción
 
 $action = $_GET['action'] ?? '';
 
@@ -32,6 +33,7 @@ switch ($action) {
 
     /* ----------------------------------------------------------- CREATE */
     case 'create': {
+        exigir_rol(['admin', 'tecnico']); // el técnico-vendedor puede vender
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
@@ -71,7 +73,14 @@ switch ($action) {
             $clienteRut = null;
         }
 
-        $vendedor   = campo_texto($d, 'vendedor', 80)   ?? 'Mostrador';
+        // Atribución del vendedor: con sesión de TÉCNICO la venta queda SIEMPRE
+        // a su nombre (definido en el servidor, no falsificable desde el
+        // cliente). Para el admin se conserva el comportamiento previo.
+        if (rol_actual() === 'tecnico') {
+            $vendedor = ($_SESSION['admin_name'] ?? '') !== '' ? $_SESSION['admin_name'] : 'Técnico';
+        } else {
+            $vendedor = campo_texto($d, 'vendedor', 80) ?? 'Mostrador';
+        }
         $medioPago  = in_array(($d['medio_pago'] ?? ''), ['Efectivo','Debito','Credito','Transferencia','Mercado Pago'], true)
                       ? $d['medio_pago'] : 'Efectivo';
         $ordenCod   = strtoupper(trim((string)($d['orden_codigo'] ?? '')));
@@ -155,6 +164,7 @@ switch ($action) {
 
     /* ------------------------------------------------------------- LIST */
     case 'list': {
+        exigir_rol(['admin']); // historial completo de ventas: solo administrador
         $stmt = db()->query(
             'SELECT v.id, v.numero, v.cliente, v.vendedor, v.total, v.medio_pago, v.orden_codigo, v.creado_en,
                     (SELECT COUNT(*) FROM venta_items vi WHERE vi.venta_id = v.id) AS items
@@ -165,6 +175,7 @@ switch ($action) {
 
     /* ------------------------------------------------------ RESUMEN DIA */
     case 'resumen_dia': {
+        exigir_rol(['admin', 'tecnico']); // agregado del día: también el técnico-vendedor
         $porPago = db()->query(
             "SELECT medio_pago, COUNT(*) AS n, COALESCE(SUM(total),0) AS total
              FROM ventas WHERE DATE(creado_en) = CURDATE()
@@ -177,6 +188,7 @@ switch ($action) {
 
     /* ----------------------------------------------------------- TICKET */
     case 'ticket': {
+        exigir_rol(['admin', 'tecnico']); // impresión de la boleta de la venta
         $numero = strtoupper(trim($_GET['numero'] ?? ''));
         if (!preg_match('/^VT-\d{6}$/', $numero)) {
             responder(['ok' => false, 'error' => 'Número de venta inválido'], 400);

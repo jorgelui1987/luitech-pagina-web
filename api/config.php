@@ -168,6 +168,14 @@ function exigir_rol_admin(): void
     }
 }
 
+/** Exige sesión con uno de los roles indicados, ej: exigir_rol(['admin','tecnico']). */
+function exigir_rol(array $roles): void
+{
+    if (!in_array(rol_actual(), $roles, true)) {
+        responder(['ok' => false, 'error' => 'No autorizado para esta acción'], 403);
+    }
+}
+
 function iniciar_sesion(): void
 {
     if (session_status() !== PHP_SESSION_ACTIVE) {

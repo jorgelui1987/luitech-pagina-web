@@ -3,6 +3,7 @@
  * LUITECH API - Configuraciones globales del sistema (solo administrador).
  * Acciones (?action=):
  *   promo     GET                      -> {promo:{visible,texto}}          (PÚBLICO: banner del sitio)
+ *   pos       GET                      -> datos NO sensibles para el POS   (admin + tecnico)
  *   get       GET                      -> { iva_porcentaje }               (compatibilidad POS)
  *   set       POST {iva_porcentaje}    -> guarda la tasa (0..100)          (compatibilidad POS)
  *   get_all   GET                      -> todas las claves (secretos enmascarados)
@@ -21,8 +22,15 @@ $action = $_GET['action'] ?? '';
 
 // Solo el banner público ('promo') no exige sesión: entrega únicamente el
 // texto y el estado de la promoción, jamás claves ni datos sensibles.
+// 'pos' entrega SOLO datos no sensibles del negocio y está abierto al rol
+// técnico (boleta del POS). Todo lo demás sigue siendo solo administrador.
 if ($action !== 'promo') {
-    exigir_admin(); exigir_rol_admin();
+    exigir_admin();
+    if ($action === 'pos') {
+        exigir_rol(['admin', 'tecnico']);
+    } else {
+        exigir_rol(['admin']);
+    }
 }
 
 preparar_configuraciones(); // garantiza la tabla aunque el hosting no ejecute migrate
@@ -131,6 +139,22 @@ switch ($action) {
         $vence   = trim(config_valor(db(), 'promo_vence', ''));
         $visible = $activa && $texto !== '' && ($vence === '' || $vence >= date('Y-m-d'));
         responder(['ok' => true, 'promo' => ['visible' => $visible, 'texto' => $texto]]);
+    }
+
+    case 'pos': {
+        // Lista blanca de claves NO sensibles que el POS usa para la boleta
+        // (empresa, moneda e IVA). Sustituye a get_all para el rol técnico:
+        // jamás incluye tokens, claves API ni la clave de la pantalla TV.
+        $clavesPOS = [
+            'empresa_nombre', 'empresa_rut', 'empresa_giro', 'empresa_direccion',
+            'empresa_telefono', 'empresa_email', 'empresa_logo', 'moneda',
+            'moneda_simbolo', 'iva_porcentaje', 'terminos_texto', 'garantia_dias_default',
+        ];
+        $salida = [];
+        foreach ($clavesPOS as $clave) {
+            $salida[$clave] = config_valor(db(), $clave, '');
+        }
+        responder(['ok' => true, 'config' => $salida]);
     }
 
     case 'get':

@@ -308,7 +308,7 @@ switch ($action) {
         // Envía el TOTAL del carrito del POS al terminal Point.
         // external_reference "POS-..." (no LUH): el webhook la ignora y la venta
         // la registra el POS al confirmarse el pago (evita doble ingreso a caja).
-        exigir_admin(); exigir_rol_admin();
+        exigir_admin(); exigir_rol(['admin', 'tecnico']); // el técnico-vendedor cobra en el POS
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
@@ -342,7 +342,7 @@ switch ($action) {
     }
 
     case 'point_estado': {
-        exigir_admin(); exigir_rol_admin();
+        exigir_admin(); exigir_rol(['admin', 'tecnico']); // monitoreo del cobro iniciado en el POS
         $cfg = mp_config();
         if (!$cfg['enabled'] || $cfg['token'] === '') {
             responder(['ok' => false, 'error' => 'Mercado Pago no está habilitado'], 409);
