@@ -2,7 +2,7 @@
    - Interfaz (páginas, CSS, JS, imágenes): red primero + caché de respaldo
    - API (/api/): SIEMPRE red — los datos del taller nunca se cachean
    Al publicar una actualización, sube la constante CACHE (ej: luitech-v2). */
-var CACHE = 'luitech-v34'; // v34: garantía digital — vencimiento asentado al entregar, cuenta regresiva en el tracker público y panel de garantías por vencer
+var CACHE = 'luitech-v35'; // v35: '¿Cómo está mi tienda hoy?' — pantallazo único en Finanzas (caja, ventas, órdenes, por cobrar, entregas, gastos, estantería, garantías)
 var NUCLEO = [
   'admin.html', 'pos.html', 'inventario.html', 'proveedores.html', 'cotizador.html',
   'clientes.html', 'tecnicos.html', 'finanzas.html', 'configuracion.html',

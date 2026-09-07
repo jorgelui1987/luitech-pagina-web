@@ -16,7 +16,105 @@
   function mostrarVista(logueado) {
     $('view-nologin').classList.toggle('hidden', logueado);
     $('view-fin').classList.toggle('hidden', !logueado);
-    if (logueado) { refrescarCaja(); refrescarGastos(); }
+    if (logueado) { refrescarCaja(); refrescarGastos(); cargarTienda(); }
+  }
+
+  /* ============================================ ¿CÓMO ESTÁ MI TIENDA? */
+  /** Tarjeta compacta del resumen de tienda (etiqueta + valor + detalle). */
+  function tarjetaTienda(etiqueta, icono, valor, sub, clase) {
+    var card = document.createElement('div');
+    card.className = 'bg-slate-900/80 border border-slate-800 rounded-xl p-3';
+    var l = document.createElement('p');
+    l.className = 'text-[10px] uppercase tracking-wider text-slate-500 font-bold';
+    l.innerHTML = '<i class="fa-solid ' + icono + ' mr-1"></i>' + etiqueta;
+    var v = document.createElement('p');
+    v.className = 'text-xl font-black mt-1 ' + (clase || 'text-slate-200');
+    v.textContent = valor;
+    var s = document.createElement('p');
+    s.className = 'text-[10px] text-slate-500 mt-0.5';
+    s.textContent = sub || '';
+    card.appendChild(l); card.appendChild(v); card.appendChild(s);
+    return card;
+  }
+
+  /** Pantallazo único del estado del negocio: caja, ventas del día, órdenes,
+   *  por cobrar, entregas del mes, gastos, estantería y garantías. Usa solo
+   *  APIs que ya existen (lectura) — funciona igual para dueño y encargado. */
+  function cargarTienda() {
+    var grid = $('tienda-grid');
+    if (!grid) return;
+    grid.replaceChildren();
+    grid.appendChild(tarjetaTienda('Cargando…', 'fa-spinner fa-spin', '…', ''));
+
+    Promise.all([
+      api('api/caja.php?action=estado'),
+      api('api/ventas.php?action=resumen_dia'),
+      api('api/ordenes.php?action=list'),
+      api('api/gastos.php?action=list'),
+      api('api/ordenes.php?action=estanteria'),
+      api('api/ordenes.php?action=garantias')
+    ]).then(function (rs) {
+      var caja = rs[0], ventas = rs[1], ordenes = rs[2], gastos = rs[3], est = rs[4], gar = rs[5];
+      grid.replaceChildren();
+
+      // 1) CAJA: abierta (cuadrada o pendiente de arqueo) o cerrada
+      if (caja.abierta) {
+        var clsCaja = 'text-emerald-400';
+        var subCaja = 'Fondo $' + fmt(caja.sesion.monto_apertura) +
+                      (caja.sesion.abierta_dia ? ' · desde el ' + caja.sesion.abierta_dia : ' · de hoy');
+        if ((caja.sesion.dias_abierta || 0) >= 1) { clsCaja = 'text-red-400'; subCaja = '⚠ sin arquear desde el ' + caja.sesion.abierta_dia; }
+        grid.appendChild(tarjetaTienda('Caja abierta', 'fa-cash-register', fmt(caja.efectivo_esperado), subCaja, clsCaja));
+      } else {
+        grid.appendChild(tarjetaTienda('Caja', 'fa-cash-register', 'Cerrada', 'Ábrela para registrar el efectivo', 'text-slate-400'));
+      }
+
+      // 2) VENTAS DE HOY (POS)
+      var nVentas = 0;
+      (ventas.detalle || []).forEach(function (d) { nVentas += parseInt(d.n, 10) || 0; });
+      grid.appendChild(tarjetaTienda('Ventas de hoy (POS)', 'fa-cart-shopping', fmt(ventas.total_dia || 0),
+        nVentas + (nVentas === 1 ? ' venta' : ' ventas'), 'text-cyan-400'));
+
+      // 3-5) ÓRDENES: en taller, por cobrar y entregadas del mes
+      var lista = ordenes.ordenes || [];
+      var enTaller = 0, listas = 0, porCobrar = 0, nPorCobrar = 0, entregadasMes = 0;
+      var mesHoy = new Date().toISOString().slice(0, 7);
+      lista.forEach(function (o) {
+        if (o.estado !== 'Entregado') {
+          enTaller++;
+          if (o.estado === 'Listo para Retiro') listas++;
+          var saldo = (parseInt(o.total, 10) || 0) - (parseInt(o.abono, 10) || 0);
+          if (saldo > 0) { porCobrar += saldo; nPorCobrar++; }
+        }
+        if (o.estado === 'Entregado' && (o.fecha_entrega || '').slice(0, 7) === mesHoy) entregadasMes++;
+      });
+      grid.appendChild(tarjetaTienda('Órdenes en el taller', 'fa-screwdriver-wrench', String(enTaller),
+        listas + ' listas para retiro', 'text-cyan-400'));
+      grid.appendChild(tarjetaTienda('Por cobrar (taller)', 'fa-money-bill-wave', fmt(porCobrar),
+        nPorCobrar + (nPorCobrar === 1 ? ' orden con saldo' : ' órdenes con saldo'), porCobrar > 0 ? 'text-red-400' : 'text-slate-500'));
+      grid.appendChild(tarjetaTienda('Entregadas este mes', 'fa-box-open', String(entregadasMes),
+        'reparaciones completadas', 'text-emerald-400'));
+
+      // 6) GASTOS DEL MES
+      var gastosMes = (gastos.resumen && gastos.resumen.gastos) || 0;
+      grid.appendChild(tarjetaTienda('Gastos del mes', 'fa-receipt', fmt(gastosMes),
+        'registrados en Finanzas', gastosMes > 0 ? 'text-amber-400' : 'text-slate-500'));
+
+      // 7) ESTANTERÍA: equipos listos sin retirar
+      var nEst = (est.ordenes || []).length;
+      grid.appendChild(tarjetaTienda('En estantería', 'fa-boxes-stacked', String(nEst),
+        nEst > 0 ? '¡avisar a los clientes!' : 'nada esperando', nEst > 0 ? 'text-amber-400' : 'text-slate-500'));
+
+      // 8) GARANTÍAS POR VENCER (≤ 7 días)
+      var nGar = (gar.ordenes || []).length;
+      grid.appendChild(tarjetaTienda('Garantías por vencer', 'fa-shield-halved', String(nGar),
+        nGar > 0 ? 'contactar para renovar' : 'nada por vencer', nGar > 0 ? 'text-violet-400' : 'text-slate-500'));
+
+      var fecha = $('tienda-fecha');
+      if (fecha) fecha.textContent = new Date().toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
+    }).catch(function () {
+      grid.replaceChildren();
+      grid.appendChild(tarjetaTienda('Sin conexión', 'fa-triangle-exclamation', '—', 'Revisa que MySQL esté encendido', 'text-red-400'));
+    });
   }
 
   /* ============================================================ CAJA DÍA */
