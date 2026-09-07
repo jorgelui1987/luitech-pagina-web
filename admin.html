@@ -48,8 +48,6 @@
            aleatorio de turnos) se ocultan vía styles.css. El servidor SIEMPRE
            re-valida los permisos por su cuenta. */
         body.rol-tecnico .solo-dueno { display:none !important; }
-        #banner-tecnico{ display:none; }
-        body.rol-tecnico #banner-tecnico{ display:block; }
         /* Barra inferior estilo app nativa (solo teléfono) */
         #barra-movil{ display:none; }
         #mas-panel{ display:none; }
@@ -211,12 +209,6 @@
         </header>
 
         <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-
-            <!-- Banner: vista restringida de técnico -->
-            <div id="banner-tecnico" class="bg-cyan-950 border border-cyan-800 text-cyan-300 rounded-xl px-4 py-2 text-xs font-bold flex flex-wrap items-center justify-between gap-2">
-                <span><i class="fa-solid fa-user-gear mr-1"></i>Modo Encargado — manejas todo el taller; eliminar y configuración son solo del dueño</span>
-                <a href="pos.html" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 px-3 py-1.5 rounded-lg font-bold whitespace-nowrap"><i class="fa-solid fa-cash-register mr-1"></i>Ir al POS</a>
-            </div>
 
             <!-- Formulario: Nueva Orden -->
             <section id="nueva-orden" class="bg-slate-950/50 border border-slate-800/80 p-5 rounded-xl">
