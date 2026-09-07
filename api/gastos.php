@@ -1,6 +1,6 @@
 <?php
 /**
- * LUITECH API - Gastos + Reporte financiero mensual (solo admin).
+ * LUITECH API - Gastos + Reporte financiero mensual (admin y encargado; delete solo admin).
  * Acciones (?action=):
  *   list     GET ?mes=YYYY-MM (default actual) -> gastos del mes + resumen financiero
  *   create   POST {concepto,categoria,monto,fecha?}
@@ -12,7 +12,12 @@ declare(strict_types=1);
 require __DIR__ . '/config.php';
 
 iniciar_respuesta_json();
-exigir_admin(); exigir_rol_admin();
+exigir_admin();
+if (($_GET['action'] ?? '') === 'delete') {
+    exigir_rol(['admin']); // eliminar gastos: solo el dueño
+} else {
+    exigir_rol(['admin', 'tecnico']); // registrar gastos: también el encargado
+}
 
 $action = $_GET['action'] ?? '';
 

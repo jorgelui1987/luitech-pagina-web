@@ -172,7 +172,7 @@
     boton.type = 'button';
     boton.title = 'Eliminar orden';
     boton.setAttribute('aria-label', 'Eliminar orden ' + codigo);
-    boton.className = 'bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-900/60 p-2 rounded-lg transition-all';
+    boton.className = 'btn-del-orden bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-900/60 p-2 rounded-lg transition-all';
     boton.innerHTML = '<i class="fa-solid fa-trash-can pointer-events-none"></i>';
     boton.addEventListener('click', function () { eliminarOrden(codigo); });
     return boton;

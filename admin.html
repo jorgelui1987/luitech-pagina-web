@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow">
     <meta name="theme-color" content="#020617">
     <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg?v=2">
-    <link rel="stylesheet" href="assets/css/styles.css?v=mp55">
+    <link rel="stylesheet" href="assets/css/styles.css?v=enc1">
     <style>
         /* Acta de recepción: firma táctil, chips de accesorios y miniaturas */
         .lienzo-firma{ touch-action:none; cursor:crosshair; background:#ffffff; display:block; width:100%; height:140px; border-radius:0.5rem; }
@@ -41,20 +41,12 @@
         /* Resumen del taller (métricas) */
         #resumen-panel{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
         @media(min-width:1024px){ #resumen-panel{ grid-template-columns:repeat(4,1fr); } }
-        /* Vista Técnico: oculta lo exclusivo del administrador */
-        body.rol-tecnico #nueva-orden,
-        body.rol-tecnico #resumen-panel,
-        body.rol-tecnico #view-panel header a,
-        body.rol-tecnico #mo-cobro,
-        body.rol-tecnico #mo-btn-cobro,
-        body.rol-tecnico #mo-btn-cobro-total,
-        body.rol-tecnico #mo-btn-mp,
-        body.rol-tecnico #mo-btn-point,
-        body.rol-tecnico #mo-btn-recibo,
-        body.rol-tecnico #mo-btn-comprobante,
-        body.rol-tecnico #mo-entrega-form,
-        body.rol-tecnico #mo-btn-entrega,
-        body.rol-tecnico #mo-btn-nota { display:none !important; }
+        /* Vista Técnico (ENCARGADO): puede todo lo operativo — crear/editar/cobrar
+           órdenes, caja, clientes, inventario, gastos. Oculto solo lo exclusivo
+           del dueño: los enlaces del encabezado. Los botones destructivos
+           (eliminar orden, avance aleatorio de turnos) se ocultan vía styles.css.
+           El servidor SIEMPRE re-valida los permisos por su cuenta. */
+        body.rol-tecnico #view-panel header a { display:none !important; }
         #banner-tecnico{ display:none; }
         body.rol-tecnico #banner-tecnico{ display:block; }
         /* Barra inferior estilo app nativa (solo teléfono) */
@@ -561,13 +553,13 @@
     <nav id="barra-movil">
         <a href="admin.html"><i class="fa-solid fa-house"></i><span>Inicio</span></a>
         <a href="pos.html"><i class="fa-solid fa-cash-register"></i><span>POS</span></a>
-        <a href="inventario.html" class="bm-admin"><i class="fa-solid fa-boxes-stacked"></i><span>Inventario</span></a>
-        <a href="finanzas.html" class="bm-admin"><i class="fa-solid fa-coins"></i><span>Finanzas</span></a>
+        <a href="inventario.html"><i class="fa-solid fa-boxes-stacked"></i><span>Inventario</span></a>
+        <a href="finanzas.html"><i class="fa-solid fa-coins"></i><span>Finanzas</span></a>
         <button type="button" id="bm-mas"><i class="fa-solid fa-ellipsis"></i><span>Más</span></button>
     </nav>
     <div id="mas-panel" class="hidden">
         <a href="cotizador.html" class="bm-admin"><i class="fa-solid fa-magnifying-glass-dollar mr-1"></i>Cotizador</a>
-        <a href="clientes.html" class="bm-admin"><i class="fa-solid fa-users mr-1"></i>Clientes</a>
+        <a href="clientes.html"><i class="fa-solid fa-users mr-1"></i>Clientes</a>
         <a href="proveedores.html" class="bm-admin"><i class="fa-solid fa-truck-field mr-1"></i>Proveedores</a>
         <a href="tecnicos.html" class="bm-admin"><i class="fa-solid fa-user-gear mr-1"></i>Técnicos</a>
         <a href="configuracion.html" class="bm-admin"><i class="fa-solid fa-gear mr-1"></i>Configuración</a>
@@ -576,7 +568,7 @@
         <button type="button" id="bm-salir" style="grid-column:1/-1"><i class="fa-solid fa-right-from-bracket mr-1"></i>Salir (<span class="bm-nombre"></span>)</button>
     </div>
 
-    <script src="assets/js/common.js?v=mp55" defer></script>
-    <script src="assets/js/admin.js?v=mp55" defer></script>
+    <script src="assets/js/common.js?v=enc1" defer></script>
+    <script src="assets/js/admin.js?v=enc1" defer></script>
 </body>
 </html>

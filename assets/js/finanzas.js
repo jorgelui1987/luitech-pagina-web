@@ -179,7 +179,7 @@
       tdB.className = 'p-2.5 text-center';
       var btnX = document.createElement('button');
       btnX.type = 'button'; btnX.title = 'Eliminar'; btnX.innerHTML = '<i class="fa-solid fa-xmark pointer-events-none"></i>';
-      btnX.className = 'w-7 h-7 rounded-md bg-slate-800 hover:bg-red-600 text-slate-400 hover:text-white transition-all';
+      btnX.className = 'btn-del-gasto w-7 h-7 rounded-md bg-slate-800 hover:bg-red-600 text-slate-400 hover:text-white transition-all';
       btnX.addEventListener('click', function () {
         if (!confirm('¿Eliminar gasto "' + g.concepto + '"?')) return;
         api('api/gastos.php?action=delete', { method: 'POST', body: { id: g.id } })

@@ -174,7 +174,7 @@
         var btnEl = document.createElement('button');
         btnEl.type = 'button'; btnEl.title = 'Eliminar';
         btnEl.innerHTML = '<i class="fa-solid fa-trash-can pointer-events-none"></i>';
-        btnEl.className = 'w-8 h-8 rounded-lg bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-900/60 mx-0.5 transition-all';
+        btnEl.className = 'btn-del-proveedor w-8 h-8 rounded-lg bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-900/60 mx-0.5 transition-all';
         btnEl.addEventListener('click', function () { eliminarProveedor(p); });
         tdAcc.appendChild(btnEd); tdAcc.appendChild(btnEl);
         tr.appendChild(tdAcc);
@@ -531,7 +531,7 @@
           var btnEl = document.createElement('button');
           btnEl.type = 'button'; btnEl.title = 'Eliminar';
           btnEl.innerHTML = '<i class="fa-solid fa-trash-can pointer-events-none"></i>';
-          btnEl.className = 'w-7 h-7 rounded-lg bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-900/60 mx-0.5 transition-all';
+          btnEl.className = 'btn-del-catalogo w-7 h-7 rounded-lg bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-900/60 mx-0.5 transition-all';
           btnEl.addEventListener('click', function () { eliminarCatalogo(c); });
           tdAcc.appendChild(btnCot); tdAcc.appendChild(btnEd); tdAcc.appendChild(btnEl);
           tr.appendChild(tdAcc);

@@ -1,6 +1,6 @@
 <?php
 /**
- * LUITECH API - Inventario (solo administrador autenticado).
+ * LUITECH API - Inventario (admin y encargado; delete solo admin).
  * Acciones (?action=):
  *   list    GET            -> productos activos (incluye alertas de stock bajo)
  *   create  POST {codigo,barcode,nombre,categoria,precio_costo,precio_venta,stock,stock_minimo,controlar_stock}
@@ -92,7 +92,7 @@ switch ($action) {
         responder(['ok' => true, 'productos' => $productos]);
 
     case 'create': {
-        exigir_rol(['admin']); // crear productos: solo administrador
+        exigir_rol(['admin', 'tecnico']); // crear productos: también el encargado
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
@@ -134,7 +134,7 @@ switch ($action) {
     }
 
     case 'update': {
-        exigir_rol(['admin']); // escribir inventario: solo administrador
+        exigir_rol(['admin', 'tecnico']); // editar productos: también el encargado
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }

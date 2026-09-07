@@ -82,7 +82,7 @@
         var btnEl = document.createElement('button');
         btnEl.type = 'button'; btnEl.title = 'Eliminar';
         btnEl.innerHTML = '<i class="fa-solid fa-trash-can pointer-events-none"></i>';
-        btnEl.className = 'w-8 h-8 rounded-lg bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-900/60 mx-0.5 transition-all';
+        btnEl.className = 'btn-del-cliente w-8 h-8 rounded-lg bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-900/60 mx-0.5 transition-all';
         btnEl.addEventListener('click', function () { eliminarCliente(c); });
         tdAcc.appendChild(btnF); tdAcc.appendChild(btnEd); tdAcc.appendChild(btnEl);
         tr.appendChild(tdAcc);

@@ -1,6 +1,6 @@
 <?php
 /**
- * LUITECH API - Caja diaria (solo administrador autenticado).
+ * LUITECH API - Caja diaria (admin y técnico-encargado).
  * Acciones (?action=):
  *   estado        GET  -> ¿caja abierta? + totales + movimientos del período
  *   abrir         POST {monto_apertura}   -> nueva sesión (409 si ya hay una)
@@ -14,7 +14,7 @@ declare(strict_types=1);
 require __DIR__ . '/config.php';
 
 iniciar_respuesta_json();
-exigir_admin(); exigir_rol_admin();
+exigir_admin(); exigir_rol(['admin', 'tecnico']); // el encargado abre, mueve y cierra la caja
 
 $action = $_GET['action'] ?? '';
 

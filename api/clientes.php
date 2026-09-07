@@ -1,6 +1,6 @@
 <?php
 /**
- * LUITECH API - Registro de clientes (solo administrador).
+ * LUITECH API - Registro de clientes (admin y encargado; delete solo admin).
  * Acciones (?action=):
  *   list    GET ?q=        -> clientes activos + n órdenes + total gastado
  *   create  POST {...}     -> crea cliente
@@ -14,7 +14,12 @@ declare(strict_types=1);
 require __DIR__ . '/config.php';
 
 iniciar_respuesta_json();
-exigir_admin(); exigir_rol_admin();
+exigir_admin();
+if (($_GET['action'] ?? '') === 'delete') {
+    exigir_rol(['admin']); // eliminar clientes: solo el dueño
+} else {
+    exigir_rol(['admin', 'tecnico']); // crear/editar/ficha: también el encargado
+}
 preparar_clientes(db()); // tabla auto-reparable (hostings sin migrate)
 
 $action = $_GET['action'] ?? '';

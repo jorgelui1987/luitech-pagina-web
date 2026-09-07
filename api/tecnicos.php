@@ -71,6 +71,7 @@ switch ($action) {
         responder(['ok' => true, 'tecnicos' => $stmt->fetchAll()]);
 
     case 'create': {
+        exigir_rol(['admin']); // gestión de técnicos: solo el dueño
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
@@ -90,6 +91,7 @@ switch ($action) {
     }
 
     case 'update': {
+        exigir_rol(['admin']); // gestión de técnicos: solo el dueño
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
@@ -110,6 +112,7 @@ switch ($action) {
     }
 
     case 'delete': {
+        exigir_rol(['admin']); // gestión de técnicos: solo el dueño
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }

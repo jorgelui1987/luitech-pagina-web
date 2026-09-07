@@ -22,7 +22,13 @@ require __DIR__ . '/config.php';
 require __DIR__ . '/planillas.php'; // parser de planillas de proveedores (Google Sheets)
 
 iniciar_respuesta_json();
-exigir_admin(); exigir_rol_admin();
+exigir_admin();
+$soloDueno = in_array(($_GET['action'] ?? ''), ['delete', 'catalogo_delete', 'catalogo_vaciar'], true);
+if ($soloDueno) {
+    exigir_rol(['admin']); // eliminar proveedor o catálogo: solo el dueño
+} else {
+    exigir_rol(['admin', 'tecnico']); // compras y catálogo: también el encargado
+}
 preparar_proveedores(db()); // tablas auto-reparables (hostings sin migrate)
 
 $action = $_GET['action'] ?? '';

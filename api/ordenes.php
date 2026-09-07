@@ -208,7 +208,7 @@ switch ($action) {
 
     /* ----------------------------------------------------------- CREATE */
     case 'create': {
-        exigir_admin(); exigir_rol_admin();
+        exigir_admin(); exigir_rol(['admin', 'tecnico']); // el encargado ingresa órdenes (cliente auto-registrado)
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
@@ -330,7 +330,7 @@ switch ($action) {
 
     /* ----------------------------------------------------------- UPDATE */
     case 'update': {
-        exigir_admin(); exigir_rol_admin();
+        exigir_admin(); exigir_rol(['admin', 'tecnico']); // el encargado edita y cobra órdenes
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
@@ -563,7 +563,7 @@ switch ($action) {
         // Registra el Egreso de la compra de la pieza en la caja abierta.
         // Idempotente: un solo egreso de compra por orden (se detecta por la
         // marca [EGRESO-REPUESTO codigo] en la bitácora).
-        exigir_admin(); exigir_rol_admin();
+        exigir_admin(); exigir_rol(['admin', 'tecnico']); // el encargado registra la compra de la pieza
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
@@ -652,7 +652,7 @@ switch ($action) {
 
     /* --------------------------------------------------------- FOTOS GET */
     case 'fotos': {
-        exigir_admin(); exigir_rol_admin();
+        exigir_admin(); exigir_rol(['admin', 'tecnico']); // lectura: el encargado ve las fotos
         $codigo = strtoupper(trim($_GET['codigo'] ?? ''));
         if (!preg_match('/^LUH-\d{3,8}(-[A-Z0-9]{4})?$/', $codigo)) {
             responder(['ok' => false, 'error' => 'Código inválido'], 400);
@@ -666,7 +666,7 @@ switch ($action) {
 
     /* ------------------------------------------------- FOTOS SUBIR (POST) */
     case 'subir_foto': {
-        exigir_admin(); exigir_rol_admin();
+        exigir_admin(); exigir_rol(['admin', 'tecnico']); // agregar fotos: también el encargado
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
@@ -759,7 +759,7 @@ switch ($action) {
 
     /* ------------------------------------------------ BITÁCORA NOTA (POST) */
     case 'nota': {
-        exigir_admin(); exigir_rol_admin();
+        exigir_admin(); exigir_rol(['admin', 'tecnico']); // agregar notas: también el encargado
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
@@ -785,7 +785,7 @@ switch ($action) {
 
     /* ------------------------------------------------ BITÁCORA GET (lista) */
     case 'bitacora': {
-        exigir_admin(); exigir_rol_admin();
+        exigir_admin(); exigir_rol(['admin', 'tecnico']); // lectura: el encargado ve la bitácora
         $codigo = strtoupper(trim($_GET['codigo'] ?? ''));
         if (!preg_match('/^LUH-\d{3,8}(-[A-Z0-9]{4})?$/', $codigo)) {
             responder(['ok' => false, 'error' => 'Código inválido'], 400);

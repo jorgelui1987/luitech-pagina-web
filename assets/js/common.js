@@ -424,5 +424,14 @@
 
   window.LuitechScanner = { abrir: escanerAbrir, cerrar: escanerCerrar };
 
+  /* Rol de la sesión en el <body>: con 'rol-tecnico' las páginas ocultan por
+     CSS los botones destructivos (eliminar, vaciar). El servidor SIEMPRE
+     re-valida los permisos por su cuenta; esto es solo pulido de interfaz. */
+  api('api/auth.php?action=me').then(function (res) {
+    if (res && res.logueado && res.rol === 'tecnico') {
+      document.body.classList.add('rol-tecnico');
+    }
+  }).catch(function () {});
+
   document.addEventListener('DOMContentLoaded', ponerAnio);
 })();

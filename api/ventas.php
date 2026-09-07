@@ -164,7 +164,7 @@ switch ($action) {
 
     /* ------------------------------------------------------------- LIST */
     case 'list': {
-        exigir_rol(['admin']); // historial completo de ventas: solo administrador
+        exigir_rol(['admin', 'tecnico']); // historial de ventas: lectura también para el encargado
         $stmt = db()->query(
             'SELECT v.id, v.numero, v.cliente, v.vendedor, v.total, v.medio_pago, v.orden_codigo, v.creado_en,
                     (SELECT COUNT(*) FROM venta_items vi WHERE vi.venta_id = v.id) AS items
