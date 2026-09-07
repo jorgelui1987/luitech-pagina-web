@@ -98,6 +98,7 @@ $migracionColumnas = [
     'accesorios'    => 'ALTER TABLE ordenes ADD COLUMN accesorios VARCHAR(255) NULL AFTER pin_patron',
     'obs_recepcion' => 'ALTER TABLE ordenes ADD COLUMN obs_recepcion VARCHAR(250) NULL AFTER accesorios',
     'firma_ingreso' => 'ALTER TABLE ordenes ADD COLUMN firma_ingreso VARCHAR(255) NULL AFTER obs_recepcion',
+    'fecha_listo'   => 'ALTER TABLE ordenes ADD COLUMN fecha_listo DATE NULL AFTER fecha_ingreso',
 ];
 foreach ($migracionColumnas as $columna => $sql) {
     if (!in_array($columna, $columnasExistentes, true)) {

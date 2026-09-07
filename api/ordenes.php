@@ -24,6 +24,10 @@ aplicar_zona_horaria();
 iniciar_respuesta_json();
 preparar_clientes(db()); // tabla de clientes auto-reparable
 
+// Auto-reparación: fecha_listo (estantería) para órdenes listas sin retirar
+try { db()->query('SELECT fecha_listo FROM ordenes LIMIT 1'); }
+catch (Throwable $e) { db()->exec('ALTER TABLE ordenes ADD COLUMN fecha_listo DATE NULL'); }
+
 const ESTADOS_VALIDOS = ['Ingresado', 'En Diagnóstico', 'En Reparación', 'Listo para Retiro', 'Entregado'];
 
 /** Porcentaje estándar de avance al cambiar de estado (el tracker público
@@ -191,7 +195,7 @@ switch ($action) {
             $stmt = db()->prepare('SELECT id, codigo, cliente, cliente_id, equipo, tipo, falla, estado, avance, tecnico, fecha_ingreso,
                     pin_patron, accesorios, obs_recepcion, firma_ingreso,
                     precio_repuestos, mano_obra, total, abono, estado_pago, metodo_pago, garantia_dias,
-                    fecha_entrega, entregado_a, firma_entrega, tecnico_id, costo_repuesto
+                    fecha_entrega, entregado_a, firma_entrega, tecnico_id, costo_repuesto, fecha_listo
              FROM ordenes WHERE tecnico_id = ? ORDER BY id DESC');
             $stmt->execute([$_SESSION['admin_tecnico_id'] ?? 0]);
             responder(['ok' => true, 'ordenes' => $stmt->fetchAll()]);
@@ -200,7 +204,7 @@ switch ($action) {
             'SELECT id, codigo, cliente, cliente_id, equipo, tipo, falla, estado, avance, tecnico, fecha_ingreso,
                     pin_patron, accesorios, obs_recepcion, firma_ingreso,
                     precio_repuestos, mano_obra, total, abono, estado_pago, metodo_pago, garantia_dias,
-                    fecha_entrega, entregado_a, firma_entrega, tecnico_id, costo_repuesto
+                    fecha_entrega, entregado_a, firma_entrega, tecnico_id, costo_repuesto, fecha_listo
              FROM ordenes ORDER BY id DESC'
         );
         responder(['ok' => true, 'ordenes' => $stmt->fetchAll()]);
@@ -293,6 +297,11 @@ switch ($action) {
             db()->prepare('INSERT INTO orden_bitacora (orden_codigo, tecnico, nota, estado_nuevo) VALUES (?, ?, ?, ?)')
                 ->execute([$codigo, $tecnico, 'Orden ingresada al taller', $estadoIn]);
 
+            // Estantería: si ingresa directo como lista, arranca su conteo de días
+            if ($estadoIn === 'Listo para Retiro') {
+                db()->prepare('UPDATE ordenes SET fecha_listo = CURDATE() WHERE codigo = ?')->execute([$codigo]);
+            }
+
             // Vincula (o crea) el cliente en el registro de clientes
             $clienteId = (int)($d['cliente_id'] ?? 0);
             if ($clienteId > 0) {
@@ -356,6 +365,13 @@ switch ($action) {
             $estadoAnterior = (string)($st->fetchColumn() ?: '');
             $set[]    = 'estado = ?';
             $params[] = $d['estado'];
+            // Estantería: marca el día en que la orden queda lista y limpia la
+            // marca si vuelve al taller (la bitácora conserva el histórico)
+            if ($d['estado'] === 'Listo para Retiro') {
+                $set[] = 'fecha_listo = CURDATE()';
+            } elseif ($estadoAnterior === 'Listo para Retiro') {
+                $set[] = 'fecha_listo = NULL';
+            }
         }
         // Abono previo (para derivar cuánto dinero nuevo entra a la caja)
         if (isset($d['abono'])) {
@@ -796,6 +812,24 @@ switch ($action) {
         );
         $stmt->execute([$codigo]);
         responder(['ok' => true, 'bitacora' => $stmt->fetchAll()]);
+    }
+
+    /* ------------------------------------------------------- ESTANTERÍA */
+    case 'estanteria': {
+        // Órdenes 'Listo para Retiro' aún en el estante: días esperando y
+        // teléfono del cliente para el aviso por WhatsApp. Lectura: ambos roles.
+        exigir_admin();
+        $rows = db()->query(
+            'SELECT o.codigo, o.cliente, o.equipo, o.total, o.fecha_listo,
+                    DATEDIFF(CURDATE(), o.fecha_listo) AS dias,
+                    (SELECT c.telefono FROM clientes c
+                      WHERE c.activo = 1 AND (c.id = o.cliente_id OR LOWER(c.nombre) = LOWER(o.cliente))
+                      LIMIT 1) AS telefono
+             FROM ordenes o
+             WHERE o.estado = "Listo para Retiro" AND o.fecha_listo IS NOT NULL
+             ORDER BY o.fecha_listo ASC, o.id ASC'
+        )->fetchAll();
+        responder(['ok' => true, 'ordenes' => $rows]);
     }
 
     default:

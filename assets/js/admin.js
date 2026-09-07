@@ -618,6 +618,64 @@
     panel.appendChild(tarjetaResumen('Entregadas este mes', 'fa-box-open', String(entregadasMes), 'text-emerald-400'));
   }
 
+  /* --------------------------------------------------------- ESTANTERÍA */
+  /** Normaliza un teléfono a formato wa.me (solo dígitos, con país 56). */
+  function telWhatsapp(t) {
+    var d = String(t || '').replace(/[^0-9]/g, '');
+    if (!d) return '';
+    return d.indexOf('56') === 0 ? d : '56' + d;
+  }
+
+  /** Equipos 'Listo para Retiro' aún en el estante: días esperando + botón
+   *  de WhatsApp al cliente. Se refresca con cada recarga de la tabla. */
+  function cargarEstanteria() {
+    api('api/ordenes.php?action=estanteria').then(function (res) {
+      if (!res.ok) return;
+      var panel = $('estanteria-panel');
+      var lista = $('estanteria-lista');
+      if (!panel || !lista) return;
+      lista.replaceChildren();
+
+      if (!res.ordenes.length) { panel.classList.add('hidden'); return; }
+      panel.classList.remove('hidden');
+      $('estanteria-cant').textContent = res.ordenes.length;
+
+      res.ordenes.forEach(function (o) {
+        var fila = document.createElement('div');
+        fila.className = 'flex flex-wrap items-center gap-2 bg-slate-900/70 border border-slate-800 rounded-lg px-3 py-2 text-xs';
+
+        var cod = document.createElement('span');
+        cod.className = 'font-bold text-cyan-400 font-mono';
+        cod.textContent = o.codigo;
+        fila.appendChild(cod);
+
+        var info = document.createElement('span');
+        info.className = 'text-slate-300';
+        info.textContent = o.cliente + ' — ' + o.equipo;
+        fila.appendChild(info);
+
+        var dias = parseInt(o.dias, 10) || 0;
+        var chip = document.createElement('span');
+        chip.className = 'px-2 py-0.5 rounded-full border font-bold ' +
+          (dias >= 3 ? 'bg-red-950/60 border-red-800 text-red-300' : 'bg-amber-950/60 border-amber-800 text-amber-300');
+        chip.textContent = dias + (dias === 1 ? ' día esperando' : ' días esperando');
+        fila.appendChild(chip);
+
+        var num = telWhatsapp(o.telefono);
+        if (num) {
+          var a = document.createElement('a');
+          a.target = '_blank'; a.rel = 'noopener';
+          a.className = 'ml-auto inline-flex items-center gap-1.5 bg-emerald-950 hover:bg-emerald-800 border border-emerald-800 text-emerald-300 font-bold px-3 py-1.5 rounded-xl transition-all';
+          var msg = '¡Hola ' + o.cliente + '! Tu ' + o.equipo + ' está listo para retiro. Te esperamos en el taller.';
+          a.href = 'https://wa.me/' + num + '?text=' + encodeURIComponent(msg);
+          a.innerHTML = '<i class="fa-brands fa-whatsapp pointer-events-none"></i> Avisar';
+          fila.appendChild(a);
+        }
+        lista.appendChild(fila);
+      });
+    }).catch(function () {});
+  }
+
   function renderizarTablaAdmin() {
     api('api/ordenes.php?action=list').then(function (res) {
       if (!res.ok) {
@@ -627,6 +685,7 @@
       ordenesCache = res.ordenes;
       renderResumen(ordenesCache);
       renderFilasOrdenes();
+      cargarEstanteria();
     }).catch(function (e) {
       window.mostrarToast(e.message || 'No se pudo conectar con el servidor', 'error');
     });
@@ -790,6 +849,12 @@
         tdAcciones.appendChild(botonVer(o.codigo));
         tdAcciones.appendChild(botonEliminar(o.codigo));
         tr.appendChild(tdAcciones);
+
+        // Estantería: fila ámbar si está lista y lleva 3+ días sin retiro
+        if (o.estado === 'Listo para Retiro' && o.fecha_listo) {
+          var diasListo = Math.floor((Date.now() - new Date(o.fecha_listo + 'T00:00:00').getTime()) / 86400000);
+          if (diasListo >= 3) { tr.classList.add('bg-amber-950/25'); }
+        }
 
         tbody.appendChild(tr);
       });
