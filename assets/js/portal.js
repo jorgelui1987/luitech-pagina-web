@@ -88,6 +88,29 @@
       (CLASES_BADGE[estadoMostrado] || CLASES_BADGE['Ingresado']);
     badge.replaceChildren(puntoPulso(), document.createTextNode(estadoMostrado));
 
+    // Garantía digital: cuenta regresiva visible para el cliente (si aplica)
+    var tg = $('track-garantia');
+    if (!tg && badge.parentNode) {
+      tg = document.createElement('p');
+      tg.id = 'track-garantia';
+      badge.parentNode.appendChild(tg);
+    }
+    if (tg) {
+      if (o.garantia_hasta) {
+        var dg = parseInt(o.garantia_dias, 10);
+        var esNum = !isNaN(dg);
+        tg.textContent = esNum
+          ? ('Garantía hasta el ' + o.garantia_hasta + ' — ' +
+             (dg >= 0 ? 'quedan ' + dg + (dg === 1 ? ' día' : ' días') : 'vencida hace ' + Math.abs(dg) + (Math.abs(dg) === 1 ? ' día' : ' días')))
+          : ('Garantía hasta el ' + o.garantia_hasta);
+        tg.className = 'text-xs font-bold mt-2 ' +
+          (!esNum || dg < 0 ? 'text-red-400' : (dg <= 7 ? 'text-amber-400' : 'text-emerald-400'));
+        tg.classList.remove('hidden');
+      } else {
+        tg.classList.add('hidden');
+      }
+    }
+
     // Las etapas se encienden según el ESTADO real de la orden (no solo el %),
     // así nunca quedan desincronizadas del estado que cambia el técnico.
     var pasoActivo = ({ 'Ingresado': 1, 'En Diagnóstico': 2, 'En Reparación': 3, 'Listo para Retiro': 4 })[o.estado] || 1;

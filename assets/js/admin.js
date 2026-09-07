@@ -676,6 +676,43 @@
     }).catch(function () {});
   }
 
+  /** Garantías por vencer (≤ 7 días) de órdenes entregadas: oportunidad de
+   *  contacto para renovar/extender. Lectura, ambos roles. */
+  function cargarGarantias() {
+    api('api/ordenes.php?action=garantias').then(function (res) {
+      if (!res.ok) return;
+      var panel = $('garantias-panel');
+      var lista = $('garantias-lista');
+      if (!panel || !lista) return;
+      lista.replaceChildren();
+      if (!res.ordenes.length) { panel.classList.add('hidden'); return; }
+      panel.classList.remove('hidden');
+
+      res.ordenes.forEach(function (o) {
+        var fila = document.createElement('div');
+        fila.className = 'flex flex-wrap items-center gap-2 bg-slate-900/70 border border-slate-800 rounded-lg px-3 py-2 text-xs';
+
+        var cod = document.createElement('span');
+        cod.className = 'font-bold text-cyan-400 font-mono';
+        cod.textContent = o.codigo;
+        fila.appendChild(cod);
+
+        var info = document.createElement('span');
+        info.className = 'text-slate-300';
+        info.textContent = o.cliente + ' — ' + o.equipo;
+        fila.appendChild(info);
+
+        var dias = parseInt(o.dias, 10) || 0;
+        var chip = document.createElement('span');
+        chip.className = 'px-2 py-0.5 rounded-full border font-bold bg-violet-950/60 border-violet-800 text-violet-300';
+        chip.textContent = 'vence en ' + dias + (dias === 1 ? ' día (' : ' días (') + o.garantia_hasta + ')';
+        fila.appendChild(chip);
+
+        lista.appendChild(fila);
+      });
+    }).catch(function () {});
+  }
+
   function renderizarTablaAdmin() {
     api('api/ordenes.php?action=list').then(function (res) {
       if (!res.ok) {
@@ -686,6 +723,7 @@
       renderResumen(ordenesCache);
       renderFilasOrdenes();
       cargarEstanteria();
+      cargarGarantias();
     }).catch(function (e) {
       window.mostrarToast(e.message || 'No se pudo conectar con el servidor', 'error');
     });
@@ -1341,7 +1379,9 @@
     var derecha = document.createElement('span');
     derecha.className = 'text-[10px] text-slate-500';
     var gd = parseInt(o.garantia_dias, 10) || 0;
-    derecha.textContent = gd > 0 ? 'Garantía: ' + gd + ' días' : 'Sin garantía definida';
+    derecha.textContent = gd > 0
+      ? ('Garantía: ' + gd + ' días' + (o.garantia_hasta ? ' (vence ' + o.garantia_hasta + ')' : ''))
+      : 'Sin garantía definida';
     fila.appendChild(izquierda);
     fila.appendChild(derecha);
     cont.appendChild(fila);
@@ -1559,8 +1599,16 @@
       linea1.textContent = 'Entregado el ' + String(o.fecha_entrega).slice(0, 16) + ' — retiró: ' + (o.entregado_a || '—');
       var gd = parseInt(o.garantia_dias, 10) || 0;
       var linea2 = document.createElement('p');
-      linea2.className = 'text-[11px] text-slate-500';
-      linea2.textContent = gd > 0 ? 'Garantía de ' + gd + ' días desde la entrega.' : 'Sin garantía registrada.';
+      linea2.className = 'text-[11px]';
+      if (gd > 0 && o.garantia_hasta) {
+        var diasG = Math.ceil((new Date(o.garantia_hasta + 'T23:59:59').getTime() - Date.now()) / 86400000);
+        linea2.className += diasG < 0 ? ' text-red-400' : (diasG <= 7 ? ' text-amber-400' : ' text-emerald-400');
+        linea2.textContent = 'Garantía hasta el ' + o.garantia_hasta + ' — ' +
+          (diasG >= 0 ? 'quedan ' + diasG + (diasG === 1 ? ' día' : ' días') : 'vencida hace ' + Math.abs(diasG) + (Math.abs(diasG) === 1 ? ' día' : ' días'));
+      } else {
+        linea2.className += ' text-slate-500';
+        linea2.textContent = gd > 0 ? 'Garantía de ' + gd + ' días desde la entrega.' : 'Sin garantía registrada.';
+      }
       info.appendChild(linea1);
       info.appendChild(linea2);
     } else if (o.estado === 'Listo para Retiro') {

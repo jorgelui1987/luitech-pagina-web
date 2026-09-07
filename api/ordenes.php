@@ -24,9 +24,11 @@ aplicar_zona_horaria();
 iniciar_respuesta_json();
 preparar_clientes(db()); // tabla de clientes auto-reparable
 
-// Auto-reparación: fecha_listo (estantería) para órdenes listas sin retirar
+// Auto-reparación: fecha_listo (estantería) y garantia_hasta (garantía digital)
 try { db()->query('SELECT fecha_listo FROM ordenes LIMIT 1'); }
 catch (Throwable $e) { db()->exec('ALTER TABLE ordenes ADD COLUMN fecha_listo DATE NULL'); }
+try { db()->query('SELECT garantia_hasta FROM ordenes LIMIT 1'); }
+catch (Throwable $e) { db()->exec('ALTER TABLE ordenes ADD COLUMN garantia_hasta DATE NULL'); }
 
 const ESTADOS_VALIDOS = ['Ingresado', 'En Diagnóstico', 'En Reparación', 'Listo para Retiro', 'Entregado'];
 
@@ -145,7 +147,8 @@ switch ($action) {
         // Privacidad: la falla reportada NO viaja al portal público (nadie debe
         // enterarse de qué servicio llevó el equipo de otra persona).
         $stmt = db()->prepare(
-            'SELECT codigo, equipo, estado, avance, tecnico, fecha_ingreso, fecha_entrega
+            'SELECT codigo, equipo, estado, avance, tecnico, fecha_ingreso, fecha_entrega,
+                    garantia_hasta, DATEDIFF(garantia_hasta, CURDATE()) AS garantia_dias
              FROM ordenes WHERE codigo = ? LIMIT 1'
         );
         $stmt->execute([$codigo]);
@@ -194,7 +197,7 @@ switch ($action) {
         if (rol_actual() === 'tecnico') {
             $stmt = db()->prepare('SELECT id, codigo, cliente, cliente_id, equipo, tipo, falla, estado, avance, tecnico, fecha_ingreso,
                     pin_patron, accesorios, obs_recepcion, firma_ingreso,
-                    precio_repuestos, mano_obra, total, abono, estado_pago, metodo_pago, garantia_dias,
+                    precio_repuestos, mano_obra, total, abono, estado_pago, metodo_pago, garantia_dias, garantia_hasta,
                     fecha_entrega, entregado_a, firma_entrega, tecnico_id, costo_repuesto, fecha_listo
              FROM ordenes WHERE tecnico_id = ? ORDER BY id DESC');
             $stmt->execute([$_SESSION['admin_tecnico_id'] ?? 0]);
@@ -203,7 +206,7 @@ switch ($action) {
         $stmt = db()->query(
             'SELECT id, codigo, cliente, cliente_id, equipo, tipo, falla, estado, avance, tecnico, fecha_ingreso,
                     pin_patron, accesorios, obs_recepcion, firma_ingreso,
-                    precio_repuestos, mano_obra, total, abono, estado_pago, metodo_pago, garantia_dias,
+                    precio_repuestos, mano_obra, total, abono, estado_pago, metodo_pago, garantia_dias, garantia_hasta,
                     fecha_entrega, entregado_a, firma_entrega, tecnico_id, costo_repuesto, fecha_listo
              FROM ordenes ORDER BY id DESC'
         );
@@ -522,6 +525,9 @@ switch ($action) {
             }
         }
 
+        // Garantía digital: asienta el vencimiento (entrega + días) una sola vez
+        asentar_garantia(db(), $codigo);
+
         // Cada cobro (delta de abono) queda como ingreso en la caja diaria
         $avisoCaja = null;
         if (isset($d['abono']) && $abonoAnterior !== null) {
@@ -556,7 +562,7 @@ switch ($action) {
 
         $stmt2 = db()->prepare(
             'SELECT codigo, estado, avance, tecnico, falla, precio_repuestos, mano_obra, costo_repuesto,
-                    total, abono, estado_pago, metodo_pago, garantia_dias, tecnico_id,
+                    total, abono, estado_pago, metodo_pago, garantia_dias, garantia_hasta, tecnico_id,
                     fecha_entrega, entregado_a, firma_entrega
              FROM ordenes WHERE codigo = ?'
         );
@@ -828,6 +834,22 @@ switch ($action) {
              FROM ordenes o
              WHERE o.estado = "Listo para Retiro" AND o.fecha_listo IS NOT NULL
              ORDER BY o.fecha_listo ASC, o.id ASC'
+        )->fetchAll();
+        responder(['ok' => true, 'ordenes' => $rows]);
+    }
+
+    /* ------------------------------------------------ GARANTÍAS POR VENCER */
+    case 'garantias': {
+        // Órdenes ENTREGADAS cuya garantía vence dentro de los próximos 7 días:
+        // oportunidad de contacto/venta de extensión. Lectura: ambos roles.
+        exigir_admin();
+        $rows = db()->query(
+            'SELECT codigo, cliente, equipo, garantia_hasta,
+                    DATEDIFF(garantia_hasta, CURDATE()) AS dias
+             FROM ordenes
+             WHERE garantia_hasta IS NOT NULL
+               AND DATEDIFF(garantia_hasta, CURDATE()) BETWEEN 0 AND 7
+             ORDER BY garantia_hasta ASC'
         )->fetchAll();
         responder(['ok' => true, 'ordenes' => $rows]);
     }

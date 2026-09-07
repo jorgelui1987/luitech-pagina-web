@@ -415,10 +415,25 @@ function auto_entregar_si_pagada(PDO $pdo, string $codigo): ?array
     $entregadoA = ($o['cliente'] !== null && $o['cliente'] !== '') ? $o['cliente'] : 'Cliente';
     $pdo->prepare("UPDATE ordenes SET estado = 'Entregado', avance = 100, fecha_entrega = NOW(), entregado_a = ? WHERE codigo = ?")
         ->execute([$entregadoA, $codigo]);
+    asentar_garantia($pdo, $codigo); // garantía digital: vencimiento = entrega + días
     $pdo->prepare('INSERT INTO orden_bitacora (orden_codigo, tecnico, nota, estado_nuevo) VALUES (?, ?, ?, ?)')
         ->execute([$codigo, (string)($o['tecnico'] ?? ''), 'Pago completo: entrega automática del equipo', 'Entregado']);
     $comision = generar_comision_orden($pdo, $codigo);
     return ['auto' => true, 'entregado_a' => $entregadoA, 'comision' => $comision];
+}
+
+/** Garantía digital: asienta la fecha de vencimiento (entrega + días) UNA sola
+ *  vez por orden. No-op si aún no se entrega, no tiene garantía o ya está
+ *  asentada. Llamada desde las rutas de entrega (manual y automática). */
+function asentar_garantia(PDO $pdo, string $codigo): void
+{
+    try {
+        $pdo->prepare(
+            "UPDATE ordenes
+             SET garantia_hasta = DATE_ADD(fecha_entrega, INTERVAL garantia_dias DAY)
+             WHERE codigo = ? AND fecha_entrega IS NOT NULL AND garantia_dias > 0 AND garantia_hasta IS NULL"
+        )->execute([$codigo]);
+    } catch (Throwable $e) { /* columna sin migrate: silencio, no interrumpe */ }
 }
 
 /* ==========================================================================

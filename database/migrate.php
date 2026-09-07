@@ -121,6 +121,7 @@ $migracionCobro = [
     'fecha_entrega'    => 'ALTER TABLE ordenes ADD COLUMN fecha_entrega DATETIME NULL AFTER garantia_dias',
     'entregado_a'      => 'ALTER TABLE ordenes ADD COLUMN entregado_a VARCHAR(120) NULL AFTER fecha_entrega',
     'firma_entrega'    => 'ALTER TABLE ordenes ADD COLUMN firma_entrega VARCHAR(255) NULL AFTER entregado_a',
+    'garantia_hasta'   => 'ALTER TABLE ordenes ADD COLUMN garantia_hasta DATE NULL AFTER garantia_dias',
 ];
 foreach ($migracionCobro as $columna => $sql) {
     if (!in_array($columna, $columnasExistentes, true)) {
