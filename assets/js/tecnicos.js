@@ -45,7 +45,26 @@
           return c;
         }
 
-        tr.appendChild(td(t.nombre, 'p-2 font-bold text-white'));
+        // Nombre + usuario de acceso (solo visible para el administrador)
+        var tdNom = document.createElement('td');
+        tdNom.className = 'p-2 font-bold text-white';
+        tdNom.textContent = t.nombre;
+        if (!esRolTecnico) {
+          if (t.usuario_acceso) {
+            var badgeAcc = document.createElement('span');
+            badgeAcc.className = 'block mt-0.5 text-[10px] font-semibold font-mono text-emerald-400';
+            badgeAcc.title = 'Usuario de acceso al sistema';
+            badgeAcc.innerHTML = '<i class="fa-solid fa-key mr-1"></i>';
+            badgeAcc.appendChild(document.createTextNode(t.usuario_acceso));
+            tdNom.appendChild(badgeAcc);
+          } else {
+            var badgeNo = document.createElement('span');
+            badgeNo.className = 'block mt-0.5 text-[10px] font-semibold text-slate-600';
+            badgeNo.textContent = 'sin acceso al sistema';
+            tdNom.appendChild(badgeNo);
+          }
+        }
+        tr.appendChild(tdNom);
         tr.appendChild(td(t.rut || '—', 'p-2 font-mono text-slate-400'));
         tr.appendChild(td(t.porcentaje_comision + '%', 'p-2 text-center text-cyan-400 font-bold'));
 
@@ -78,6 +97,16 @@
               : 'bg-slate-800 hover:bg-cyan-600 text-slate-300 hover:text-white');
             btnKey.addEventListener('click', function () { gestionarAcceso(t); });
             tdAcc.appendChild(btnKey);
+            if (t.tiene_acceso > 0) {
+              // Cambiar usuario/contraseña sin quitar el acceso (recrear)
+              var btnCred = document.createElement('button');
+              btnCred.type = 'button';
+              btnCred.title = 'Cambiar usuario o contraseña';
+              btnCred.innerHTML = '<i class="fa-solid fa-user-pen pointer-events-none"></i>';
+              btnCred.className = 'w-8 h-8 rounded-lg bg-slate-800 hover:bg-cyan-600 text-slate-300 hover:text-white mx-0.5 transition-all';
+              btnCred.addEventListener('click', function () { pedirCredenciales(t, t.usuario_acceso || ''); });
+              tdAcc.appendChild(btnCred);
+            }
         }
         var btnEd = document.createElement('button');
         btnEd.type = 'button';
@@ -159,16 +188,23 @@
         }).catch(function () {});
       return;
     }
-    var usuario = prompt('Usuario de acceso para "' + t.nombre + '":\n(letras, números, punto o guion)');
+    pedirCredenciales(t, ''); // crear acceso nuevo (PASO 1: usuario, PASO 2: contraseña)
+  }
+
+  /** PASO 1 y PASO 2 del acceso: pide usuario y contraseña y los guarda
+   *  (crea la cuenta o la actualiza si el técnico ya tenía acceso). */
+  function pedirCredenciales(t, usuarioActual) {
+    var esCambio = !!usuarioActual;
+    var usuario = prompt('PASO 1 de 2 — USUARIO de acceso para "' + t.nombre + '":\n(3-30 caracteres: letras, números, punto o guion. Ej: juan.perez)', usuarioActual || '');
     if (usuario === null) return;
     usuario = (usuario || '').trim();
     if (!/^[a-zA-Z0-9._-]{3,30}$/.test(usuario)) { window.mostrarToast('Usuario inválido (3-30: letras, números, punto, guion)', 'error'); return; }
-    var password = prompt('Contraseña (mínimo 10, con MAYÚSCULA, minúscula, número y carácter especial):\nEj: Taller2026$Luitech');
+    var password = prompt('PASO 2 de 2 — CONTRASEÑA para el usuario "' + usuario + '":\n(mínimo 10, con MAYÚSCULA, minúscula, número y carácter especial)\nEj: Taller2026$Luitech');
     if (password === null) return;
     api('api/tecnicos.php?action=crear_acceso', { method: 'POST', body: { tecnico_id: t.id, usuario: usuario, password: password } })
       .then(function (res) {
-        if (!res.ok) { window.mostrarToast(res.error || 'No se pudo crear el acceso', 'error'); return; }
-        window.mostrarToast('Acceso creado para "' + t.nombre + '"', 'success');
+        if (!res.ok) { window.mostrarToast(res.error || 'No se pudo guardar el acceso', 'error'); return; }
+        window.mostrarToast((esCambio ? 'Acceso actualizado' : 'Acceso creado') + ' — usuario: ' + usuario, 'success');
         cargarTecnicos();
       }).catch(function () {});
   }

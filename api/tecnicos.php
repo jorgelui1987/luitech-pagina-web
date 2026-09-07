@@ -59,6 +59,7 @@ switch ($action) {
         $stmt = db()->query(
             'SELECT t.id, t.nombre, t.rut, t.telefono, t.porcentaje_comision,
                     (SELECT COUNT(*) FROM usuarios_admin u WHERE u.tecnico_id = t.id AND u.rol = "tecnico") AS tiene_acceso,
+                    (SELECT u.usuario FROM usuarios_admin u WHERE u.tecnico_id = t.id AND u.rol = "tecnico" LIMIT 1) AS usuario_acceso,
                     (SELECT COUNT(*) FROM comisiones c WHERE c.tecnico_id = t.id AND c.estado = "Pendiente") AS comisiones_pendientes,
                     (SELECT COALESCE(SUM(c.monto),0) FROM comisiones c WHERE c.tecnico_id = t.id AND c.estado = "Pendiente") AS monto_pendiente,
                     (SELECT COUNT(*) FROM comisiones c WHERE c.tecnico_id = t.id AND c.estado = "Pagada") AS comisiones_pagadas,
