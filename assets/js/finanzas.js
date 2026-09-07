@@ -116,17 +116,111 @@
     }).catch(function () {});
   }
 
+  /* --------------------------------------------- ARQUEO POR DENOMINACIONES */
+  var DENOMS = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 10];
+
+  function renderArqueo() {
+    var grid = $('denom-grid');
+    grid.replaceChildren();
+    DENOMS.forEach(function (v) {
+      var wrap = document.createElement('label');
+      wrap.className = 'flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5';
+      var lbl = document.createElement('span');
+      lbl.className = 'text-xs font-bold text-slate-300 w-16';
+      lbl.textContent = '$' + fmt(v);
+      var inp = document.createElement('input');
+      inp.type = 'number'; inp.min = '0'; inp.value = '0';
+      inp.dataset.valor = String(v);
+      inp.className = 'denom-input w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white text-right text-xs focus:outline-none focus:border-cyan-500';
+      inp.addEventListener('input', sumarArqueo);
+      wrap.appendChild(lbl); wrap.appendChild(inp);
+      grid.appendChild(wrap);
+    });
+  }
+
+  function totalArqueo() {
+    var total = 0;
+    document.querySelectorAll('.denom-input').forEach(function (inp) {
+      total += (parseInt(inp.dataset.valor, 10) || 0) * (parseInt(inp.value, 10) || 0);
+    });
+    return total;
+  }
+
+  function sumarArqueo() {
+    var total = totalArqueo();
+    $('denom-total').textContent = fmt(total);
+    $('caja-contado').value = total; // el arqueo manda: sincroniza el monto del cierre
+  }
+
+  function limpiarArqueo() {
+    document.querySelectorAll('.denom-input').forEach(function (inp) { inp.value = '0'; });
+    sumarArqueo();
+  }
+
+  function alternarArqueo() {
+    var box = $('caja-denominaciones');
+    box.classList.toggle('hidden');
+    if (!box.classList.contains('hidden') && !$('denom-grid').children.length) { renderArqueo(); }
+  }
+
+  /** Ticket 80mm del arqueo: esperado, desglose contado y diferencia. */
+  function imprimirArqueo(res, denoms, hayArqueo) {
+    var s = res.sesion || {};
+    var dif = parseInt(res.diferencia, 10);
+    var filas = '';
+    Object.keys(denoms).sort(function (a, b) { return b - a; }).forEach(function (v) {
+      filas += '<tr><td>' + denoms[v] + ' x</td><td align="right">$' + fmt(parseInt(v, 10)) +
+               '</td><td align="right">$' + fmt(parseInt(v, 10) * denoms[v]) + '</td></tr>';
+    });
+    var html = (
+      '<html><head><title>Arqueo de caja</title><style>' +
+      '@page{size:80mm auto;margin:0}body{font-family:monospace;font-size:12px;line-height:1.25;padding:3mm 2mm;color:#000;width:74mm;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+      'h2{text-align:center;margin:4px 0;font-size:15px}.c{text-align:center}.d{border-top:1px dashed #000;margin:8px 0;border-bottom:1px dashed #000;padding:8px 0}' +
+      'table{width:100%;border-collapse:collapse}td{padding:2px 0;font-size:11px}' +
+      '.t{font-size:14px;font-weight:bold;text-align:right;margin-top:8px}' +
+      '</style></head><body>' +
+      '<h2>ARQUEO DE CAJA</h2>' +
+      '<div class="c">' + (s.abierta_por ? 'Abierta por: ' + esc(s.abierta_por) + '<br>' : '') +
+      (s.dia ? 'Apertura: ' + esc(s.dia) : '') + '</div>' +
+      '<div class="d"><table>' +
+      '<tr><td>Fondo de apertura</td><td align="right">$' + fmt(s.monto_apertura || 0) + '</td></tr>' +
+      '<tr><td><b>Efectivo esperado</b></td><td align="right"><b>$' + fmt(res.esperado) + '</b></td></tr>' +
+      '</table></div>' +
+      (hayArqueo
+        ? '<div class="d"><p class="c" style="margin:0 0 4px"><b>Conteo por denominaciones</b></p><table>' + filas +
+          '<tr><td colspan="2"><b>TOTAL CONTADO</b></td><td align="right"><b>$' + fmt(res.contado) + '</b></td></tr></table></div>'
+        : '<div class="d c">Contado sin desglose</div>') +
+      '<p class="t">DIFERENCIA: ' + (dif === 0 ? '$0 — CAJA CUADRADA' : (dif > 0 ? '+$' + fmt(dif) : '-$' + fmt(Math.abs(dif)))) + '</p>' +
+      (dif !== 0 ? '<div class="c">Revisar faltante/sobrante con el dueño</div>' : '') +
+      '<div class="c" style="margin-top:10px">Firma del cierre: ______________</div>' +
+      '</body></html>'
+    );
+    window.imprimirDocumento(html);
+  }
+
   function cerrarCaja() {
     var contado = $('caja-contado').value;
     if (contado === '') {
-      window.mostrarToast('Primero cuenta el dinero e ingresa el monto', 'error');
+      window.mostrarToast('Primero cuenta el dinero e ingresa el monto (o usa el arqueo por denominaciones)', 'error');
       $('caja-contado').focus();
       return;
     }
     var conf = confirm('¿Cerrar la caja del día con $' + fmt(parseInt(contado, 10)) + ' contados?');
     if (!conf) return;
 
-    api('api/caja.php?action=cerrar', { method: 'POST', body: { monto_contado: parseInt(contado, 10) } })
+    // Arqueo por denominaciones (si la grilla está en uso): el contado real
+    // es la suma de billetes/monedas y queda guardado + impreso en el ticket.
+    var denoms = {};
+    var hayArqueo = false;
+    document.querySelectorAll('.denom-input').forEach(function (inp) {
+      var cant = parseInt(inp.value, 10) || 0;
+      if (cant > 0) { denoms[inp.dataset.valor] = cant; hayArqueo = true; }
+    });
+
+    var cuerpo = { monto_contado: parseInt(contado, 10) };
+    if (hayArqueo) { cuerpo.denominaciones = denoms; }
+
+    api('api/caja.php?action=cerrar', { method: 'POST', body: cuerpo })
       .then(function (res) {
         if (!res.ok) { window.mostrarToast(res.error || 'No se pudo cerrar', 'error'); return; }
         var dif = parseInt(res.diferencia, 10);
@@ -135,6 +229,8 @@
           : (dif > 0 ? '⚠ Sobran $' + fmt(dif) : '⚠ Faltan $' + fmt(Math.abs(dif)));
         alert('CAJA CERRADA\n\nEsperado: $' + fmt(res.esperado) + '\nContado: $' + fmt(res.contado) +
               '\nDiferencia: ' + (dif >= 0 ? '+' : '') + '$' + fmt(dif) + '\n\n' + msg.replace(/<[^>]*>/g, ''));
+        imprimirArqueo(res, denoms, hayArqueo);
+        limpiarArqueo();
         $('caja-contado').value = '';
         refrescarCaja();
       }).catch(function () {});
@@ -333,6 +429,8 @@
     $('btn-abrir-caja').addEventListener('click', abrirCaja);
     $('form-mov').addEventListener('submit', agregarMovimiento);
     $('btn-cerrar-caja').addEventListener('click', cerrarCaja);
+    $('btn-arqueo').addEventListener('click', alternarArqueo);
+    $('btn-arqueo-limpiar').addEventListener('click', limpiarArqueo);
     $('form-gasto').addEventListener('submit', guardarGasto);
 
     // Acordeón de gastos + filtros + impresión del reporte

@@ -16,6 +16,10 @@ require __DIR__ . '/config.php';
 iniciar_respuesta_json();
 exigir_admin(); exigir_rol(['admin', 'tecnico']); // el encargado abre, mueve y cierra la caja
 
+// Auto-reparación: columna del arqueo por denominaciones (hostings sin migrate)
+try { db()->query('SELECT detalle_contado FROM caja_sesiones LIMIT 1'); }
+catch (Throwable $e) { db()->exec('ALTER TABLE caja_sesiones ADD COLUMN detalle_contado TEXT NULL'); }
+
 $action = $_GET['action'] ?? '';
 
 /** Devuelve la sesión abierta actual o null. */
@@ -136,10 +140,34 @@ switch ($action) {
         if (!$s) {
             responder(['ok' => false, 'error' => 'No hay caja abierta'], 409);
         }
-        $contado = max(0, (int)(leer_cuerpo()['monto_contado'] ?? -1));
-        if ((leer_cuerpo()['monto_contado'] ?? '') === '') {
-            responder(['ok' => false, 'error' => 'Indica cuánto dinero contaste'], 400);
+
+        // Arqueo por denominaciones (opcional): si viene, el contado REAL es la
+        // suma de billetes/monedas — más fiable que un número tipeado.
+        $d = leer_cuerpo();
+        $permitidas = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 10];
+        $denoms = [];
+        if (isset($d['denominaciones']) && is_array($d['denominaciones'])) {
+            foreach ($d['denominaciones'] as $valor => $cant) {
+                $valor = (int)$valor;
+                $cant  = max(0, (int)$cant);
+                if ($cant > 0 && in_array($valor, $permitidas, true)) {
+                    $denoms[$valor] = $cant;
+                }
+            }
+            krsort($denoms);
         }
+        $hayArqueo = count($denoms) > 0;
+
+        if ($hayArqueo) {
+            $contado = 0;
+            foreach ($denoms as $valor => $cant) { $contado += $valor * $cant; }
+        } else {
+            if (!isset($d['monto_contado']) || (string)$d['monto_contado'] === '') {
+                responder(['ok' => false, 'error' => 'Indica cuánto dinero contaste'], 400);
+            }
+            $contado = max(0, (int)$d['monto_contado']);
+        }
+
         $sid = (int)$s['id'];
         $esperado = efectivo_en_caja(db(), $sid);
         $dif = $contado - $esperado;
@@ -147,7 +175,29 @@ switch ($action) {
         db()->prepare("UPDATE caja_sesiones SET cierre_ts = NOW(), monto_cierre = ?, diferencia = ?, estado = 'Cerrada' WHERE id = ?")
              ->execute([$contado, $dif, $sid]);
 
-        responder(['ok' => true, 'esperado' => $esperado, 'contado' => $contado, 'diferencia' => $dif]);
+        // Guarda el desglose del arqueo para el ticket y el historial
+        if ($hayArqueo) {
+            try {
+                db()->prepare('UPDATE caja_sesiones SET detalle_contado = ? WHERE id = ?')
+                     ->execute([json_encode($denoms, JSON_UNESCAPED_UNICODE), $sid]);
+            } catch (Throwable $e) { /* columna aún sin migrate: no interrumpe el cierre */ }
+        }
+
+        $info = db()->prepare("SELECT DATE_FORMAT(apertura_ts, '%d-%m-%Y') AS dia FROM caja_sesiones WHERE id = ?");
+        $info->execute([$sid]);
+
+        responder([
+            'ok'         => true,
+            'esperado'   => $esperado,
+            'contado'    => $contado,
+            'diferencia' => $dif,
+            'arqueo'     => $denoms,
+            'sesion'     => [
+                'abierta_por'    => (string)$s['abierta_por'],
+                'monto_apertura' => (int)$s['monto_apertura'],
+                'dia'            => (string)($info->fetchColumn() ?: ''),
+            ],
+        ]);
     }
 
     /* -------------------------------------------------------- HISTORIAL */

@@ -293,6 +293,14 @@ $pdo->exec("
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 ");
 
+// --- Caja: detalle del arqueo por denominaciones (idempotente) -----------
+foreach ([
+    'detalle_contado' => "ALTER TABLE caja_sesiones ADD COLUMN detalle_contado TEXT NULL",
+] as [$colCaja, $sqlCaja]) {
+    try { $pdo->query("SELECT `$colCaja` FROM caja_sesiones LIMIT 1"); }
+    catch (Throwable $e) { $pdo->exec($sqlCaja); echo "[migrate] caja_sesiones.$colCaja agregada\n"; }
+}
+
 // --- Movimientos de caja (ventas efectivo + manuales) -------------------
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS movimientos_caja (
