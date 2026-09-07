@@ -20,8 +20,24 @@
       $('admin-nombre').textContent = nombre;
       document.querySelectorAll('.bm-nombre').forEach(function (el) { el.textContent = nombre; });
     }
-    if (logueado) { cargarTecnicos(); cargarClientesLista(); aplicarClientePendiente(); }
+    if (logueado) { cargarTecnicos(); cargarClientesLista(); aplicarClientePendiente(); avisoCaja(); }
     if (!logueado) { document.body.classList.remove('rol-tecnico'); $('usuario').focus(); }
+  }
+
+  /** Aviso anti-olvido: caja abierta desde un día anterior sin arquear.
+   *  Sirve para dueño y encargado por igual; el servidor ya calcula los días. */
+  function avisoCaja() {
+    api('api/caja.php?action=estado').then(function (res) {
+      var el = $('aviso-caja');
+      if (!el) return;
+      if (res.ok && res.abierta && (res.sesion.dias_abierta || 0) >= 1) {
+        el.textContent = '⚠️ ' + (res.aviso || ('Caja abierta desde el ' + (res.sesion.abierta_dia || '') + ' sin arquear.'));
+        el.classList.remove('hidden');
+      } else {
+        el.textContent = '';
+        el.classList.add('hidden');
+      }
+    }).catch(function () {});
   }
 
   function sesionAbierta(res) {

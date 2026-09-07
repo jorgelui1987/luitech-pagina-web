@@ -2,7 +2,7 @@
    - Interfaz (páginas, CSS, JS, imágenes): red primero + caché de respaldo
    - API (/api/): SIEMPRE red — los datos del taller nunca se cachean
    Al publicar una actualización, sube la constante CACHE (ej: luitech-v2). */
-var CACHE = 'luitech-v30'; // v30: banner del modo encargado eliminado (los paneles del encabezado lo reemplazan)
+var CACHE = 'luitech-v31'; // v31: avisos anti-olvido de caja (abierta desde días anteriores: aviso visible + freno detallado al abrir)
 var NUCLEO = [
   'admin.html', 'pos.html', 'inventario.html', 'proveedores.html', 'cotizador.html',
   'clientes.html', 'tecnicos.html', 'finanzas.html', 'configuracion.html',

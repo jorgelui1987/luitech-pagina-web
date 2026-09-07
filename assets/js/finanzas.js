@@ -37,6 +37,18 @@
       $('caja-quien').textContent = res.sesion.abierta_por;
       $('caja-desde').textContent = 'Desde ' + fechaLocal(res.sesion.apertura_ts);
 
+      // Aviso anti-olvido: caja abierta desde un día anterior sin arquear
+      var aviso = $('caja-aviso');
+      if (aviso) {
+        if ((res.sesion.dias_abierta || 0) >= 1) {
+          aviso.textContent = '⚠️ ' + (res.aviso || ('Caja abierta desde el ' + (res.sesion.abierta_dia || '') + ' sin arquear.'));
+          aviso.classList.remove('hidden');
+        } else {
+          aviso.textContent = '';
+          aviso.classList.add('hidden');
+        }
+      }
+
       var lista = $('mov-lista');
       lista.replaceChildren();
       (res.movimientos || []).forEach(function (m) {

@@ -49,6 +49,16 @@ switch ($action) {
         $sid = (int)$s['id'];
         $mov = db()->prepare('SELECT tipo, concepto, monto, creado_en FROM movimientos_caja WHERE sesion_id = ? ORDER BY id DESC LIMIT 30');
         $mov->execute([$sid]);
+
+        // Control anti-olvido: ¿la caja lleva abierta desde un día anterior?
+        // (DATEDIFF en MySQL: apertura y NOW() comparten la misma zona horaria)
+        $tiempo = db()->prepare("SELECT DATEDIFF(NOW(), apertura_ts) AS dias, DATE_FORMAT(apertura_ts, '%d-%m-%Y') AS dia FROM caja_sesiones WHERE id = ?");
+        $tiempo->execute([$sid]);
+        $t = $tiempo->fetch() ?: [];
+        $dias = max(0, (int)($t['dias'] ?? 0));
+        $dia  = (string)($t['dia'] ?? '');
+        $esperado = efectivo_en_caja($pdo ?? db(), $sid);
+
         responder([
             'ok'       => true,
             'abierta'  => true,
@@ -57,8 +67,13 @@ switch ($action) {
                 'abierta_por'  => $s['abierta_por'],
                 'monto_apertura' => (int)$s['monto_apertura'],
                 'apertura_ts'  => $s['apertura_ts'],
+                'abierta_dia'  => $dia,
+                'dias_abierta' => $dias,
             ],
-            'efectivo_esperado' => efectivo_en_caja($pdo ?? db(), $sid),
+            'efectivo_esperado' => $esperado,
+            'aviso' => $dias >= 1
+                ? 'Caja abierta desde el ' . $dia . ' (' . $dias . ' ' . ($dias === 1 ? 'día' : 'días') . ') sin arquear: efectivo esperado $' . number_format($esperado, 0, ',', '.') . '. Cuéntala y ciérrala.'
+                : null,
             'movimientos' => $mov->fetchAll(),
         ]);
     }
@@ -68,8 +83,22 @@ switch ($action) {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
-        if (sesion_abierta(db())) {
-            responder(['ok' => false, 'error' => 'Ya hay una caja abierta'], 409);
+        if ($s = sesion_abierta(db())) {
+            // Freno anti-olvido: no abrir una caja nueva sin cuadrar la anterior,
+            // diciendo exactamente qué caja quedó olvidada y cuánto se espera.
+            $info = db()->prepare("SELECT DATE_FORMAT(apertura_ts, '%d-%m-%Y') AS dia, DATEDIFF(NOW(), apertura_ts) AS dias FROM caja_sesiones WHERE id = ?");
+            $info->execute([(int)$s['id']]);
+            $i = $info->fetch() ?: [];
+            $dia  = (string)($i['dia'] ?? '');
+            $dias = max(0, (int)($i['dias'] ?? 0));
+            $cuando = $dias >= 1 ? "desde el {$dia} (hace {$dias} " . ($dias === 1 ? 'día' : 'días') . ')' : 'de hoy';
+            $moneda = fn(int $n): string => '$' . number_format($n, 0, ',', '.');
+            responder([
+                'ok' => false,
+                'error' => 'Ya hay una caja abierta ' . $cuando . ': fondo ' . $moneda((int)$s['monto_apertura'])
+                         . ', efectivo esperado ' . $moneda(efectivo_en_caja(db(), (int)$s['id']))
+                         . '. Cuéntala y ciérrala primero en Finanzas → Caja.',
+            ], 409);
         }
         $monto = max(0, (int)(leer_cuerpo()['monto_apertura'] ?? 0));
         db()->prepare("INSERT INTO caja_sesiones (abierta_por, monto_apertura, estado) VALUES (?, ?, 'Abierta')")
