@@ -2,7 +2,7 @@
    - Interfaz (páginas, CSS, JS, imágenes): red primero + caché de respaldo
    - API (/api/): SIEMPRE red — los datos del taller nunca se cachean
    Al publicar una actualización, sube la constante CACHE (ej: luitech-v2). */
-var CACHE = 'luitech-v35'; // v35: '¿Cómo está mi tienda hoy?' — pantallazo único en Finanzas (caja, ventas, órdenes, por cobrar, entregas, gastos, estantería, garantías)
+var CACHE = 'luitech-v36'; // v36: corte de etiquetas UNO POR UNO — imprimirEtiqueta envía cada copia como trabajo de impresión independiente (imprimirDocumentosEnSerie) para el autocorte por documento de la térmica 80mm
 var NUCLEO = [
   'admin.html', 'pos.html', 'inventario.html', 'proveedores.html', 'cotizador.html',
   'clientes.html', 'tecnicos.html', 'finanzas.html', 'configuracion.html',

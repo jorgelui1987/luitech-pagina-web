@@ -149,8 +149,13 @@
    * reutilizable y se imprime desde ahí. Nunca abre pestañas ni ventanas
    * nuevas: solo aparece el diálogo de impresión del navegador.
    * Espera a que carguen las imágenes (logo/firma) antes de imprimir.
+   * `alTerminar` (opcional): se avisa cuando el trabajo de impresión terminó
+   * (window.print() es síncrono en Chrome/Edge/Firefox: al retornar el job ya
+   * se envió o el diálogo se cerró). Es la señal que usa
+   * imprimirDocumentosEnSerie para lanzar el siguiente trabajo (autocorte
+   * etiqueta por etiqueta: el driver corta al final de cada documento).
    */
-  function imprimirDocumento(html) {
+  function imprimirDocumento(html, alTerminar) {
     var marco = document.getElementById('luitech-print-frame');
     if (!marco) {
       marco = document.createElement('iframe');
@@ -175,6 +180,7 @@
       lanzada = true;
       try { marco.contentWindow.focus(); } catch (e) {}
       marco.contentWindow.print();
+      if (typeof alTerminar === 'function') { try { alTerminar(); } catch (e) {} }
     }
     if (pendientes === 0) { setTimeout(imprimir, 50); return; }
     Array.prototype.forEach.call(imagenes, function (im) {
@@ -182,6 +188,38 @@
       im.addEventListener('error', function () { pendientes--; if (pendientes <= 0) imprimir(); });
     });
     setTimeout(imprimir, 2500); // respaldo si una imagen nunca responde
+  }
+
+  /**
+   * Impresión EN SERIE: cada documento se envía como un TRABAJO DE IMPRESIÓN
+   * independiente (un print() por documento) reutilizando el mismo iframe
+   * oculto. Es lo que permite el autocorte etiqueta por etiqueta: la
+   * impresora configurada como "cortar después de cada documento" corta al
+   * terminar cada trabajo (ej: 5 etiquetas = 5 trabajos = 5 cortes).
+   * Con Chrome en modo --kiosk-printing todo sale sin diálogos; sin él,
+   * aparece el diálogo una vez por etiqueta.
+   */
+  var _serieImprimiendo = false;
+  function imprimirDocumentosEnSerie(htmls) {
+    if (!htmls || !htmls.length) return;
+    if (_serieImprimiendo) {
+      window.mostrarToast('Espera: aún hay etiquetas en cola de impresión', 'error');
+      return;
+    }
+    _serieImprimiendo = true;
+    var indice = 0;
+    function siguiente() {
+      if (indice >= htmls.length) { _serieImprimiendo = false; return; }
+      var hayMas = (indice < htmls.length - 1);
+      imprimirDocumento(htmls[indice++], function () {
+        if (hayMas) {
+          setTimeout(siguiente, 500); // respiro entre trabajos para no pisar el spool
+        } else {
+          _serieImprimiendo = false;
+        }
+      });
+    }
+    siguiente();
   }
 
   /**
@@ -199,6 +237,7 @@
   window.LuitechAPI   = api;
   window.mostrarToast = mostrarToast;
   window.imprimirDocumento = imprimirDocumento;
+  window.imprimirDocumentosEnSerie = imprimirDocumentosEnSerie;
   window.abrirExterno = abrirExterno;
   window.LUITECH_WA = WHATSAPP_LUITECH;
   window.LUITECH_WEB = SITIO_LUITECH;              // URL del sitio público

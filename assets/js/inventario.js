@@ -388,11 +388,13 @@
     });
   }
 
-  /** Etiquetas para papel térmico adhesivo de 80mm: tira continua con todas
-   *  las copias separadas por línea de corte punteada (SIN saltos de página,
-   *  así no se va papel en blanco; se corta a tijera). Barcode EAN13 si son
-   *  13 dígitos, Code 128 en los demás casos. Sirve para los productos SIN
-   *  código de fábrica: se pega al producto/estante y el POS la lee. */
+  /** Etiquetas para papel térmico adhesivo de 80mm: CADA copia se envía como
+   *  un trabajo de impresión independiente (un print() por etiqueta). Con la
+   *  impresora configurada en "cortar después de cada documento", el autocorte
+   *  las separa una por una (ej: 5 etiquetas = 5 trabajos = 5 cortes), sin
+   *  línea de tinta ni tijera. Barcode EAN13 si son 13 dígitos, Code 128 en
+   *  los demás casos. Sirve para los productos SIN código de fábrica: se pega
+   *  al producto/estante y el POS la lee. */
   function imprimirEtiqueta(p) {
     var valor = String(p.barcode || p.codigo || '').trim();
     if (!valor) { window.mostrarToast('El producto no tiene código', 'error'); return; }
@@ -409,25 +411,28 @@
       var svgTexto = new XMLSerializer().serializeToString(svg);
       var urlImg = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgTexto)));
       var nombre = String(p.nombre).replace(/[<>&]/g, '');
-      var copias = '';
+      // Cada etiqueta es una página de 80mm de alto automático (una etiqueta
+      // = un trabajo de impresión = un corte del autocorte). El espacio en
+      // blanco inferior (4mm) es la zona por donde pasa la cuchilla al final
+      // del trabajo: así nunca roza el código de barras.
+      var etiqueta = '<div class="etq"><p class="n">' + nombre + '</p>' +
+        '<img src="' + urlImg + '" alt="">' +
+        (parseInt(p.precio_venta, 10) > 0 ? '<p class="p">$' + fmt(p.precio_venta) + '</p>' : '') +
+        '</div>';
+      var documentos = [];
       for (var i = 0; i < cantidad; i++) {
-        if (i > 0) copias += '<div class="corte"></div>'; // línea de corte entre etiquetas
-        copias += '<div class="etq"><p class="n">' + nombre + '</p>' +
-          '<img src="' + urlImg + '" alt="">' +
-          (parseInt(p.precio_venta, 10) > 0 ? '<p class="p">$' + fmt(p.precio_venta) + '</p>' : '') +
-          '</div>';
+        documentos.push('<html><head><title>Etiqueta ' + p.codigo + ' (' + (i + 1) + '/' + cantidad + ')</title><style>' +
+          '@page{size:80mm auto;margin:0}' +
+          'body{margin:0;padding-bottom:4mm;font-family:Arial,Helvetica,sans-serif;color:#000;width:76mm}' +
+          '.etq{width:76mm;padding:2mm 2mm 0;box-sizing:border-box;text-align:center}' +
+          '.etq .n{margin:0 0 1mm;font-size:11px;font-weight:bold;white-space:nowrap;overflow:hidden}' +
+          '.etq img{height:14mm;max-width:70mm;display:block;margin:0 auto}' +
+          '.etq .p{margin:1mm 0 0;font-size:16px;font-weight:bold;line-height:1.15}' +
+          '</style></head><body>' + etiqueta + '</body></html>');
       }
-      // Papel térmico de 80mm: tira continua (página de alto automático, sin
-      // saltos de página) con línea de corte punteada entre cada etiqueta.
-      var html = '<html><head><title>Etiquetas ' + p.codigo + '</title><style>' +
-        '@page{size:80mm auto;margin:0}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000;width:76mm}' +
-        '.etq{width:76mm;padding:2mm 2mm 1mm;box-sizing:border-box;text-align:center;page-break-inside:avoid}' +
-        '.etq .n{margin:0 0 1mm;font-size:11px;font-weight:bold;white-space:nowrap;overflow:hidden}' +
-        '.etq img{height:14mm;max-width:70mm;display:block;margin:0 auto}' +
-        '.etq .p{margin:1mm 0 0;font-size:16px;font-weight:bold;line-height:1.15}' +
-        '.corte{border-top:1px dashed #000;margin:2mm 0}' +
-        '</style></head><body>' + copias + '</body></html>';
-      window.imprimirDocumento(html);
+      // Un trabajo de impresión por etiqueta: el driver corta al final de
+      // cada uno (corte automático configurado por documento).
+      window.imprimirDocumentosEnSerie(documentos);
     }).catch(function (e) {
       window.mostrarToast(e.message || 'No se pudo generar la etiqueta', 'error');
     });
