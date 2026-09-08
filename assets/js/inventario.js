@@ -442,8 +442,13 @@
     var bytes = [0x1b, 0x40];                                  // ESC @: inicializar
     bytes = bytes.concat([0x1d, 0x76, 0x30, 0x00,              // GS v 0: imagen ráster
       bytesFila & 255, (bytesFila >> 8) & 255, alto & 255, (alto >> 8) & 255], filas);
-    bytes = bytes.concat([0x1b, 0x64, 0x04]);                  // ESC d 4: avanzar
-    bytes = bytes.concat([0x1d, 0x56, 0x00]);                  // GS V 0: CORTAR
+    // Corte por etiqueta: avanzar papel y cortar PARCIAL. El corte parcial
+    // (GS V 66 n) es el comando más confiable en Xprinter/SSPRO: el avance
+    // (ESC J con 24 unidades ≈ 4mm) deja la cuchilla fuera del barcode y
+    // asegura que el comando no se pierda si llega pegado a la imagen.
+    bytes = bytes.concat([0x1b, 0x4a, 24]);                    // ESC J 24: avanzar ~4mm
+    bytes = bytes.concat([0x1d, 0x56, 0x42, 0x18]);            // GS V 66 24: cortar parcial con feed
+    bytes = bytes.concat([0x1b, 0x64, 0x04]);                  // ESC d 4: separar del corte
     return bytes;
   }
 
