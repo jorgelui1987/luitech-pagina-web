@@ -2,7 +2,7 @@
    - Interfaz (páginas, CSS, JS, imágenes): red primero + caché de respaldo
    - API (/api/): SIEMPRE red — los datos del taller nunca se cachean
    Al publicar una actualización, sube la constante CACHE (ej: luitech-v2). */
-var CACHE = 'luitech-v44'; // v44: corte por etiqueta corregido — avance (ESC J) + corte PARCIAL con feed (GS V 66 n), el comando más confiable en Xprinter/SSPRO: ahora corta UNO POR UNO, no solo al final
+var CACHE = 'luitech-v45'; // v45: corte garantizado por etiqueta — UN trabajo de impresión por etiqueta, cada uno terminando en GS V 0 (el corte al fin de trabajo es el que esta impresora ejecuta seguro); aviso en pantalla de la vía usada
 var NUCLEO = [
   'admin.html', 'pos.html', 'inventario.html', 'proveedores.html', 'cotizador.html',
   'clientes.html', 'tecnicos.html', 'finanzas.html', 'configuracion.html',

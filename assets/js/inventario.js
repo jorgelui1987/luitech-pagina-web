@@ -447,8 +447,8 @@
     // (ESC J con 24 unidades ≈ 4mm) deja la cuchilla fuera del barcode y
     // asegura que el comando no se pierda si llega pegado a la imagen.
     bytes = bytes.concat([0x1b, 0x4a, 24]);                    // ESC J 24: avanzar ~4mm
-    bytes = bytes.concat([0x1d, 0x56, 0x42, 0x18]);            // GS V 66 24: cortar parcial con feed
-    bytes = bytes.concat([0x1b, 0x64, 0x04]);                  // ESC d 4: separar del corte
+    bytes = bytes.concat([0x1d, 0x56, 0x00]);                  // GS V 0: CORTAR al fin del trabajo
+    bytes = bytes.concat([0x1b, 0x64, 0x02]);                  // ESC d 2: separar
     return bytes;
   }
 
@@ -508,19 +508,27 @@
       var urlImg = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgTexto)));
       var nombre = String(p.nombre).replace(/[<>&]/g, '');
       var precioTexto = parseInt(p.precio_venta, 10) > 0 ? '$' + fmt(p.precio_venta) : '';
-      // 1ª vía: QZ Tray → cada etiqueta se manda a la térmica con su comando
-      // de CORTE: salen las N de una vez y la cuchilla las separa una por una.
+      // 1ª vía: QZ Tray → UN TRABAJO POR ETIQUETA, cada uno terminando en su
+      // comando de CORTE. En esta impresora el corte se ejecuta seguro al
+      // terminar cada trabajo (así se comprobó en pruebas) y así la cuchilla
+      // separa una por una: 10 etiquetas = 10 trabajos = 10 cortes.
       var viaQz = (window.LuitechQZ ? window.LuitechQZ.cargar() : Promise.reject(new Error('QZ Tray no está instalado en este PC')))
         .then(function () {
           var bytes = etiquetaCanvasAEscPos(etiquetaPintar(nombre, valor, precioTexto));
-          return window.LuitechQZ.imprimirBruto(etiquetasABase64(bytes, cantidad));
+          var base64 = etiquetasABase64(bytes, 1); // una etiqueta por trabajo
+          var cadena = Promise.resolve();
+          for (var i = 0; i < cantidad; i++) {
+            cadena = cadena.then(function () { return window.LuitechQZ.imprimirBruto(base64); });
+          }
+          return cadena;
         })
         .then(function () {
-          window.mostrarToast('Etiquetas impresas con corte uno por uno ✓', 'success');
+          window.mostrarToast('Impresas y cortadas una por una ✓', 'success');
           return true;
         })
         .catch(function (e) {
           console.warn('Impresión directa (QZ Tray) no disponible:', e && e.message);
+          window.mostrarToast('Sin corte automático: se imprime por el navegador (línea punteada a tijera)', 'success');
           return false; // pasa al plan B
         });
       // 2ª vía (respaldo garantizado): tira continua por el navegador.
