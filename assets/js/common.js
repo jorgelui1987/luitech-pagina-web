@@ -151,9 +151,8 @@
    * Espera a que carguen las imágenes (logo/firma) antes de imprimir.
    * `alTerminar` (opcional): se avisa cuando el trabajo de impresión terminó
    * (window.print() es síncrono en Chrome/Edge/Firefox: al retornar el job ya
-   * se envió o el diálogo se cerró). Es la señal que usa
-   * imprimirDocumentosEnSerie para lanzar el siguiente trabajo (autocorte
-   * etiqueta por etiqueta: el driver corta al final de cada documento).
+   * se envió o el diálogo se cerró). Útil para encadenar impresiones simples;
+   * la impresión EN SERIE usa su propia lógica aislada (ver más abajo).
    */
   function imprimirDocumento(html, alTerminar) {
     var marco = document.getElementById('luitech-print-frame');
@@ -191,13 +190,18 @@
   }
 
   /**
-   * Impresión EN SERIE: cada documento se envía como un TRABAJO DE IMPRESIÓN
-   * independiente (un print() por documento) reutilizando el mismo iframe
-   * oculto. Es lo que permite el autocorte etiqueta por etiqueta: la
-   * impresora configurada como "cortar después de cada documento" corta al
-   * terminar cada trabajo (ej: 5 etiquetas = 5 trabajos = 5 cortes).
+   * Impresión EN SERIE: cada documento se imprime como un TRABAJO DE IMPRESIÓN
+   * independiente (un print() por documento) y en SU PROPIO iframe recién
+   * creado. Es lo que permite el autocorte etiqueta por etiqueta: la impresora
+   * configurada como "cortar después de cada documento" corta al terminar cada
+   * trabajo (ej: 5 etiquetas = 5 trabajos = 5 cortes).
+   * ¿Por qué un iframe NUEVO por trabajo y no el reutilizable? Chrome IGNORA
+   * silenciosamente un print() que cae mientras aún procesa el trabajo
+   * anterior (síntoma: pides 5 y solo sale 1). Por eso el encadenado espera el
+   * evento afterprint del marco que imprimió (se dispara al cerrar el diálogo
+   * o al auto-enviar con --kiosk-printing) antes de lanzar el siguiente.
    * Con Chrome en modo --kiosk-printing todo sale sin diálogos; sin él,
-   * aparece el diálogo una vez por etiqueta.
+   * aparece el diálogo una vez por etiqueta (darle Imprimir a cada una).
    */
   var _serieImprimiendo = false;
   function imprimirDocumentosEnSerie(htmls) {
@@ -210,14 +214,54 @@
     var indice = 0;
     function siguiente() {
       if (indice >= htmls.length) { _serieImprimiendo = false; return; }
-      var hayMas = (indice < htmls.length - 1);
-      imprimirDocumento(htmls[indice++], function () {
-        if (hayMas) {
-          setTimeout(siguiente, 500); // respiro entre trabajos para no pisar el spool
-        } else {
-          _serieImprimiendo = false;
-        }
+      var html = htmls[indice++];
+      var hayMas = (indice < htmls.length);
+      // Iframe PROPIO y desechable para este trabajo: aislado del anterior
+      var marco = document.createElement('iframe');
+      marco.style.position = 'fixed';
+      marco.style.right = '0';
+      marco.style.bottom = '0';
+      marco.style.width = '0';
+      marco.style.height = '0';
+      marco.style.border = '0';
+      document.body.appendChild(marco);
+      var doc = marco.contentWindow.document;
+      doc.open();
+      doc.write(html);
+      doc.close();
+      var lanzada = false, listo = false;
+      function terminar() {
+        if (listo) return; // afterprint y el respaldo pueden coincidir
+        listo = true;
+        try { marco.contentWindow.removeEventListener('afterprint', terminar); } catch (e) {}
+        try { window.removeEventListener('afterprint', terminar); } catch (e) {}
+        // Respiro antes de soltar el marco: el spool termina de tragar el job
+        setTimeout(function () {
+          try { marco.remove(); } catch (e) {}
+          if (hayMas) { setTimeout(siguiente, 300); }
+          else { _serieImprimiendo = false; }
+        }, 500);
+      }
+      // afterprint = el diálogo se cerró (Imprimir o Cancelar) o el job se
+      // auto-envió en kiosk: es el punto seguro para lanzar el siguiente.
+      try { marco.contentWindow.addEventListener('afterprint', terminar); } catch (e) {}
+      try { window.addEventListener('afterprint', terminar); } catch (e) {}
+      var imagenes = doc.images;
+      var pendientes = imagenes.length;
+      function lanzar() {
+        if (lanzada) return; // las imágenes y el respaldo pueden coincidir
+        lanzada = true;
+        try { marco.contentWindow.focus(); } catch (e) {}
+        try { marco.contentWindow.print(); } catch (e) { terminar(); return; }
+        // Respaldo para navegadores sin afterprint: no dejar la serie colgada
+        setTimeout(terminar, 60000);
+      }
+      if (pendientes === 0) { setTimeout(lanzar, 50); return; }
+      Array.prototype.forEach.call(imagenes, function (im) {
+        im.addEventListener('load', function () { pendientes--; if (pendientes <= 0) lanzar(); });
+        im.addEventListener('error', function () { pendientes--; if (pendientes <= 0) lanzar(); });
       });
+      setTimeout(lanzar, 2500); // respaldo si una imagen nunca responde
     }
     siguiente();
   }
