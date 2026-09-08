@@ -388,13 +388,15 @@
     });
   }
 
-  /** Etiquetas para papel térmico adhesivo de 80mm: CADA copia se envía como
-   *  un trabajo de impresión independiente (un print() por etiqueta). Con la
-   *  impresora configurada en "cortar después de cada documento", el autocorte
-   *  las separa una por una (ej: 5 etiquetas = 5 trabajos = 5 cortes), sin
-   *  línea de tinta ni tijera. Barcode EAN13 si son 13 dígitos, Code 128 en
-   *  los demás casos. Sirve para los productos SIN código de fábrica: se pega
-   *  al producto/estante y el POS la lee. */
+  /** Etiquetas para papel térmico adhesivo de 80mm: UN solo trabajo de
+   *  impresión con TODAS las copias (un diálogo, como la tira de siempre)
+   *  pero cada etiqueta termina en SALTO DE PÁGINA: cada copia es una página
+   *  propia del mismo trabajo. Con el driver configurado en "Corte de papel:
+   *  Corte por PÁGINA", el autocorte las separa una por una: 10 etiquetas =
+   *  10 páginas = 10 cortes, y salen las 10 de una sola vez. Barcode EAN13
+   *  si son 13 dígitos, Code 128 en los demás casos. Sirve para los
+   *  productos SIN código de fábrica: se pega al producto/estante y el POS
+   *  la lee. */
   function imprimirEtiqueta(p) {
     var valor = String(p.barcode || p.codigo || '').trim();
     if (!valor) { window.mostrarToast('El producto no tiene código', 'error'); return; }
@@ -411,28 +413,32 @@
       var svgTexto = new XMLSerializer().serializeToString(svg);
       var urlImg = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgTexto)));
       var nombre = String(p.nombre).replace(/[<>&]/g, '');
-      // Cada etiqueta es una página de 80mm de alto automático (una etiqueta
-      // = un trabajo de impresión = un corte del autocorte). El espacio en
-      // blanco inferior (4mm) es la zona por donde pasa la cuchilla al final
-      // del trabajo: así nunca roza el código de barras.
-      var etiqueta = '<div class="etq"><p class="n">' + nombre + '</p>' +
-        '<img src="' + urlImg + '" alt="">' +
-        (parseInt(p.precio_venta, 10) > 0 ? '<p class="p">$' + fmt(p.precio_venta) + '</p>' : '') +
-        '</div>';
-      var documentos = [];
+      // Una sola tira con TODAS las copias (un trabajo = un diálogo), pero
+      // cada etiqueta termina en SALTO DE PÁGINA: cada copia es una página
+      // propia. El driver configurado como "Corte de papel: Corte por
+      // página" manda cortar al final de cada una → salen las N de una vez
+      // y el autocorte las separa una por una. Los 4mm de blanco al pie de
+      // cada etiqueta son la zona por donde pasa la cuchilla sin rozar el
+      // código de barras.
+      var copias = '';
       for (var i = 0; i < cantidad; i++) {
-        documentos.push('<html><head><title>Etiqueta ' + p.codigo + ' (' + (i + 1) + '/' + cantidad + ')</title><style>' +
-          '@page{size:80mm auto;margin:0}' +
-          'body{margin:0;padding-bottom:4mm;font-family:Arial,Helvetica,sans-serif;color:#000;width:76mm}' +
-          '.etq{width:76mm;padding:2mm 2mm 0;box-sizing:border-box;text-align:center}' +
-          '.etq .n{margin:0 0 1mm;font-size:11px;font-weight:bold;white-space:nowrap;overflow:hidden}' +
-          '.etq img{height:14mm;max-width:70mm;display:block;margin:0 auto}' +
-          '.etq .p{margin:1mm 0 0;font-size:16px;font-weight:bold;line-height:1.15}' +
-          '</style></head><body>' + etiqueta + '</body></html>');
+        copias += '<div class="etq' + (i < cantidad - 1 ? ' salto' : '') + '"><p class="n">' + nombre + '</p>' +
+          '<img src="' + urlImg + '" alt="">' +
+          (parseInt(p.precio_venta, 10) > 0 ? '<p class="p">$' + fmt(p.precio_venta) + '</p>' : '') +
+          '</div>';
       }
-      // Un trabajo de impresión por etiqueta: el driver corta al final de
-      // cada uno (corte automático configurado por documento).
-      window.imprimirDocumentosEnSerie(documentos);
+      var html = '<html><head><title>Etiquetas ' + p.codigo + ' x' + cantidad + '</title><style>' +
+        '@page{size:80mm auto;margin:0}' +
+        'body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000;width:76mm}' +
+        '.etq{width:76mm;padding:2mm 2mm 4mm;box-sizing:border-box;text-align:center;page-break-inside:avoid}' +
+        '.etq .n{margin:0 0 1mm;font-size:11px;font-weight:bold;white-space:nowrap;overflow:hidden}' +
+        '.etq img{height:14mm;max-width:70mm;display:block;margin:0 auto}' +
+        '.etq .p{margin:1mm 0 0;font-size:16px;font-weight:bold;line-height:1.15}' +
+        '.salto{page-break-after:always}' +
+        '</style></head><body>' + copias + '</body></html>';
+      // UN solo trabajo con todas las páginas: el driver corta al final de
+      // cada página (corte automático configurado por PÁGINA).
+      window.imprimirDocumento(html);
     }).catch(function (e) {
       window.mostrarToast(e.message || 'No se pudo generar la etiqueta', 'error');
     });
