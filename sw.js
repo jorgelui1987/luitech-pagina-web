@@ -2,7 +2,7 @@
    - Interfaz (páginas, CSS, JS, imágenes): red primero + caché de respaldo
    - API (/api/): SIEMPRE red — los datos del taller nunca se cachean
    Al publicar una actualización, sube la constante CACHE (ej: luitech-v2). */
-var CACHE = 'luitech-v39'; // v39: etiquetas vuelven a UN solo trabajo (un diálogo, salen todas de una vez) pero con salto de página entre copias — el driver en 'Corte por página' las corta una por una
+var CACHE = 'luitech-v40'; // v40: etiquetas de alto FIJO (32mm por página) — garantiza una página por etiqueta en el mismo único trabajo; el driver en 'Corte por página' corta una por una
 var NUCLEO = [
   'admin.html', 'pos.html', 'inventario.html', 'proveedores.html', 'cotizador.html',
   'clientes.html', 'tecnicos.html', 'finanzas.html', 'configuracion.html',

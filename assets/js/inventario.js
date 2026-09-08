@@ -389,14 +389,16 @@
   }
 
   /** Etiquetas para papel térmico adhesivo de 80mm: UN solo trabajo de
-   *  impresión con TODAS las copias (un diálogo, como la tira de siempre)
-   *  pero cada etiqueta termina en SALTO DE PÁGINA: cada copia es una página
-   *  propia del mismo trabajo. Con el driver configurado en "Corte de papel:
-   *  Corte por PÁGINA", el autocorte las separa una por una: 10 etiquetas =
-   *  10 páginas = 10 cortes, y salen las 10 de una sola vez. Barcode EAN13
-   *  si son 13 dígitos, Code 128 en los demás casos. Sirve para los
-   *  productos SIN código de fábrica: se pega al producto/estante y el POS
-   *  la lee. */
+   *  impresión con TODAS las copias (un diálogo, como la tira de siempre).
+   *  Cada etiqueta es una PÁGINA de alto FIJO (32mm) con salto de página
+   *  entre copias: al ser la página del mismo alto que la etiqueta, Chrome
+   *  genera SIEMPRE una página por copia (no se pierde ninguna). Con el
+   *  driver configurado en "Corte de papel: Corte por PÁGINA", el autocorte
+   *  las separa una por una: 10 etiquetas = 10 páginas = 10 cortes. Los 4mm
+   *  de blanco al pie son la zona por donde pasa la cuchilla sin rozar el
+   *  código de barras. Barcode EAN13 si son 13 dígitos, Code 128 en los
+   *  demás casos. Sirve para los productos SIN código de fábrica: se pega
+   *  al producto/estante y el POS la lee. */
   function imprimirEtiqueta(p) {
     var valor = String(p.barcode || p.codigo || '').trim();
     if (!valor) { window.mostrarToast('El producto no tiene código', 'error'); return; }
@@ -414,12 +416,13 @@
       var urlImg = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgTexto)));
       var nombre = String(p.nombre).replace(/[<>&]/g, '');
       // Una sola tira con TODAS las copias (un trabajo = un diálogo), pero
-      // cada etiqueta termina en SALTO DE PÁGINA: cada copia es una página
-      // propia. El driver configurado como "Corte de papel: Corte por
-      // página" manda cortar al final de cada una → salen las N de una vez
-      // y el autocorte las separa una por una. Los 4mm de blanco al pie de
-      // cada etiqueta son la zona por donde pasa la cuchilla sin rozar el
-      // código de barras.
+      // cada etiqueta ocupa EXACTAMENTE una página de 32mm de alto fijo:
+      // página y etiqueta miden lo mismo, así que el salto de página genera
+      // una página por copia SIEMPRE (las etiquetas no se pierden). El
+      // driver configurado como "Corte de papel: Corte por página" manda
+      // cortar al final de cada una → salen las N de una vez y el autocorte
+      // las separa una por una. Los 4mm de blanco al pie son la zona por
+      // donde pasa la cuchilla sin rozar el código de barras.
       var copias = '';
       for (var i = 0; i < cantidad; i++) {
         copias += '<div class="etq' + (i < cantidad - 1 ? ' salto' : '') + '"><p class="n">' + nombre + '</p>' +
@@ -428,9 +431,9 @@
           '</div>';
       }
       var html = '<html><head><title>Etiquetas ' + p.codigo + ' x' + cantidad + '</title><style>' +
-        '@page{size:80mm auto;margin:0}' +
+        '@page{size:80mm 32mm;margin:0}' +
         'body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000;width:76mm}' +
-        '.etq{width:76mm;padding:2mm 2mm 4mm;box-sizing:border-box;text-align:center;page-break-inside:avoid}' +
+        '.etq{width:76mm;height:32mm;padding:2mm 2mm 4mm;box-sizing:border-box;text-align:center;overflow:hidden;page-break-inside:avoid}' +
         '.etq .n{margin:0 0 1mm;font-size:11px;font-weight:bold;white-space:nowrap;overflow:hidden}' +
         '.etq img{height:14mm;max-width:70mm;display:block;margin:0 auto}' +
         '.etq .p{margin:1mm 0 0;font-size:16px;font-weight:bold;line-height:1.15}' +
