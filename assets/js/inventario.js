@@ -415,14 +415,13 @@
       var svgTexto = new XMLSerializer().serializeToString(svg);
       var urlImg = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgTexto)));
       var nombre = String(p.nombre).replace(/[<>&]/g, '');
-      // Una sola tira con TODAS las copias (un trabajo = un diálogo), pero
-      // cada etiqueta ocupa EXACTAMENTE una página de 32mm de alto fijo:
-      // página y etiqueta miden lo mismo, así que el salto de página genera
-      // una página por copia SIEMPRE (las etiquetas no se pierden). El
-      // driver configurado como "Corte de papel: Corte por página" manda
-      // cortar al final de cada una → salen las N de una vez y el autocorte
-      // las separa una por una. Los 4mm de blanco al pie son la zona por
-      // donde pasa la cuchilla sin rozar el código de barras.
+      // Una sola tira con TODAS las copias (un trabajo = un diálogo), cada
+      // una ocupando EXACTAMENTE una página de 80×32mm (alto fijo = alto de
+      // la etiqueta: el salto de página genera una página por copia SIEMPRE,
+      // no se pierde ninguna). El driver configurado como "Corte de papel:
+      // Corte por página" manda cortar al final de cada una → salen las N
+      // de una vez y el autocorte las separa una por una. El pie de 3mm de
+      // blanco es la zona por donde pasa la cuchilla sin rozar el barcode.
       var copias = '';
       for (var i = 0; i < cantidad; i++) {
         copias += '<div class="etq' + (i < cantidad - 1 ? ' salto' : '') + '"><p class="n">' + nombre + '</p>' +
@@ -433,10 +432,10 @@
       var html = '<html><head><title>Etiquetas ' + p.codigo + ' x' + cantidad + '</title><style>' +
         '@page{size:80mm 32mm;margin:0}' +
         'body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000;width:76mm}' +
-        '.etq{width:76mm;height:32mm;padding:2mm 2mm 4mm;box-sizing:border-box;text-align:center;overflow:hidden;page-break-inside:avoid}' +
-        '.etq .n{margin:0 0 1mm;font-size:11px;font-weight:bold;white-space:nowrap;overflow:hidden}' +
-        '.etq img{height:14mm;max-width:70mm;display:block;margin:0 auto}' +
-        '.etq .p{margin:1mm 0 0;font-size:16px;font-weight:bold;line-height:1.15}' +
+        '.etq{width:76mm;height:32mm;padding:1mm 2mm 3mm;box-sizing:border-box;text-align:center;overflow:hidden}' +
+        '.etq .n{margin:0 0 0.5mm;font-size:11px;font-weight:bold;white-space:nowrap;overflow:hidden}' +
+        '.etq img{height:13mm;max-width:72mm;display:block;margin:0 auto}' +
+        '.etq .p{margin:0;font-size:15px;font-weight:bold;line-height:1.1}' +
         '.salto{page-break-after:always}' +
         '</style></head><body>' + copias + '</body></html>';
       // UN solo trabajo con todas las páginas: el driver corta al final de
