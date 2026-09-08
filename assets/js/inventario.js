@@ -447,7 +447,9 @@
     // (ESC J con 24 unidades ≈ 4mm) deja la cuchilla fuera del barcode y
     // asegura que el comando no se pierda si llega pegado a la imagen.
     bytes = bytes.concat([0x1b, 0x4a, 24]);                    // ESC J 24: avanzar ~4mm
-    bytes = bytes.concat([0x1d, 0x56, 0x00]);                  // GS V 0: CORTAR al fin del trabajo
+    bytes = bytes.concat([0x1d, 0x56, 0x00]);                  // GS V 0: corte completo (estándar)
+    bytes = bytes.concat([0x1b, 0x69]);                        // ESC i: corte completo (alterno)
+    bytes = bytes.concat([0x1b, 0x6d]);                        // ESC m: corte (alterno)
     bytes = bytes.concat([0x1b, 0x64, 0x02]);                  // ESC d 2: separar
     return bytes;
   }
