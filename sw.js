@@ -2,7 +2,7 @@
    - Interfaz (páginas, CSS, JS, imágenes): red primero + caché de respaldo
    - API (/api/): SIEMPRE red — los datos del taller nunca se cachean
    Al publicar una actualización, sube la constante CACHE (ej: luitech-v2). */
-var CACHE = 'luitech-v37'; // v37: fix serie de etiquetas — iframe NUEVO por trabajo + evento afterprint para encadenar; Chrome ignoraba los print() consecutivos y solo salía 1 etiqueta
+var CACHE = 'luitech-v38'; // v38: fix serie de etiquetas parte 2 — se detecta si print() fue síncrono (diálogo manual: avanzar a los 600ms, sin depender de afterprint que algunas versiones de Chrome no disparan en iframes) o asíncrono (kiosk: esperar afterprint)
 var NUCLEO = [
   'admin.html', 'pos.html', 'inventario.html', 'proveedores.html', 'cotizador.html',
   'clientes.html', 'tecnicos.html', 'finanzas.html', 'configuracion.html',

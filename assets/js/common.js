@@ -197,9 +197,11 @@
    * trabajo (ej: 5 etiquetas = 5 trabajos = 5 cortes).
    * ¿Por qué un iframe NUEVO por trabajo y no el reutilizable? Chrome IGNORA
    * silenciosamente un print() que cae mientras aún procesa el trabajo
-   * anterior (síntoma: pides 5 y solo sale 1). Por eso el encadenado espera el
-   * evento afterprint del marco que imprimió (se dispara al cerrar el diálogo
-   * o al auto-enviar con --kiosk-printing) antes de lanzar el siguiente.
+   * anterior (síntoma: pides 5 y solo sale 1). El siguiente trabajo se lanza
+   * en el PRIMER punto seguro: el evento afterprint del marco (al cerrar el
+   * diálogo o auto-enviarse en kiosk) o, si print() bloqueó hasta cerrarse
+   * (comportamiento síncrono), 600ms después de retornar — porque algunas
+   * versiones de Chrome no disparan afterprint en iframes.
    * Con Chrome en modo --kiosk-printing todo sale sin diálogos; sin él,
    * aparece el diálogo una vez por etiqueta (darle Imprimir a cada una).
    */
@@ -251,10 +253,22 @@
       function lanzar() {
         if (lanzada) return; // las imágenes y el respaldo pueden coincidir
         lanzada = true;
+        var t0 = Date.now();
         try { marco.contentWindow.focus(); } catch (e) {}
         try { marco.contentWindow.print(); } catch (e) { terminar(); return; }
-        // Respaldo para navegadores sin afterprint: no dejar la serie colgada
-        setTimeout(terminar, 60000);
+        // Chrome actúa de DOS modos: print() SÍNCRONO (bloquea hasta que el
+        // diálogo se cierra: dura segundos) o ASÍNCRONO (retorna al instante:
+        // modo --kiosk-printing auto-envía). Se detecta midiendo la duración:
+        var bloqueo = Date.now() - t0;
+        if (bloqueo > 400) {
+          // SÍNCRONO: el diálogo se abrió y se cerró → el job ya terminó.
+          // NO se depende de afterprint (algunas versiones de Chrome no lo
+          // disparan en iframes): este es el punto seguro para el siguiente.
+          setTimeout(terminar, 600);
+        }
+        // ASÍNCRONO: afterprint llega al auto-enviarse el job; respaldo si
+        // el navegador nunca lo dispara, para no dejar la serie colgada.
+        setTimeout(terminar, bloqueo > 400 ? 8000 : 30000);
       }
       if (pendientes === 0) { setTimeout(lanzar, 50); return; }
       Array.prototype.forEach.call(imagenes, function (im) {
