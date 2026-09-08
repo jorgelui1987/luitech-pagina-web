@@ -2,7 +2,7 @@
    - Interfaz (páginas, CSS, JS, imágenes): red primero + caché de respaldo
    - API (/api/): SIEMPRE red — los datos del taller nunca se cachean
    Al publicar una actualización, sube la constante CACHE (ej: luitech-v2). */
-var CACHE = 'luitech-v42'; // v42: etiquetas restauradas a la versión ORIGINAL que funcionaba (tira continua compacta, todas las copias seguidas, línea de corte punteada a tijera)
+var CACHE = 'luitech-v43'; // v43: etiquetas con CORTE uno por uno vía QZ Tray (ESC/POS: ráster + GS V por etiqueta, sin driver ni diálogos) — si QZ no está instalado, imprime la tira a tijera como siempre
 var NUCLEO = [
   'admin.html', 'pos.html', 'inventario.html', 'proveedores.html', 'cotizador.html',
   'clientes.html', 'tecnicos.html', 'finanzas.html', 'configuracion.html',

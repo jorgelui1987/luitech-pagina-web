@@ -291,11 +291,50 @@
     return w;
   }
 
+  /* ================== QZ Tray: impresión directa (ESC/POS) ==================
+     Si en el PC está instalado QZ Tray (qz.io), el sistema manda comandos
+     crudos a la térmica: etiquetas con CORTE automático uno por uno, sin
+     depender del driver ni del diálogo de Chrome. El script de QZ se carga
+     bajo demanda desde http://localhost:8181 (localhost es origen confiable,
+     así que no cuenta como contenido mixto). Si QZ no está instalado, el
+     sistema sigue imprimiendo por el navegador como siempre (fallback). */
+  function qzCargar() {
+    if (window.qz) return Promise.resolve();
+    return new Promise(function (resolver, rechazar) {
+      var s = document.createElement('script');
+      s.src = 'http://localhost:8181/js/qz-tray.js';
+      s.onload = function () {
+        if (window.qz) resolver();
+        else rechazar(new Error('QZ Tray no disponible'));
+      };
+      s.onerror = function () { rechazar(new Error('QZ Tray no está instalado en este PC')); };
+      document.head.appendChild(s);
+      setTimeout(function () {
+        if (!window.qz) rechazar(new Error('QZ Tray no respondió (¿está abierto?)'));
+      }, 4000);
+    });
+  }
+  /** Imprime un flujo crudo (bytes en base64) en la impresora guardada en
+   *  localStorage 'luitech-impresora-etiquetas' o, si no hay, en la
+   *  impresora PREDETERMINADA de Windows. */
+  function qzImprimirBruto(base64) {
+    return qzCargar().then(function () {
+      var conexion = qz.websocket.isActive() ? Promise.resolve() : qz.websocket.connect();
+      return conexion.then(function () {
+        var nombre = null;
+        try { nombre = localStorage.getItem('luitech-impresora-etiquetas'); } catch (e) {}
+        var config = qz.configs.create(nombre || null); // null = predeterminada de Windows
+        return qz.print(config, [{ type: 'raw', format: 'base64', data: base64 }]);
+      });
+    });
+  }
+
   // API pública (los onclick del HTML usan estas globales)
   window.LuitechAPI   = api;
   window.mostrarToast = mostrarToast;
   window.imprimirDocumento = imprimirDocumento;
   window.imprimirDocumentosEnSerie = imprimirDocumentosEnSerie;
+  window.LuitechQZ = { cargar: qzCargar, imprimirBruto: qzImprimirBruto };
   window.abrirExterno = abrirExterno;
   window.LUITECH_WA = WHATSAPP_LUITECH;
   window.LUITECH_WEB = SITIO_LUITECH;              // URL del sitio público

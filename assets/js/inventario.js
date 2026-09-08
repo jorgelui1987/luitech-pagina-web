@@ -388,6 +388,97 @@
     });
   }
 
+  /* --- Corte automático uno por uno: impresión directa ESC/POS por QZ Tray ---
+     Si el PC tiene QZ Tray, cada etiqueta se manda como imagen térmica nativa
+     + comando de CORTE, una por una (sin driver, sin diálogo de Chrome).
+     Si QZ no está instalado o no responde, se imprime como siempre por el
+     navegador (tira continua con línea punteada a tijera). */
+
+  /** Dibuja UNA etiqueta (nombre + código + precio) en un canvas de 576px de
+   *  ancho: los 76mm útiles del cabezal térmico a 8 puntos por milímetro. */
+  function etiquetaPintar(nombre, valor, precioTexto) {
+    var cv = document.createElement('canvas');
+    cv.width = 576; cv.height = 256; // ≈ 72mm × 32mm de puntos
+    var ctx = cv.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 576, 256);
+    ctx.fillStyle = '#000000'; ctx.textAlign = 'center';
+    ctx.font = 'bold 30px Arial, Helvetica, sans-serif';
+    ctx.fillText(nombre, 288, 40, 536);
+    var bc = document.createElement('canvas');
+    try {
+      window.JsBarcode(bc, valor, { format: 'auto', width: 2, height: 90, displayValue: true, fontSize: 24, margin: 0, background: '#ffffff', lineColor: '#000000' });
+    } catch (e) {
+      window.JsBarcode(bc, valor, { format: 'CODE128', width: 2, height: 90, displayValue: true, fontSize: 24, margin: 0, background: '#ffffff', lineColor: '#000000' });
+    }
+    ctx.drawImage(bc, Math.floor((576 - bc.width) / 2), 58);
+    if (precioTexto) {
+      ctx.font = 'bold 46px Arial, Helvetica, sans-serif';
+      ctx.fillText(precioTexto, 288, 238);
+    }
+    return cv;
+  }
+
+  /** Canvas → comandos ESC/POS: inicializar + imagen ráster (GS v 0: 1 bit
+   *  por punto, negro = 1, MSB primero) + avanzar 4 líneas + GS V 0 (CORTAR). */
+  function etiquetaCanvasAEscPos(cv) {
+    var ctx = cv.getContext('2d');
+    var ancho = cv.width, alto = cv.height;
+    var pix = ctx.getImageData(0, 0, ancho, alto).data;
+    var bytesFila = Math.ceil(ancho / 8);
+    var filas = [];
+    for (var y = 0; y < alto; y++) {
+      for (var xb = 0; xb < bytesFila; xb++) {
+        var b = 0;
+        for (var bit = 0; bit < 8; bit++) {
+          var x = xb * 8 + bit;
+          if (x < ancho) {
+            var idx = (y * ancho + x) * 4;
+            if (pix[idx] < 160 || pix[idx + 1] < 160 || pix[idx + 2] < 160) b |= (128 >> bit);
+          }
+        }
+        filas.push(b);
+      }
+    }
+    var bytes = [0x1b, 0x40];                                  // ESC @: inicializar
+    bytes = bytes.concat([0x1d, 0x76, 0x30, 0x00,              // GS v 0: imagen ráster
+      bytesFila & 255, (bytesFila >> 8) & 255, alto & 255, (alto >> 8) & 255], filas);
+    bytes = bytes.concat([0x1b, 0x64, 0x04]);                  // ESC d 4: avanzar
+    bytes = bytes.concat([0x1d, 0x56, 0x00]);                  // GS V 0: CORTAR
+    return bytes;
+  }
+
+  /** N etiquetas → un solo flujo de bytes → base64 (para QZ Tray). */
+  function etiquetasABase64(bytes, cantidad) {
+    var todo = [];
+    for (var i = 0; i < cantidad; i++) todo = todo.concat(bytes);
+    var binario = '';
+    for (var j = 0; j < todo.length; j += 8192) {
+      binario += String.fromCharCode.apply(null, todo.slice(j, j + 8192));
+    }
+    return btoa(binario);
+  }
+
+  /** Plan B garantizado: tira continua por el navegador (la de siempre). */
+  function imprimirTiraNavegador(nombre, urlImg, precioTexto, cantidad) {
+    var copias = '';
+    for (var i = 0; i < cantidad; i++) {
+      if (i > 0) copias += '<div class="corte"></div>'; // línea de corte entre etiquetas
+      copias += '<div class="etq"><p class="n">' + nombre + '</p>' +
+        '<img src="' + urlImg + '" alt="">' +
+        (precioTexto ? '<p class="p">' + precioTexto + '</p>' : '') +
+        '</div>';
+    }
+    var html = '<html><head><title>Etiquetas x' + cantidad + '</title><style>' +
+      '@page{size:80mm auto;margin:0}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000;width:76mm}' +
+      '.etq{width:76mm;padding:2mm 2mm 1mm;box-sizing:border-box;text-align:center;page-break-inside:avoid}' +
+      '.etq .n{margin:0 0 1mm;font-size:11px;font-weight:bold;white-space:nowrap;overflow:hidden}' +
+      '.etq img{height:14mm;max-width:70mm;display:block;margin:0 auto}' +
+      '.etq .p{margin:1mm 0 0;font-size:16px;font-weight:bold;line-height:1.15}' +
+      '.corte{border-top:1px dashed #000;margin:2mm 0}' +
+      '</style></head><body>' + copias + '</body></html>';
+    window.imprimirDocumento(html);
+  }
+
   /** Etiquetas para papel térmico adhesivo de 80mm: tira continua con todas
    *  las copias separadas por línea de corte punteada (SIN saltos de página,
    *  así no se va papel en blanco; se corta a tijera). Barcode EAN13 si son
@@ -411,30 +502,26 @@
       var svgTexto = new XMLSerializer().serializeToString(svg);
       var urlImg = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgTexto)));
       var nombre = String(p.nombre).replace(/[<>&]/g, '');
-      // Tira continua como la versión que funcionaba: TODAS las copias una
-      // tras otra en la misma página (alto automático, sin saltos) — así el
-      // driver alimenta exactamente el largo de las etiquetas, sin blanco.
-      // Entre cada una va la línea de corte punteada (a tijera).
-      var copias = '';
-      for (var i = 0; i < cantidad; i++) {
-        if (i > 0) copias += '<div class="corte"></div>'; // línea de corte entre etiquetas
-        copias += '<div class="etq"><p class="n">' + nombre + '</p>' +
-          '<img src="' + urlImg + '" alt="">' +
-          (parseInt(p.precio_venta, 10) > 0 ? '<p class="p">$' + fmt(p.precio_venta) + '</p>' : '') +
-          '</div>';
-      }
-      // Papel térmico de 80mm: página de alto automático, sin saltos de página.
-      var html = '<html><head><title>Etiquetas ' + p.codigo + ' x' + cantidad + '</title><style>' +
-        '@page{size:80mm auto;margin:0}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000;width:76mm}' +
-        '.etq{width:76mm;padding:2mm 2mm 1mm;box-sizing:border-box;text-align:center;page-break-inside:avoid}' +
-        '.etq .n{margin:0 0 1mm;font-size:11px;font-weight:bold;white-space:nowrap;overflow:hidden}' +
-        '.etq img{height:14mm;max-width:70mm;display:block;margin:0 auto}' +
-        '.etq .p{margin:1mm 0 0;font-size:16px;font-weight:bold;line-height:1.15}' +
-        '.corte{border-top:1px dashed #000;margin:2mm 0}' +
-        '</style></head><body>' + copias + '</body></html>';
-      // UN solo trabajo con todas las páginas: el driver corta al final de
-      // cada página (corte automático configurado por PÁGINA).
-      window.imprimirDocumento(html);
+      var precioTexto = parseInt(p.precio_venta, 10) > 0 ? '$' + fmt(p.precio_venta) : '';
+      // 1ª vía: QZ Tray → cada etiqueta se manda a la térmica con su comando
+      // de CORTE: salen las N de una vez y la cuchilla las separa una por una.
+      var viaQz = (window.LuitechQZ ? window.LuitechQZ.cargar() : Promise.reject(new Error('QZ Tray no está instalado en este PC')))
+        .then(function () {
+          var bytes = etiquetaCanvasAEscPos(etiquetaPintar(nombre, valor, precioTexto));
+          return window.LuitechQZ.imprimirBruto(etiquetasABase64(bytes, cantidad));
+        })
+        .then(function () {
+          window.mostrarToast('Etiquetas impresas con corte uno por uno ✓', 'success');
+          return true;
+        })
+        .catch(function (e) {
+          console.warn('Impresión directa (QZ Tray) no disponible:', e && e.message);
+          return false; // pasa al plan B
+        });
+      // 2ª vía (respaldo garantizado): tira continua por el navegador.
+      viaQz.then(function (viaDirecta) {
+        if (!viaDirecta) imprimirTiraNavegador(nombre, urlImg, precioTexto, cantidad);
+      });
     }).catch(function (e) {
       window.mostrarToast(e.message || 'No se pudo generar la etiqueta', 'error');
     });
