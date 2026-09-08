@@ -388,17 +388,13 @@
     });
   }
 
-  /** Etiquetas para papel térmico adhesivo de 80mm: UN solo trabajo de
-   *  impresión con TODAS las copias (un diálogo, como la tira de siempre).
-   *  Cada etiqueta es una PÁGINA de alto FIJO (32mm) con salto de página
-   *  entre copias: al ser la página del mismo alto que la etiqueta, Chrome
-   *  genera SIEMPRE una página por copia (no se pierde ninguna). Con el
-   *  driver configurado en "Corte de papel: Corte por PÁGINA", el autocorte
-   *  las separa una por una: 10 etiquetas = 10 páginas = 10 cortes. Los 4mm
-   *  de blanco al pie son la zona por donde pasa la cuchilla sin rozar el
-   *  código de barras. Barcode EAN13 si son 13 dígitos, Code 128 en los
-   *  demás casos. Sirve para los productos SIN código de fábrica: se pega
-   *  al producto/estante y el POS la lee. */
+  /** Etiquetas para papel térmico adhesivo de 80mm: tira continua con todas
+   *  las copias separadas por línea de corte punteada (SIN saltos de página,
+   *  así no se va papel en blanco; se corta a tijera). Barcode EAN13 si son
+   *  13 dígitos, Code 128 en los demás casos. Sirve para los productos SIN
+   *  código de fábrica: se pega al producto/estante y el POS la lee.
+   *  (VERSIÓN ORIGINAL RESTAURADA: es la que imprimía todas las etiquetas
+   *  seguidas y compactas, igual que "como antes".) */
   function imprimirEtiqueta(p) {
     var valor = String(p.barcode || p.codigo || '').trim();
     if (!valor) { window.mostrarToast('El producto no tiene código', 'error'); return; }
@@ -415,28 +411,26 @@
       var svgTexto = new XMLSerializer().serializeToString(svg);
       var urlImg = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgTexto)));
       var nombre = String(p.nombre).replace(/[<>&]/g, '');
-      // Una sola tira con TODAS las copias (un trabajo = un diálogo), cada
-      // una ocupando EXACTAMENTE una página de 80×32mm (alto fijo = alto de
-      // la etiqueta: el salto de página genera una página por copia SIEMPRE,
-      // no se pierde ninguna). El driver configurado como "Corte de papel:
-      // Corte por página" manda cortar al final de cada una → salen las N
-      // de una vez y el autocorte las separa una por una. El pie de 3mm de
-      // blanco es la zona por donde pasa la cuchilla sin rozar el barcode.
+      // Tira continua como la versión que funcionaba: TODAS las copias una
+      // tras otra en la misma página (alto automático, sin saltos) — así el
+      // driver alimenta exactamente el largo de las etiquetas, sin blanco.
+      // Entre cada una va la línea de corte punteada (a tijera).
       var copias = '';
       for (var i = 0; i < cantidad; i++) {
-        copias += '<div class="etq' + (i < cantidad - 1 ? ' salto' : '') + '"><p class="n">' + nombre + '</p>' +
+        if (i > 0) copias += '<div class="corte"></div>'; // línea de corte entre etiquetas
+        copias += '<div class="etq"><p class="n">' + nombre + '</p>' +
           '<img src="' + urlImg + '" alt="">' +
           (parseInt(p.precio_venta, 10) > 0 ? '<p class="p">$' + fmt(p.precio_venta) + '</p>' : '') +
           '</div>';
       }
+      // Papel térmico de 80mm: página de alto automático, sin saltos de página.
       var html = '<html><head><title>Etiquetas ' + p.codigo + ' x' + cantidad + '</title><style>' +
-        '@page{size:80mm 32mm;margin:0}' +
-        'body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000;width:76mm}' +
-        '.etq{width:76mm;height:32mm;padding:1mm 2mm 3mm;box-sizing:border-box;text-align:center;overflow:hidden}' +
-        '.etq .n{margin:0 0 0.5mm;font-size:11px;font-weight:bold;white-space:nowrap;overflow:hidden}' +
-        '.etq img{height:13mm;max-width:72mm;display:block;margin:0 auto}' +
-        '.etq .p{margin:0;font-size:15px;font-weight:bold;line-height:1.1}' +
-        '.salto{page-break-after:always}' +
+        '@page{size:80mm auto;margin:0}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000;width:76mm}' +
+        '.etq{width:76mm;padding:2mm 2mm 1mm;box-sizing:border-box;text-align:center;page-break-inside:avoid}' +
+        '.etq .n{margin:0 0 1mm;font-size:11px;font-weight:bold;white-space:nowrap;overflow:hidden}' +
+        '.etq img{height:14mm;max-width:70mm;display:block;margin:0 auto}' +
+        '.etq .p{margin:1mm 0 0;font-size:16px;font-weight:bold;line-height:1.15}' +
+        '.corte{border-top:1px dashed #000;margin:2mm 0}' +
         '</style></head><body>' + copias + '</body></html>';
       // UN solo trabajo con todas las páginas: el driver corta al final de
       // cada página (corte automático configurado por PÁGINA).

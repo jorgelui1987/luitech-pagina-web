@@ -2,7 +2,7 @@
    - Interfaz (páginas, CSS, JS, imágenes): red primero + caché de respaldo
    - API (/api/): SIEMPRE red — los datos del taller nunca se cachean
    Al publicar una actualización, sube la constante CACHE (ej: luitech-v2). */
-var CACHE = 'luitech-v41'; // v41: etiqueta compacta para sticker 80x32mm (zona de corte 3mm DENTRO del alto) — cabe completa en una página sin papel extra
+var CACHE = 'luitech-v42'; // v42: etiquetas restauradas a la versión ORIGINAL que funcionaba (tira continua compacta, todas las copias seguidas, línea de corte punteada a tijera)
 var NUCLEO = [
   'admin.html', 'pos.html', 'inventario.html', 'proveedores.html', 'cotizador.html',
   'clientes.html', 'tecnicos.html', 'finanzas.html', 'configuracion.html',
