@@ -1866,9 +1866,10 @@
       });
   }
 
-  /** QR (imagen) del link de seguimiento de una orden (código precargado). */
+  /** QR (imagen) del link de seguimiento de una orden (código precargado).
+   *  300px + margen blanco: el QR chico de 240px se veía borroso al agrandar. */
   function urlQrSeguimiento(codigo) {
-    return 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=' +
+    return 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=' +
            encodeURIComponent(window.LUITECH_URL_SEGUIMIENTO(codigo));
   }
 
@@ -1891,15 +1892,15 @@
       '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Comprobante ' + escapar(o.codigo) + '</title>' +
       '<style>' +
       '@page{size:80mm auto;margin:0}' +
-      'body{font-family:monospace;font-size:12px;line-height:1.25;padding:3mm 2mm;color:#000;width:74mm;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+      'body{font-family:monospace;font-size:12px;line-height:1.25;padding:3mm 2mm;color:#000;background:#fff;width:74mm;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
       'h1{text-align:center;margin:2px 0;font-size:14px}' +
-      'img.logo{width:46mm;margin:0 auto 3px;display:block}' +
+      'img.logo{width:40mm;max-height:20mm;object-fit:contain;margin:0 auto 3px;display:block;image-rendering:crisp-edges;filter:grayscale(1) contrast(1.6) brightness(1.05)}' +
       '.c{text-align:center}.d{border-top:1px dashed #000;margin:5px 0;padding:5px 0;border-bottom:1px dashed #000}' +
       'table{width:100%;border-collapse:collapse}th,td{padding:1px 0;font-size:11px;vertical-align:top;text-align:left;font-weight:normal}' +
       'th{width:34%}td{font-weight:bold}' +
       '.etq{font-size:9px;font-weight:bold;text-align:center;margin:0 0 3px}' +
       '.codigo{border:2px dashed #000;border-radius:4px;padding:4px 0;text-align:center;font-size:20px;font-weight:bold;letter-spacing:2px}' +
-      'img.qr{width:26mm;height:26mm;display:block;margin:5px auto 3px;background:#fff}' +
+      'img.qr{width:28mm;height:28mm;display:block;margin:5px auto 3px;background:#fff;image-rendering:crisp-edges;image-rendering:pixelated}' +
       '.n{font-size:9px;text-align:center;margin-top:6px}' +
       '</style></head><body>' +
       (empresaCfg && empresaCfg.empresa_logo
@@ -1959,16 +1960,16 @@
       '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Recibo ' + escapar(o.codigo) + '</title>' +
       '<style>' +
       '@page{size:80mm auto;margin:0}' +
-      'body{font-family:monospace;font-size:12px;line-height:1.25;padding:3mm 2mm;color:#000;width:74mm;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
-      'h1{text-align:center;margin:2px 0;font-size:14px}' +
-      'img.logo{width:46mm;margin:0 auto 3px;display:block}' +
-      '.c{text-align:center}.d{border-top:1px dashed #000;margin:5px 0;padding:5px 0;border-bottom:1px dashed #000}' +
-      'table{width:100%;border-collapse:collapse}th,td{padding:1px 0;font-size:11px;vertical-align:top;text-align:left;font-weight:normal}' +
+      'body{font-family:monospace;font-size:12.5px;line-height:1.3;padding:3mm 2mm;color:#000;background:#fff;width:74mm;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+      'h1{text-align:center;margin:2px 0;font-size:15px}' +
+      'img.logo{width:40mm;max-height:20mm;object-fit:contain;margin:0 auto 3px;display:block;image-rendering:crisp-edges;filter:grayscale(1) contrast(1.6) brightness(1.05)}' +
+      '.c{text-align:center;font-size:12px}.d{border-top:1px dashed #000;margin:5px 0;padding:5px 0;border-bottom:1px dashed #000}' +
+      'table{width:100%;border-collapse:collapse}th,td{padding:1px 0;font-size:11.5px;vertical-align:top;text-align:left;font-weight:normal}' +
       'th{width:38%}td{font-weight:bold}' +
-      '.t{font-size:13.5px;font-weight:bold;text-align:right;margin-top:4px}' +
+      '.t{font-size:15px;font-weight:bold;text-align:right;margin-top:4px}' +
       'img.f{max-height:14mm;display:block;margin:2px 0}' +
-      'img.q{width:24mm;height:24mm;display:block;margin:4px auto 0;background:#fff}' +
-      '.n{font-size:9px;text-align:center;margin-top:6px}' +
+      'img.q{width:28mm;height:28mm;display:block;margin:4px auto 0;background:#fff;image-rendering:crisp-edges;image-rendering:pixelated}' +
+      '.n{font-size:10px;text-align:center;margin-top:6px}' +
       '</style></head><body>' +
       (empresaCfg && empresaCfg.empresa_logo
         ? '<img class="logo" src="' + escapar(new URL(empresaCfg.empresa_logo, location.href).href) + '">'
