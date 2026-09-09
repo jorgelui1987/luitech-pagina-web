@@ -2,7 +2,7 @@
    - Interfaz (páginas, CSS, JS, imágenes): red primero + caché de respaldo
    - API (/api/): SIEMPRE red — los datos del taller nunca se cachean
    Al publicar una actualización, sube la constante CACHE (ej: luitech-v2). */
-var CACHE = 'luitech-v46'; // v46: corte reforzado — cada etiqueta termina con TRES comandos de corte alternativos (GS V 0 + ESC i + ESC m) para cubrir cualquier variante de firmware; sigue siendo un trabajo por etiqueta
+var CACHE = 'luitech-v47'; // v47: etiquetas 80mm NÍTIDAS — sin aplastar texto, umbral 128 por luminancia, barcode con zona silenciosa + CSS sin estirar, fuentes más grandes
 var NUCLEO = [
   'admin.html', 'pos.html', 'inventario.html', 'proveedores.html', 'cotizador.html',
   'clientes.html', 'tecnicos.html', 'finanzas.html', 'configuracion.html',

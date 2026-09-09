@@ -395,31 +395,51 @@
      navegador (tira continua con línea punteada a tijera). */
 
   /** Dibuja UNA etiqueta (nombre + código + precio) en un canvas de 576px de
-   *  ancho: los 76mm útiles del cabezal térmico a 8 puntos por milímetro. */
+   *  ancho: los 72mm útiles del cabezal térmico a 8 puntos por milímetro.
+   *  NITIDEZ: sin aplastar el texto (el maxWidth deformaba y difuminaba),
+   *  suavizado desactivado, código con zona silenciosa y precio separado. */
   function etiquetaPintar(nombre, valor, precioTexto) {
     var cv = document.createElement('canvas');
-    cv.width = 576; cv.height = 256; // ≈ 72mm × 32mm de puntos
+    cv.width = 576; cv.height = 320; // más aire: nada se toca ni se recorta
     var ctx = cv.getContext('2d');
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 576, 256);
-    ctx.fillStyle = '#000000'; ctx.textAlign = 'center';
-    ctx.font = 'bold 30px Arial, Helvetica, sans-serif';
-    ctx.fillText(nombre, 288, 40, 536);
+    ctx.imageSmoothingEnabled = false;
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 576, 320);
+    ctx.fillStyle = '#000000'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    // Nombre: se RECORTA con … en vez de aplastar (fillText con maxWidth borra).
+    var txt = String(nombre || '').trim() || ' ';
+    ctx.font = 'bold 32px Arial, Helvetica, sans-serif';
+    var maxAncho = 552;
+    while (txt.length > 1 && ctx.measureText(txt).width > maxAncho) txt = txt.slice(0, -1);
+    if (txt !== String(nombre || '').trim() && txt.length > 1) txt = txt.slice(0, -1) + '…';
+    ctx.fillText(txt, 288, 40);
+    // Barcode: se prueba ancho 2 y si no cabe se regenera en 1 (antes se
+    // recortaba por los bordes y salía corrido/borroso).
     var bc = document.createElement('canvas');
-    try {
-      window.JsBarcode(bc, valor, { format: 'auto', width: 2, height: 90, displayValue: true, fontSize: 24, margin: 0, background: '#ffffff', lineColor: '#000000' });
-    } catch (e) {
-      window.JsBarcode(bc, valor, { format: 'CODE128', width: 2, height: 90, displayValue: true, fontSize: 24, margin: 0, background: '#ffffff', lineColor: '#000000' });
+    function pintarBc(w) {
+      try {
+        window.JsBarcode(bc, valor, { format: 'auto', width: w, height: 100, displayValue: true, font: 'Arial', fontOptions: 'bold', fontSize: 26, margin: 0, background: '#ffffff', lineColor: '#000000' });
+      } catch (e) {
+        window.JsBarcode(bc, valor, { format: 'CODE128', width: w, height: 100, displayValue: true, font: 'Arial', fontOptions: 'bold', fontSize: 26, margin: 0, background: '#ffffff', lineColor: '#000000' });
+      }
     }
-    ctx.drawImage(bc, Math.floor((576 - bc.width) / 2), 58);
+    pintarBc(2);
+    if (bc.width > 560) pintarBc(1);
+    var bx = Math.max(8, Math.floor((576 - bc.width) / 2));
+    // Zona silenciosa: 8px blancos a cada lado para que el lector no falle.
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 50, 576, bc.height + 16);
+    ctx.drawImage(bc, bx, 58);
     if (precioTexto) {
-      ctx.font = 'bold 46px Arial, Helvetica, sans-serif';
-      ctx.fillText(precioTexto, 288, 238);
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 52px Arial, Helvetica, sans-serif';
+      ctx.fillText(precioTexto, 288, 300);
     }
     return cv;
   }
 
   /** Canvas → comandos ESC/POS: inicializar + imagen ráster (GS v 0: 1 bit
-   *  por punto, negro = 1, MSB primero) + avanzar 4 líneas + GS V 0 (CORTAR). */
+   *  por punto, negro = 1, MSB primero) + avanzar 4 líneas + GS V 0 (CORTAR).
+   *  NITIDEZ: umbral 128 (antes 160 engordaba los grises del suavizado y la
+   *  negrita salía corrida/borrosa); solo negro puro pasa a punto térmico. */
   function etiquetaCanvasAEscPos(cv) {
     var ctx = cv.getContext('2d');
     var ancho = cv.width, alto = cv.height;
@@ -433,7 +453,9 @@
           var x = xb * 8 + bit;
           if (x < ancho) {
             var idx = (y * ancho + x) * 4;
-            if (pix[idx] < 160 || pix[idx + 1] < 160 || pix[idx + 2] < 160) b |= (128 >> bit);
+            // Luminancia real (no basta un canal): gris >128 queda blanco.
+            var lum = (pix[idx] * 299 + pix[idx + 1] * 587 + pix[idx + 2] * 114) / 1000;
+            if (lum < 128) b |= (128 >> bit);
           }
         }
         filas.push(b);
@@ -465,7 +487,10 @@
     return btoa(binario);
   }
 
-  /** Plan B garantizado: tira continua por el navegador (la de siempre). */
+  /** Plan B garantizado: tira continua por el navegador (la de siempre).
+   *  NITIDEZ: barcode más alto y sin estirar (antes height:14mm deformaba el
+   *  SVG y salía gris), fuentes más grandes y render nítido. En el diálogo
+   *  de Chrome usar: Escala 100%, Márgenes Ninguno, sin encabezados. */
   function imprimirTiraNavegador(nombre, urlImg, precioTexto, cantidad) {
     var copias = '';
     for (var i = 0; i < cantidad; i++) {
@@ -476,11 +501,11 @@
         '</div>';
     }
     var html = '<html><head><title>Etiquetas x' + cantidad + '</title><style>' +
-      '@page{size:80mm auto;margin:0}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000;width:76mm}' +
-      '.etq{width:76mm;padding:2mm 2mm 1mm;box-sizing:border-box;text-align:center;page-break-inside:avoid}' +
-      '.etq .n{margin:0 0 1mm;font-size:11px;font-weight:bold;white-space:nowrap;overflow:hidden}' +
-      '.etq img{height:14mm;max-width:70mm;display:block;margin:0 auto}' +
-      '.etq .p{margin:1mm 0 0;font-size:16px;font-weight:bold;line-height:1.15}' +
+      '@page{size:80mm auto;margin:0}body{margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff;width:76mm;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+      '.etq{width:76mm;padding:2mm 2mm 1.5mm;box-sizing:border-box;text-align:center;page-break-inside:avoid;overflow:hidden}' +
+      '.etq .n{margin:0 0 1mm;font-size:15px;font-weight:900;white-space:nowrap;overflow:hidden;letter-spacing:0}' +
+      '.etq img{width:68mm;height:19mm;image-rendering:crisp-edges;image-rendering:pixelated;display:block;margin:0 auto}' +
+      '.etq .p{margin:1mm 0 0;font-size:22px;font-weight:900;line-height:1.1}' +
       '.corte{border-top:1px dashed #000;margin:2mm 0}' +
       '</style></head><body>' + copias + '</body></html>';
     window.imprimirDocumento(html);
@@ -502,9 +527,9 @@
     etiquetaCargarJsBarcode().then(function () {
       var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       try {
-        window.JsBarcode(svg, valor, { format: 'auto', width: 2, height: 46, displayValue: true, fontSize: 12, margin: 2, background: '#ffffff', lineColor: '#000000' });
+        window.JsBarcode(svg, valor, { format: 'auto', width: 3, height: 72, displayValue: true, font: 'Arial', fontOptions: 'bold', fontSize: 16, margin: 4, background: '#ffffff', lineColor: '#000000' });
       } catch (e) {
-        window.JsBarcode(svg, valor, { format: 'CODE128', width: 2, height: 46, displayValue: true, fontSize: 12, margin: 2, background: '#ffffff', lineColor: '#000000' });
+        window.JsBarcode(svg, valor, { format: 'CODE128', width: 3, height: 72, displayValue: true, font: 'Arial', fontOptions: 'bold', fontSize: 16, margin: 4, background: '#ffffff', lineColor: '#000000' });
       }
       var svgTexto = new XMLSerializer().serializeToString(svg);
       var urlImg = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgTexto)));
