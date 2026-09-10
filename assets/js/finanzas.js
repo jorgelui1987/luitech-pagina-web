@@ -490,12 +490,18 @@
       renderGastos();
 
       var r = res.resumen || {};
-      $('rep-ingresos').textContent = fmt(r.ingresos_ventas || 0);
-      $('rep-gastos').textContent = fmt(r.gastos || 0);
-      var resultado = parseInt(r.resultado, 10);
+      // Compat: los IDs rep-ingresos/rep-gastos/rep-resultado/rep-cat ya no
+      // existen en el HTML (se reemplazaron por utilidad-box). Se pintan solo
+      // si existen para no romper el resto del reporte.
+      var setT0 = function (id, v) { var e = $(id); if (e) e.textContent = v; };
+      setT0('rep-ingresos', fmt(r.ingresos_ventas || 0));
+      setT0('rep-gastos', fmt(r.gastos || 0));
+      var resultado = parseInt(r.resultado, 10) || 0;
       var el = $('rep-resultado');
-      el.textContent = '$' + fmt(resultado);
-      el.className = 'text-3xl font-black mt-1 ' + (resultado >= 0 ? 'text-emerald-400' : 'text-red-400');
+      if (el) {
+        el.textContent = '$' + fmt(resultado);
+        el.className = 'text-3xl font-black mt-1 ' + (resultado >= 0 ? 'text-emerald-400' : 'text-red-400');
+      }
 
       // Utilidad real del negocio: taller + POS − gastos − comisiones − repuestos
       var ingT = parseInt(r.ingresos_taller, 10) || 0;
@@ -517,7 +523,9 @@
         ? 'pendiente pagar $' + fmt(r.comisiones_pendientes || 0) + ' a técnicos'
         : 'ingresos $' + fmt((parseInt(r.ingresos_totales, 10) || 0)) + ' − egresos $' + fmt(egrT));
 
-      var ulCat = $('rep-cat'); ulCat.replaceChildren();
+      var ulCat = $('rep-cat');
+      if (ulCat) {
+      ulCat.replaceChildren();
       var cats = (r.gastos_por_categoria || []);
       if (!cats.length) {
         ulCat.appendChild(Object.assign(document.createElement('li'), { textContent: '—', className: 'text-slate-500' }));
@@ -530,6 +538,7 @@
         li.appendChild(n); li.appendChild(vv);
         ulCat.appendChild(li);
       });
+      }
     }).catch(function () {});
   }
 
