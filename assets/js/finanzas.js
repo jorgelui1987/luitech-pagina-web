@@ -408,7 +408,19 @@
   /** Imprime el reporte del mes (tícket 80mm / PDF desde el diálogo). */
   function imprimirReporte() {
     var r = ultimoResumen || {};
-    var filas = '<tr><td><b>Ingresos (ventas POS)</b></td><td align="right"><b>$' + fmt(r.ingresos_ventas || 0) + '</b></td></tr>';
+    var filas = '<tr><td><b>Ingresos taller (' + (parseInt(r.ordenes_cobradas, 10) || 0) + ' órdenes)</b></td><td align="right"><b>$' + fmt(r.ingresos_taller || 0) + '</b></td></tr>';
+    filas += '<tr><td>Ventas POS</td><td align="right">$' + fmt(r.ingresos_ventas || 0) + '</td></tr>';
+    filas += '<tr><td><b>INGRESOS TOTALES</b></td><td align="right"><b>$' + fmt(r.ingresos_totales || 0) + '</b></td></tr>';
+    filas += '<tr><td>Gastos negocio</td><td align="right">$' + fmt(r.gastos || 0) + '</td></tr>';
+    filas += '<tr><td>Comisiones pagadas (' + (parseInt(r.comisiones_n, 10) || 0) + ')</td><td align="right">$' + fmt(r.comisiones_pagadas || 0) + '</td></tr>';
+    filas += '<tr><td>Costo repuestos</td><td align="right">$' + fmt(r.costo_repuestos || 0) + '</td></tr>';
+    filas += '<tr><td><b>EGRESOS TOTALES</b></td><td align="right"><b>$' + fmt(r.egresos_totales || 0) + '</b></td></tr>';
+    var util = parseInt(r.utilidad, 10) || 0;
+    filas += '<tr><td style="border-top:1px dashed #000"><b>UTILIDAD DEL MES</b></td>' +
+             '<td align="right" style="border-top:1px dashed #000"><b>' + (util < 0 ? '-$' + fmt(Math.abs(util)) : '$' + fmt(util)) + '</b></td></tr>';
+    if ((parseInt(r.comisiones_pendientes, 10) || 0) > 0) {
+      filas += '<tr><td>Pendiente pagar técnicos</td><td align="right">$' + fmt(r.comisiones_pendientes || 0) + '</td></tr>';
+    }
     var cats = r.gastos_por_categoria || [];
     if (!cats.length) {
       filas += '<tr><td>Sin gastos categorizados</td><td align="right">$0</td></tr>';
@@ -416,10 +428,7 @@
     cats.forEach(function (cat) {
       filas += '<tr><td>' + esc(cat.categoria) + '</td><td align="right">$' + fmt(cat.total) + '</td></tr>';
     });
-    filas += '<tr><td><b>TOTAL GASTOS</b></td><td align="right"><b>$' + fmt(r.gastos || 0) + '</b></td></tr>';
-    var resultado = parseInt(r.resultado, 10) || 0;
-    filas += '<tr><td style="border-top:1px dashed #000"><b>RESULTADO DEL MES</b></td>' +
-             '<td align="right" style="border-top:1px dashed #000"><b>' + (resultado < 0 ? '-$' + fmt(Math.abs(resultado)) : '$' + fmt(resultado)) + '</b></td></tr>';
+    filas += '<tr><td>Detalle gastos negocio</td><td align="right"></td></tr>';
 
     api('api/configuracion.php?action=get_all').then(function (cfgRes) {
       var cfg = (cfgRes && cfgRes.config) ? cfgRes.config : {};
@@ -487,6 +496,26 @@
       var el = $('rep-resultado');
       el.textContent = '$' + fmt(resultado);
       el.className = 'text-3xl font-black mt-1 ' + (resultado >= 0 ? 'text-emerald-400' : 'text-red-400');
+
+      // Utilidad real del negocio: taller + POS − gastos − comisiones − repuestos
+      var ingT = parseInt(r.ingresos_taller, 10) || 0;
+      var ingP = parseInt(r.ingresos_ventas, 10) || 0;
+      var egrT = parseInt(r.egresos_totales, 10) || 0;
+      var util = parseInt(r.utilidad, 10) || 0;
+      var setT = function (id, v) { var e = $(id); if (e) e.textContent = v; };
+      setT('rep-ing-taller', '$' + fmt(ingT));
+      setT('rep-ing-pos', '$' + fmt(ingP));
+      setT('rep-egr', '$' + fmt(egrT));
+      var elU = $('rep-utilidad');
+      if (elU) {
+        elU.textContent = (util < 0 ? '-$' : '$') + fmt(Math.abs(util));
+        elU.className = 'text-2xl font-black mt-1 ' + (util >= 0 ? 'text-emerald-400' : 'text-red-400');
+      }
+      setT('rep-ing-taller-sub', (parseInt(r.ordenes_cobradas, 10) || 0) + ' órdenes cobradas');
+      setT('rep-egr-sub', 'gastos $' + fmt(r.gastos || 0) + ' + comis. $' + fmt(r.comisiones_pagadas || 0) + ' + reptos. $' + fmt(r.costo_repuestos || 0));
+      setT('rep-utilidad-sub', (parseInt(r.comisiones_pendientes, 10) || 0) > 0
+        ? 'pendiente pagar $' + fmt(r.comisiones_pendientes || 0) + ' a técnicos'
+        : 'ingresos $' + fmt((parseInt(r.ingresos_totales, 10) || 0)) + ' − egresos $' + fmt(egrT));
 
       var ulCat = $('rep-cat'); ulCat.replaceChildren();
       var cats = (r.gastos_por_categoria || []);

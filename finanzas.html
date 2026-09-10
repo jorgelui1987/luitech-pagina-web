@@ -137,6 +137,31 @@
                     <button type="button" id="mes-next" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">&rsaquo;</button>
                 </div>
             </div>
+            <!-- Utilidad real: taller + POS - gastos - comisiones - repuestos -->
+            <div id="utilidad-box" class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3">
+                    <p class="text-[10px] uppercase tracking-wider text-slate-500 font-bold"><i class="fa-solid fa-arrow-up text-emerald-400 mr-1"></i>Ingresos taller</p>
+                    <p id="rep-ing-taller" class="text-xl font-black text-emerald-400 mt-1">$0</p>
+                    <p id="rep-ing-taller-sub" class="text-[10px] text-slate-500 mt-0.5">0 órdenes cobradas</p>
+                </div>
+                <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3">
+                    <p class="text-[10px] uppercase tracking-wider text-slate-500 font-bold"><i class="fa-solid fa-cash-register text-cyan-400 mr-1"></i>Ventas POS</p>
+                    <p id="rep-ing-pos" class="text-xl font-black text-cyan-300 mt-1">$0</p>
+                    <p class="text-[10px] text-slate-500 mt-0.5">mostrador del mes</p>
+                </div>
+                <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3">
+                    <p class="text-[10px] uppercase tracking-wider text-slate-500 font-bold"><i class="fa-solid fa-arrow-down text-red-400 mr-1"></i>Egresos totales</p>
+                    <p id="rep-egr" class="text-xl font-black text-red-400 mt-1">$0</p>
+                    <p id="rep-egr-sub" class="text-[10px] text-slate-500 mt-0.5">—</p>
+                </div>
+                <div class="bg-slate-900/80 border border-emerald-800 rounded-xl p-3">
+                    <p class="text-[10px] uppercase tracking-wider text-slate-500 font-bold"><i class="fa-solid fa-wallet text-emerald-400 mr-1"></i>Utilidad del mes</p>
+                    <p id="rep-utilidad" class="text-2xl font-black text-emerald-400 mt-1">$0</p>
+                    <p id="rep-utilidad-sub" class="text-[10px] text-slate-500 mt-0.5">ingresos − egresos</p>
+                </div>
+            </div>
+
+        </section>
 
         <!-- ============ GASTOS DEL NEGOCIO (acordeón) ============ -->
         <section class="bg-slate-950 border border-slate-800 rounded-2xl p-5">
