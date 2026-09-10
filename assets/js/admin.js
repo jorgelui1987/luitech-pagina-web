@@ -1969,7 +1969,7 @@
       '.t{font-size:15px;font-weight:bold;text-align:right;margin-top:4px}' +
       'img.f{max-height:14mm;display:block;margin:2px 0}' +
       'img.q{width:28mm;height:28mm;display:block;margin:4px auto 0;background:#fff;image-rendering:crisp-edges;image-rendering:pixelated}' +
-      '.n{font-size:10px;text-align:center;margin-top:6px}' +
+      '.n{font-size:10px;text-align:center;margin-top:6px;word-wrap:break-word;overflow-wrap:break-word;white-space:pre-line}' +
       '</style></head><body>' +
       (empresaCfg && empresaCfg.empresa_logo
         ? '<img class="logo" src="' + escapar(new URL(empresaCfg.empresa_logo, location.href).href) + '">'

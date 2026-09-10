@@ -615,12 +615,20 @@ function preparar_configuraciones(): void
     try {
         db()->exec("CREATE TABLE IF NOT EXISTS configuraciones (
             clave          VARCHAR(50)  PRIMARY KEY,
-            valor          VARCHAR(100) NOT NULL,
+            valor          TEXT NOT NULL,
             actualizado_en TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
                            ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         db()->prepare("INSERT IGNORE INTO configuraciones (clave, valor) VALUES ('iva_porcentaje', '19'), ('zona_horaria', 'America/Santiago')")
             ->execute();
+        // Auto-reparación: BD ya creadas con valor VARCHAR(100) -> TEXT
+        // (permite terminos_texto de 1000 caracteres sin perder lo guardado).
+        try {
+            $colCfg = db()->query("SHOW COLUMNS FROM configuraciones LIKE 'valor'")->fetch(PDO::FETCH_ASSOC);
+            if ($colCfg && stripos((string)($colCfg['Type'] ?? ''), 'text') === false) {
+                db()->exec("ALTER TABLE configuraciones MODIFY COLUMN valor TEXT NOT NULL");
+            }
+        } catch (Exception $e2) { /* no interrumpe la petición */ }
     } catch (Exception $e) { /* si la BD no responde, las APIs darán su propio error */ }
 }
 

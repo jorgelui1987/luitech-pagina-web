@@ -319,14 +319,23 @@ $pdo->exec("
 ");
 
 // --- Configuraciones globales (ej: tasa de IVA editable) ------------------
+// valor es TEXT: guarda textos largos como terminos_texto (1000 caracteres).
 $pdo->exec("
     CREATE TABLE IF NOT EXISTS configuraciones (
         clave          VARCHAR(50)  PRIMARY KEY,
-        valor          VARCHAR(100) NOT NULL,
+        valor          TEXT NOT NULL,
         actualizado_en TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
                        ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 ");
+// Auto-reparación: BD ya creadas con valor VARCHAR(100) -> TEXT sin perder datos.
+try {
+    $colCfg = $pdo->query("SHOW COLUMNS FROM configuraciones LIKE 'valor'")->fetch(PDO::FETCH_ASSOC);
+    if ($colCfg && stripos((string)($colCfg['Type'] ?? ''), 'text') === false) {
+        $pdo->exec("ALTER TABLE configuraciones MODIFY COLUMN valor TEXT NOT NULL");
+        echo "[migrate] configuraciones.valor ampliado a TEXT (1000 caracteres)\n";
+    }
+} catch (Throwable $e) { /* tabla aún no creada: la crea el bloque anterior */ }
 $pdo->prepare("INSERT IGNORE INTO configuraciones (clave, valor) VALUES ('iva_porcentaje', '19')")
     ->execute();
 

@@ -40,6 +40,10 @@
           return;
         }
         el.value = cfg[clave];
+        if (clave === 'terminos_texto') {
+          var tc = $('cfg-terminos-count');
+          if (tc) tc.textContent = String((cfg[clave] || '').length);
+        }
       });
       actualizarEnlaceTV(); // el enlace de la TV se arma con la clave cargada
       if (cfg.empresa_logo) {
@@ -395,6 +399,21 @@
     $('cfg-btn-term').addEventListener('click', function () {
       guardarSeccion({ terminos_texto: 'cfg-terminos_texto' }, 'cfg-btn-term');
     });
+    // Contador 0/1000 + aviso si supera 1000 (el servidor valida max 1000).
+    var termEl = $('cfg-terminos_texto'), termCount = $('cfg-terminos-count');
+    if (termEl) {
+      var actualizarTerm = function () {
+        if (termCount) termCount.textContent = String(termEl.value.length);
+        if (termEl.value.length > 1000) {
+          termEl.value = termEl.value.slice(0, 1000);
+          if (termCount) termCount.textContent = '1000';
+        }
+      };
+      termEl.addEventListener('input', actualizarTerm);
+      // Refresca el contador cuando se carga la config guardada
+      setTimeout(actualizarTerm, 800);
+      termEl.addEventListener('change', actualizarTerm);
+    }
     $('cfg-btn-tv').addEventListener('click', function () {
       guardarSeccion({ tv_clave: 'cfg-tv_clave' }, 'cfg-btn-tv');
     });

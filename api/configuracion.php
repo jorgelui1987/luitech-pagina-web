@@ -49,7 +49,7 @@ const CONFIG_CLAVES = [
     'moneda_simbolo'        => ['max' => 5],
     'zona_horaria'          => ['tz' => true],
     'garantia_dias_default' => ['int' => [0, 365]],
-    'terminos_texto'        => ['max' => 500],
+    'terminos_texto'        => ['max' => 1000],
     'iva_porcentaje'        => ['int' => [0, 100]],
     'dte_habilitado'        => ['flag' => true],
     'dte_proveedor'         => ['max' => 60],
