@@ -2,7 +2,7 @@
    - Interfaz (páginas, CSS, JS, imágenes): red primero + caché de respaldo
    - API (/api/): SIEMPRE red — los datos del taller nunca se cachean
    Al publicar una actualización, sube la constante CACHE (ej: luitech-v2). */
-var CACHE = 'luitech-v48'; // v48: recibo/comprobante 80mm NÍTIDOS — logo con contraste+grises, QR 300px con margen, fuentes más grandes, fondo blanco forzado
+var CACHE = 'luitech-v49'; // v49: freno anti-olvido — no se puede cobrar reparación con caja abierta de un día anterior
 var NUCLEO = [
   'admin.html', 'pos.html', 'inventario.html', 'proveedores.html', 'cotizador.html',
   'clientes.html', 'tecnicos.html', 'finanzas.html', 'configuracion.html',

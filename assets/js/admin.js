@@ -1480,7 +1480,14 @@
 
     var boton = cobrarTodo ? $('mo-btn-cobro-total') : $('mo-btn-cobro');
     boton.disabled = true;
-    api('api/ordenes.php?action=update', { method: 'POST', body: cuerpo })
+    // Chequeo previo de caja vieja: avisa ANTES de guardar (el servidor igual bloquea).
+    api('api/caja.php?action=estado').then(function (caja) {
+      if (caja && caja.ok && caja.abierta && (caja.sesion.dias_abierta || 0) >= 1) {
+        boton.disabled = false;
+        window.mostrarToast('No se puede registrar el pago: la caja está abierta desde el ' + (caja.sesion.abierta_dia || '') + ' sin arquear. Ciérrala en Finanzas → Caja y abre la de hoy.', 'error');
+        return;
+      }
+      api('api/ordenes.php?action=update', { method: 'POST', body: cuerpo })
       .then(function (res) {
         boton.disabled = false;
         if (!res.ok) { window.mostrarToast(res.error || 'No se pudo registrar el cobro', 'error'); return; }
@@ -1505,6 +1512,10 @@
         boton.disabled = false;
         window.mostrarToast('Error de conexión con el servidor', 'error');
       });
+    }).catch(function () {
+      boton.disabled = false;
+      window.mostrarToast('No se pudo verificar la caja: revisa tu conexión', 'error');
+    });
   }
 
   function cargarFotosOrden(codigo) {
