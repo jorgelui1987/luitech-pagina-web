@@ -86,6 +86,20 @@ switch ($action) {
         $ordenCod   = strtoupper(trim((string)($d['orden_codigo'] ?? '')));
         $ordenFinal = preg_match('/^LUH-\d{3,8}(-[A-Z0-9]{4})?$/', $ordenCod) ? $ordenCod : null;
 
+        // Freno anti-olvido (igual que en cobros del taller): no vender si la
+        // caja quedó abierta de un día anterior. Sin esto la venta de hoy cae
+        // en la sesión vieja y "no sale el registro de hoy".
+        // Se exige cerrar + abrir la caja de hoy.
+        try {
+            $cajaSt = db()->query("SELECT id, apertura_ts, DATEDIFF(NOW(), apertura_ts) AS dias, DATE_FORMAT(apertura_ts, '%d-%m-%Y') AS dia FROM caja_sesiones WHERE estado='Abierta' ORDER BY id DESC LIMIT 1")->fetch();
+            if (is_array($cajaSt) && isset($cajaSt['dias'])) {
+                $diasCaja = max(0, (int)$cajaSt['dias']);
+                if ($diasCaja >= 1) {
+                    $diaCaja = (string)($cajaSt['dia'] ?? '');
+                    responder(['ok' => false, 'error' => 'No se puede vender: la caja está abierta desde el ' . $diaCaja . ' (' . $diasCaja . ' ' . ($diasCaja === 1 ? 'día' : 'días') . ') sin arquear. Ciérrala y cuádrala en Finanzas → Caja y abre la caja de hoy, luego vuelve a vender. La venta NO se guardó.'], 409);
+                }
+            }
+        } catch (Throwable $e) { }
         $pdo = db();
         $pdo->beginTransaction();
         try {

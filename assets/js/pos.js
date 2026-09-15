@@ -38,6 +38,7 @@
     cargarProductos();
     cargarResumenDia();
     cargarConfig();
+    avisoCaja();
   }
 
   /* --------------------------------------------------------- CATÁLOGO */
@@ -186,7 +187,7 @@
 
   /** Envía el total del carrito al terminal Point; al aprobarse registra
    *  la venta con medio "Mercado Pago" e imprime la boleta automáticamente. */
-  function cobrarConPoint() {
+  function cobrarConPointReal() {
     if (!carrito.length) return;
     var total = totalCarrito();
     esperandoPoint = true;
@@ -211,7 +212,7 @@
                 detenerEsperaPoint('✓ ¡Pago aprobado en el Point!', '#34d399');
                 window.mostrarToast('¡Pago con Point aprobado!', 'success');
                 $('venta-pago').value = 'Mercado Pago';
-                cobrar(); // registra la venta e imprime la boleta
+                cobrarReal(); // registra la venta e imprime la boleta
                 return;
               }
               if (r.estado === 'rejected' || r.estado === 'error') {
@@ -301,6 +302,38 @@
     $('pos-desglose').classList.remove('hidden');
   }
 
+  /* --------------------------------------- AVISO CAJA SIN ARQUEAR */
+  /** Aviso anti-olvido: caja abierta desde un día anterior sin arquear. */
+  function avisoCaja() {
+    api('api/caja.php?action=estado').then(function (res) {
+      var el = $('aviso-caja');
+      if (!el) return;
+      if (res.ok && res.abierta && (res.sesion.dias_abierta || 0) >= 1) {
+        el.textContent = '⚠️ ' + (res.aviso || ('Caja abierta desde el ' + (res.sesion.abierta_dia || '') + ' sin arquear. Ciérrala en Finanzas y abre la de hoy: el POS no puede vender hasta hacerlo.'));
+        el.classList.remove('hidden');
+      } else {
+        el.classList.add('hidden');
+      }
+    }).catch(function () {});
+  }
+
+  /** Freno anti-olvido: verifica caja vieja antes de vender/Point.
+   *  Llama a seguir() solo si se puede vender. */
+  function conCajaAlDia(seguir) {
+    api('api/caja.php?action=estado').then(function (caja) {
+      if (caja && caja.ok && caja.abierta && (caja.sesion.dias_abierta || 0) >= 1) {
+        window.mostrarToast('No se puede vender: la caja está abierta desde el ' + (caja.sesion.abierta_dia || '') + ' sin arquear. Ciérrala en Finanzas y abre la de hoy.', 'error');
+        var b = $('btn-cobrar'); if (b) b.disabled = !carrito.length;
+        var p = $('btn-point'); if (p && !esperandoPoint) p.disabled = !carrito.length;
+        return;
+      }
+      seguir();
+    }).catch(function () {
+      window.mostrarToast('No se pudo verificar la caja: revisa tu conexión', 'error');
+      var b2 = $('btn-cobrar'); if (b2) b2.disabled = !carrito.length;
+    });
+  }
+
   /* ----------------------------------------------------- RESUMEN DEL DÍA */
   function cargarResumenDia() {
     api('api/ventas.php?action=resumen_dia').then(function (res) {
@@ -309,7 +342,7 @@
   }
 
   /* ------------------------------------------------------------ COBRAR */
-  function cobrar() {
+  function cobrarReal() {
     if (!carrito.length) return;
     var boton = $('btn-cobrar');
     boton.disabled = true;
@@ -348,6 +381,12 @@
       window.mostrarToast('Error de conexión con el servidor', 'error');
       boton.disabled = false;
     });
+  }
+
+  /** Entrada del boton COBRAR: primero freno anti-olvido, luego venta real. */
+  function cobrar() {
+    if (!carrito.length) return;
+    conCajaAlDia(cobrarReal);
   }
 
   /** Abre ventana de impresión con la boleta estilo ticket 80mm. */
@@ -442,7 +481,8 @@
         detenerEsperaPoint('Espera cancelada. Si el terminal sigue mostrando el cobro, cancélalo allí.', '#fbbf24');
         return;
       }
-      cobrarConPoint();
+      // El Point tambien respeta el freno: se verifica ANTES de enviar al terminal.
+      conCajaAlDia(cobrarConPointReal);
     });
 
     api('api/auth.php?action=me').then(function (res) {
