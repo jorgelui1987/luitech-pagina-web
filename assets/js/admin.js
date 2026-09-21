@@ -182,12 +182,24 @@
   /** Diálogo para marcar una orden "Sin reparación" con motivo + mensaje público. */
   function pedirSinReparacion(codigo, actual, select) {
     var motivo = window.prompt(
-      'Motivo de SIN REPARACIÓN (elige número):\n' +
+      'Motivo de SIN REPARACIÓN:\n' +
       MOTIVOS_SIN_REPARACION.map(function (m, i) { return (i + 1) + '. ' + m; }).join('\n') +
-      '\n\nEscribe el número (1-' + MOTIVOS_SIN_REPARACION.length + '):', '3');
+      '\n\nEscribe el NÚMERO (1-' + MOTIVOS_SIN_REPARACION.length + ') o el texto del motivo:', '3');
     if (motivo === null) { select.value = actual; return; } // canceló
+    motivo = motivo.trim();
+    // Acepta número ("3"), texto exacto ("Falla de placa irreparable") o
+    // coincidencia parcial ("placa") para no bloquear por cómo lo escriba.
     var idx = parseInt(motivo, 10) - 1;
     if (isNaN(idx) || idx < 0 || idx >= MOTIVOS_SIN_REPARACION.length) {
+      var bajo = motivo.toLowerCase();
+      idx = -1;
+      MOTIVOS_SIN_REPARACION.forEach(function (m, i) {
+        if (idx !== -1) return;
+        var ml = m.toLowerCase();
+        if (ml === bajo || ml.indexOf(bajo) !== -1 || (bajo !== '' && bajo.length > 3 && ml.indexOf(bajo.slice(0, 6)) !== -1)) idx = i;
+      });
+    }
+    if (idx < 0 || idx >= MOTIVOS_SIN_REPARACION.length) {
       window.mostrarToast('Motivo inválido, no se cambió el estado', 'error');
       select.value = actual;
       return;
