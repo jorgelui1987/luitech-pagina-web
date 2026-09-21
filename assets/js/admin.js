@@ -187,19 +187,23 @@
       '\n\nEscribe el NÚMERO (1-' + MOTIVOS_SIN_REPARACION.length + ') o el texto del motivo:', '3');
     if (motivo === null) { select.value = actual; return; } // canceló
     motivo = motivo.trim();
-    // Acepta número ("3"), texto exacto ("Falla de placa irreparable") o
-    // coincidencia parcial ("placa") para no bloquear por cómo lo escriba.
+    // Acepta número ("3"), texto de la lista o MOTIVO LIBRE escrito por ti
+    // (ej: "por el momento no hay actualización para frp").
     var idx = parseInt(motivo, 10) - 1;
-    if (isNaN(idx) || idx < 0 || idx >= MOTIVOS_SIN_REPARACION.length) {
+    var motivoFinal = '';
+    if (!isNaN(idx) && idx >= 0 && idx < MOTIVOS_SIN_REPARACION.length) {
+      motivoFinal = MOTIVOS_SIN_REPARACION[idx];
+    } else if (motivo !== '') {
       var bajo = motivo.toLowerCase();
       idx = -1;
       MOTIVOS_SIN_REPARACION.forEach(function (m, i) {
         if (idx !== -1) return;
-        var ml = m.toLowerCase();
-        if (ml === bajo || ml.indexOf(bajo) !== -1 || (bajo !== '' && bajo.length > 3 && ml.indexOf(bajo.slice(0, 6)) !== -1)) idx = i;
+        if (m.toLowerCase() === bajo) idx = i;
       });
+      // Coincide con la lista → usa el texto oficial; si no, usa tu texto tal cual.
+      motivoFinal = (idx !== -1 ? MOTIVOS_SIN_REPARACION[idx] : motivo).slice(0, 120);
     }
-    if (idx < 0 || idx >= MOTIVOS_SIN_REPARACION.length) {
+    if (motivoFinal === '') {
       window.mostrarToast('Motivo inválido, no se cambió el estado', 'error');
       select.value = actual;
       return;
@@ -211,7 +215,7 @@
     mensaje = mensaje.trim().slice(0, 280);
     actualizarOrden({
       codigo: codigo, estado: 'Sin reparación',
-      motivo_sin_reparacion: MOTIVOS_SIN_REPARACION[idx], mensaje_publico: mensaje
+      motivo_sin_reparacion: motivoFinal, mensaje_publico: mensaje
     });
   }
 

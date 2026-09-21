@@ -425,10 +425,9 @@ switch ($action) {
             // sin WhatsApp lee al consultar su código. Si el estado deja de ser
             // 'Sin reparación', se limpian para no mostrar info vieja.
             if ($d['estado'] === 'Sin reparación') {
+                // Motivo libre: puede ser uno de la lista o texto propio del técnico
+                // (ej: "por el momento no hay actualización para frp").
                 $motivo = campo_texto($d, 'motivo_sin_reparacion', 120);
-                if ($motivo !== null && $motivo !== '' && !in_array($motivo, MOTIVOS_SIN_REPARACION, true)) {
-                    responder(['ok' => false, 'error' => 'Motivo inválido'], 400);
-                }
                 $set[]    = 'motivo_sin_reparacion = ?';
                 $params[] = ($motivo !== null && $motivo !== '') ? $motivo : null;
                 $mensaje = campo_texto($d, 'mensaje_publico', 280);
