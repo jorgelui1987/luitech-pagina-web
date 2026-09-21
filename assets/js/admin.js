@@ -24,14 +24,18 @@
     if (!logueado) { document.body.classList.remove('rol-tecnico'); $('usuario').focus(); }
   }
 
-  /** Aviso anti-olvido: caja abierta desde un día anterior sin arquear.
-   *  Sirve para dueño y encargado por igual; el servidor ya calcula los días. */
+  /** Aviso de caja: cerrada o abierta de otro día (en ambos casos no se
+   *  puede cobrar hasta abrir la de hoy). */
   function avisoCaja() {
     api('api/caja.php?action=estado').then(function (res) {
       var el = $('aviso-caja');
       if (!el) return;
-      if (res.ok && res.abierta && (res.sesion.dias_abierta || 0) >= 1) {
-        el.textContent = '⚠️ ' + (res.aviso || ('Caja abierta desde el ' + (res.sesion.abierta_dia || '') + ' sin arquear.'));
+      if (!res.ok) return;
+      if (!res.abierta) {
+        el.textContent = '⚠️ Caja cerrada: abre la caja primero y después sigue con el cobro.';
+        el.classList.remove('hidden');
+      } else if (res.ok && res.abierta && (res.sesion.dias_abierta || 0) >= 1) {
+        el.textContent = '⚠️ ' + (res.aviso || ('Caja abierta desde el ' + (res.sesion.abierta_dia || '') + ' sin cerrar. Ciérrala en Finanzas → Caja, abre la de hoy y después sigue con el cobro.'));
         el.classList.remove('hidden');
       } else {
         el.textContent = '';
@@ -1539,11 +1543,17 @@
 
     var boton = cobrarTodo ? $('mo-btn-cobro-total') : $('mo-btn-cobro');
     boton.disabled = true;
-    // Chequeo previo de caja vieja: avisa ANTES de guardar (el servidor igual bloquea).
+    // Candado de caja: avisa ANTES de guardar (el servidor igual bloquea).
+    // Sin caja de hoy no se cobra: abrir primero / cerrar la vieja + abrir hoy.
     api('api/caja.php?action=estado').then(function (caja) {
+      if (caja && caja.ok && !caja.abierta) {
+        boton.disabled = false;
+        window.mostrarToast('Caja cerrada: abre la caja primero y después sigue con el cobro.', 'error');
+        return;
+      }
       if (caja && caja.ok && caja.abierta && (caja.sesion.dias_abierta || 0) >= 1) {
         boton.disabled = false;
-        window.mostrarToast('No se puede registrar el pago: la caja está abierta desde el ' + (caja.sesion.abierta_dia || '') + ' sin arquear. Ciérrala en Finanzas → Caja y abre la de hoy.', 'error');
+        window.mostrarToast('Caja abierta del ' + (caja.sesion.abierta_dia || '') + ' sin cerrar: ciérrala en Finanzas → Caja, abre la de hoy y después sigue con el cobro.', 'error');
         return;
       }
       api('api/ordenes.php?action=update', { method: 'POST', body: cuerpo })

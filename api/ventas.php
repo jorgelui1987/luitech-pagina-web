@@ -38,6 +38,10 @@ switch ($action) {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
 
+        // Candado de caja: sin caja abierta de hoy no se vende (ni efectivo
+        // ni tarjeta/transferencia: todo cobro debe quedar en caja del día).
+        exigir_caja_abierta_hoy(db(), 'la venta');
+
         $d     = leer_cuerpo();
         $items = $d['items'] ?? [];
         if (!is_array($items) || count($items) === 0) {

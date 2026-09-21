@@ -180,6 +180,8 @@ switch ($action) {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
+        // Candado de caja: el link/QR es el inicio del cobro → exige caja de hoy.
+        exigir_caja_abierta_hoy(db(), 'el cobro');
         $cfg = mp_config();
         if (!$cfg['enabled'] || $cfg['token'] === '') {
             responder(['ok' => false, 'error' => 'Mercado Pago no está habilitado en Configuración'], 409);
@@ -268,6 +270,8 @@ switch ($action) {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
+        // Candado de caja: enviar el cobro al terminal exige caja de hoy.
+        exigir_caja_abierta_hoy(db(), 'el cobro');
         $cfg = mp_config();
         if (!$cfg['enabled'] || $cfg['token'] === '') {
             responder(['ok' => false, 'error' => 'Mercado Pago no está habilitado'], 409);
@@ -312,6 +316,8 @@ switch ($action) {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
+        // Candado de caja: sin caja de hoy no se envía el cobro al terminal.
+        exigir_caja_abierta_hoy(db(), 'la venta');
         $cfg = mp_config();
         if (!$cfg['enabled'] || $cfg['token'] === '') {
             responder(['ok' => false, 'error' => 'Mercado Pago no está habilitado'], 409);

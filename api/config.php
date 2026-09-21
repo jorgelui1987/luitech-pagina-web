@@ -437,6 +437,59 @@ function asentar_garantia(PDO $pdo, string $codigo): void
 }
 
 /* ==========================================================================
+ * CAJA: candado de cobros/ventas (exige caja abierta DEL DÍA).
+ * - Sin caja abierta: no se puede vender ni cobrar (abrir primero).
+ * - Caja abierta de un día anterior: hay que cerrarla y abrir la de hoy.
+ * El webhook de Mercado Pago NO se bloquea: es la confirmación externa de
+ * un cobro ya iniciado (bloquearlo descuadraría orden vs pago real).
+ * ========================================================================== */
+
+/** Estado de la caja para el candado: ['abierta'=>bool,'dias'=>int,'dia'=>string]. */
+function estado_caja_para_cobro(PDO $pdo): array
+{
+    try {
+        $s = $pdo->query(
+            "SELECT id FROM caja_sesiones WHERE estado = 'Abierta' ORDER BY id DESC LIMIT 1"
+        )->fetch();
+        if (!$s) {
+            return ['abierta' => false, 'dias' => 0, 'dia' => ''];
+        }
+        $t = $pdo->prepare(
+            "SELECT DATEDIFF(NOW(), apertura_ts) AS dias, DATE_FORMAT(apertura_ts, '%d-%m-%Y') AS dia FROM caja_sesiones WHERE id = ?"
+        );
+        $t->execute([(int)$s['id']]);
+        $f = $t->fetch() ?: [];
+        return [
+            'abierta' => true,
+            'dias' => max(0, (int)($f['dias'] ?? 0)),
+            'dia' => (string)($f['dia'] ?? ''),
+        ];
+    } catch (Throwable $e) {
+        // Sin tablas de caja (BD sin migrate): no bloquear, solo avisar.
+        return ['abierta' => true, 'dias' => 0, 'dia' => ''];
+    }
+}
+
+/** Mensaje del candado según el estado (cerrada vs vieja sin arquear). */
+function mensaje_candado_caja(array $estado, string $accion): string
+{
+    if (!$estado['abierta']) {
+        return 'Caja cerrada: abre la caja primero y después sigue con ' . $accion . '.';
+    }
+    return 'Caja abierta del ' . ($estado['dia'] !== '' ? $estado['dia'] : 'otro día') .
+        ' sin cerrar: cierra la caja en Finanzas → Caja, abre la de hoy y después sigue con ' . $accion . '.';
+}
+
+/** Frena la petición (409 + mensaje) si no hay caja abierta del día. */
+function exigir_caja_abierta_hoy(PDO $pdo, string $accion): void
+{
+    $estado = estado_caja_para_cobro($pdo);
+    if (!$estado['abierta'] || $estado['dias'] >= 1) {
+        responder(['ok' => false, 'error' => mensaje_candado_caja($estado, $accion), 'caja_bloqueo' => true], 409);
+    }
+}
+
+/* ==========================================================================
  * CLIENTES: registro, ficha e historial (creación auto-reparable)
  * ========================================================================== */
 

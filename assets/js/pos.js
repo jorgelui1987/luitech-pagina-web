@@ -303,13 +303,18 @@
   }
 
   /* --------------------------------------- AVISO CAJA SIN ARQUEAR */
-  /** Aviso anti-olvido: caja abierta desde un día anterior sin arquear. */
+  /** Aviso de caja: cerrada o abierta de otro día (en ambos casos no se
+   *  puede vender/cobrar hasta abrir la de hoy). */
   function avisoCaja() {
     api('api/caja.php?action=estado').then(function (res) {
       var el = $('aviso-caja');
       if (!el) return;
-      if (res.ok && res.abierta && (res.sesion.dias_abierta || 0) >= 1) {
-        el.textContent = '⚠️ ' + (res.aviso || ('Caja abierta desde el ' + (res.sesion.abierta_dia || '') + ' sin arquear. Ciérrala en Finanzas y abre la de hoy: el POS no puede vender hasta hacerlo.'));
+      if (!res.ok) return;
+      if (!res.abierta) {
+        el.textContent = '⚠️ Caja cerrada: abre la caja primero y después sigue con la venta.';
+        el.classList.remove('hidden');
+      } else if (res.abierta && (res.sesion.dias_abierta || 0) >= 1) {
+        el.textContent = '⚠️ ' + (res.aviso || ('Caja abierta desde el ' + (res.sesion.abierta_dia || '') + ' sin cerrar. Ciérrala en Finanzas → Caja, abre la de hoy y después sigue con la venta.'));
         el.classList.remove('hidden');
       } else {
         el.classList.add('hidden');
@@ -317,12 +322,19 @@
     }).catch(function () {});
   }
 
-  /** Freno anti-olvido: verifica caja vieja antes de vender/Point.
+  /** Candado de caja: verifica caja abierta DE HOY antes de vender/Point.
    *  Llama a seguir() solo si se puede vender. */
   function conCajaAlDia(seguir) {
     api('api/caja.php?action=estado').then(function (caja) {
+      if (caja && caja.ok && !caja.abierta) {
+        window.mostrarToast('Caja cerrada: abre la caja primero y después sigue con la venta.', 'error');
+        var b0 = $('btn-cobrar'); if (b0) b0.disabled = !carrito.length;
+        var p0 = $('btn-point'); if (p0 && !esperandoPoint) p0.disabled = !carrito.length;
+        avisoCaja();
+        return;
+      }
       if (caja && caja.ok && caja.abierta && (caja.sesion.dias_abierta || 0) >= 1) {
-        window.mostrarToast('No se puede vender: la caja está abierta desde el ' + (caja.sesion.abierta_dia || '') + ' sin arquear. Ciérrala en Finanzas y abre la de hoy.', 'error');
+        window.mostrarToast('Caja abierta del ' + (caja.sesion.abierta_dia || '') + ' sin cerrar: ciérrala en Finanzas → Caja, abre la de hoy y después sigue con la venta.', 'error');
         var b = $('btn-cobrar'); if (b) b.disabled = !carrito.length;
         var p = $('btn-point'); if (p && !esperandoPoint) p.disabled = !carrito.length;
         return;

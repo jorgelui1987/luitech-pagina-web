@@ -382,20 +382,13 @@ switch ($action) {
             responder(['ok' => false, 'error' => 'Código inválido'], 400);
         }
 
-        // Freno anti-olvido: no cobrar si la caja quedó abierta de un día anterior.
-        // Sin esto el pago de hoy cae en la sesión vieja (del 10, por ejemplo) y
-        // "no sale el registro de hoy". Se exige cerrar + abrir la caja de hoy.
+        // Candado de caja: el abono/cobro exige caja abierta DE HOY.
+        // - Caja cerrada: hay que abrirla primero.
+        // - Caja de un día anterior: cerrarla + abrir la de hoy.
+        // Sin esto el pago de hoy cae en la sesión vieja y "no sale el
+        // registro de hoy". El abono NO se guarda si la caja no está al día.
         if (isset($d['abono'])) {
-            try {
-                $cajaSt = db()->query("SELECT id, apertura_ts, DATEDIFF(NOW(), apertura_ts) AS dias, DATE_FORMAT(apertura_ts, '%d-%m-%Y') AS dia FROM caja_sesiones WHERE estado='Abierta' ORDER BY id DESC LIMIT 1")->fetch();
-                if (is_array($cajaSt) && isset($cajaSt['dias'])) {
-                    $diasCaja = max(0, (int)$cajaSt['dias']);
-                    if ($diasCaja >= 1) {
-                        $diaCaja = (string)($cajaSt['dia'] ?? '');
-                        responder(['ok' => false, 'error' => 'No se puede registrar el pago: la caja está abierta desde el ' . $diaCaja . ' (' . $diasCaja . ' ' . ($diasCaja === 1 ? 'día' : 'días') . ') sin arquear. Ciérrala y cuádrala en Finanzas → Caja y abre la caja de hoy, luego vuelve a cobrar. El abono NO se guardó.'], 409);
-                    }
-                }
-            } catch (Throwable $e) { /* si falla el chequeo, se sigue como antes */ }
+            exigir_caja_abierta_hoy(db(), 'el cobro');
         }
 
         $set    = [];
