@@ -65,14 +65,17 @@
   }
 
   /* ------------------------------------------------------------ TRACKER */
+  /* Badge de estado: 'Sin reparación' en ROJO (no verde). Cualquier estado
+     desconocido cae a gris, jamás a verde. */
   var CLASES_BADGE = {
     'Listo para Retiro': 'bg-emerald-950 border-emerald-800 text-emerald-400',
     'En Reparación':     'bg-cyan-950 border-cyan-800 text-cyan-400',
     'En Diagnóstico':    'bg-amber-950 border-amber-800 text-amber-400',
     'Ingresado':         'bg-slate-800 border-slate-700 text-slate-300',
-    'Entregado':         'bg-emerald-950 border-emerald-800 text-emerald-400',
-    'Sin reparación':    'bg-red-950 border-red-800 text-red-400'
+    'Entregado':         'bg-slate-800 border-slate-600 text-slate-200',
+    'Sin reparación':    'bg-red-950 border-red-700 text-red-300'
   };
+  var CLASE_BADGE_DEFAULT = 'bg-slate-800 border-slate-700 text-slate-300';
 
   /* Etapa activa de la línea de tiempo según el estado (las etapas 3 y 4 se
      llaman por id para no depender del texto del encabezado). */
@@ -95,8 +98,12 @@
 
     var badge = $('track-status-badge');
     badge.className = 'rounded-xl px-5 py-2 flex items-center justify-center gap-2 font-bold text-sm border ' +
-      (CLASES_BADGE[estadoMostrado] || CLASES_BADGE['Ingresado']);
-    badge.replaceChildren(puntoPulso(), document.createTextNode(estadoMostrado));
+      (CLASES_BADGE[estadoMostrado] || CLASE_BADGE_DEFAULT);
+    // Punto del badge del color del estado: verde solo para 'Listo para Retiro',
+    // rojo para 'Sin reparación', gris para 'Entregado'.
+    badge.replaceChildren(
+      puntoPulso(estadoMostrado === 'Sin reparación' ? 'red' : (estadoMostrado === 'Entregado' ? 'slate' : 'emerald')),
+      document.createTextNode(estadoMostrado));
 
     // Garantía digital: cuenta regresiva visible para el cliente (si aplica)
     var tg = $('track-garantia');
@@ -147,28 +154,21 @@
 
     // Aviso "Sin reparación": motivo + mensaje del taller + horario de retiro.
     // Es lo que lee el cliente sin WhatsApp al consultar su código.
+    // Usa el bloque fijo del HTML (#track-sin-reparacion): visible, en rojo,
+    // a ancho completo debajo del tracker (nunca dentro del badge).
     var aviso = $('track-sin-reparacion');
-    if (!aviso && badge.parentNode) {
-      aviso = document.createElement('div');
-      aviso.id = 'track-sin-reparacion';
-      aviso.className = 'hidden mt-3 rounded-xl border border-red-800 bg-red-950/60 p-3 text-left';
-      badge.parentNode.appendChild(aviso);
-    }
+    var avisoTitulo = $('track-sin-titulo');
+    var avisoMsg = $('track-sin-mensaje');
     if (aviso) {
       if (!entregada && o.estado === 'Sin reparación') {
-        aviso.replaceChildren();
-        var t = document.createElement('p');
-        t.className = 'text-red-300 font-bold text-sm';
-        t.textContent = 'Este equipo no tuvo reparación' +
-          (o.motivo_sin_reparacion ? ': ' + o.motivo_sin_reparacion : '');
-        var m = document.createElement('p');
-        m.className = 'text-slate-200 text-xs mt-1';
-        m.textContent = o.mensaje_publico ||
-          'Equipo revisado en laboratorio. Puedes retirar tu equipo en tienda con tu comprobante.';
-        var h = document.createElement('p');
-        h.className = 'text-slate-400 text-[11px] mt-2';
-        h.textContent = 'Retiro: Lun–Vie 09:30–18:00 · Persa Las Cenizas, Local 13, La Serena. Trae tu comprobante de ingreso.';
-        aviso.appendChild(t); aviso.appendChild(m); aviso.appendChild(h);
+        if (avisoTitulo) {
+          avisoTitulo.textContent = '⛔ Este equipo no tuvo reparación' +
+            (o.motivo_sin_reparacion ? ': ' + o.motivo_sin_reparacion : '');
+        }
+        if (avisoMsg) {
+          avisoMsg.textContent = o.mensaje_publico ||
+            'Equipo revisado en laboratorio. Puedes retirar tu equipo en tienda con tu comprobante.';
+        }
         aviso.classList.remove('hidden');
       } else {
         aviso.classList.add('hidden');
@@ -186,12 +186,16 @@
     }
   }
 
-  function puntoPulso() {
+  function puntoPulso(color) {
+    // color: 'emerald' (en proceso/listo), 'red' (sin reparación), 'slate' (entregado).
+    // El puntito animado antes tenía el verde fijo adentro y por eso 'Sin reparación'
+    // se seguía viendo verde aunque el badge ya era rojo.
+    var c = (color === 'red') ? 'red' : (color === 'slate' ? 'slate' : 'emerald');
     var span = document.createElement('span');
     span.className = 'relative flex h-2 w-2';
     span.innerHTML =
-      '<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>' +
-      '<span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>';
+      '<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-' + c + '-400 opacity-75"></span>' +
+      '<span class="relative inline-flex rounded-full h-2 w-2 bg-' + c + '-500"></span>';
     return span;
   }
 

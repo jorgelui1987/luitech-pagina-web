@@ -226,6 +226,15 @@
                     </div>
                 </div>
 
+                <!-- Aviso de equipo sin reparación: motivo + mensaje del taller.
+                     Va en el HTML fijo (no creado por JS) para que nunca quede
+                     oculto dentro del badge y el cliente sin WhatsApp sí lo lea. -->
+                <div id="track-sin-reparacion" class="hidden rounded-xl border border-red-700 bg-red-950/70 p-4 text-left shadow-lg shadow-red-950/40 mb-6">
+                    <p id="track-sin-titulo" class="text-red-300 font-bold text-sm"></p>
+                    <p id="track-sin-mensaje" class="text-slate-100 text-sm mt-1"></p>
+                    <p class="text-slate-400 text-[11px] mt-2">Retiro: Lun–Vie 09:30–18:00 · Persa Las Cenizas, Local 13, La Serena. Trae tu comprobante de ingreso.</p>
+                </div>
+
                 <!-- Detalle de la Falla y Fechas -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-900 border border-slate-800 p-5 rounded-xl text-sm">
                     <div>
