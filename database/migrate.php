@@ -72,7 +72,7 @@ $pdo->exec("
         equipo         VARCHAR(120)      NOT NULL,
         tipo           ENUM('Celular','PC/Notebook','Otro') NOT NULL DEFAULT 'Celular',
         falla          TEXT              NOT NULL,
-        estado         ENUM('Ingresado','En Diagnóstico','En Reparación','Listo para Retiro')
+        estado         ENUM('Ingresado','En Diagnóstico','En Reparación','Listo para Retiro','Entregado','Sin reparación')
                                          NOT NULL DEFAULT 'Ingresado',
         avance         TINYINT UNSIGNED  NOT NULL DEFAULT 10,
         tecnico        VARCHAR(80)       NOT NULL DEFAULT 'Por Asignar',
@@ -89,6 +89,25 @@ $ordenStmt = $pdo->prepare(
     'INSERT IGNORE INTO ordenes (codigo, cliente, equipo, tipo, falla, estado, avance, tecnico, fecha_ingreso)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
 );
+
+// --- "Sin reparación": nuevo estado + motivo y mensaje público (idempotente)
+try {
+    $defEstado = $pdo->query("SHOW COLUMNS FROM ordenes LIKE 'estado'")->fetch(PDO::FETCH_ASSOC);
+    if ($defEstado && stripos((string)($defEstado['Type'] ?? ''), 'Sin reparación') === false) {
+        $pdo->exec("ALTER TABLE ordenes MODIFY estado ENUM('Ingresado','En Diagnóstico','En Reparación','Listo para Retiro','Entregado','Sin reparación') NOT NULL DEFAULT 'Ingresado'");
+        echo "[migrate] ENUM ordenes.estado ampliado con 'Sin reparación'\n";
+    }
+} catch (Throwable $e) { echo '[migrate] aviso estado: ' . $e->getMessage() . "\n"; }
+$columnasExistentes = $pdo->query('SHOW COLUMNS FROM ordenes')->fetchAll(PDO::FETCH_COLUMN);
+foreach ([
+    'motivo_sin_reparacion' => 'ALTER TABLE ordenes ADD COLUMN motivo_sin_reparacion VARCHAR(120) NULL AFTER fecha_listo',
+    'mensaje_publico'       => 'ALTER TABLE ordenes ADD COLUMN mensaje_publico VARCHAR(280) NULL AFTER motivo_sin_reparacion',
+] as $columna => $sql) {
+    if (!in_array($columna, $columnasExistentes, true)) {
+        $pdo->exec($sql);
+        echo "[migrate] Columna agregada: ordenes.{$columna}\n";
+    }
+}
 
 // --- Acta de recepción: columnas nuevas en ordenes (idempotente) --------
 // PIN/patrón, accesorios, observaciones y firma del cliente al ingreso.

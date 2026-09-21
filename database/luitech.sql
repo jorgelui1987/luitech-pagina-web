@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS ordenes (
     equipo         VARCHAR(120)      NOT NULL,
     tipo           ENUM('Celular','PC/Notebook','Otro') NOT NULL DEFAULT 'Celular',
     falla          TEXT              NOT NULL,
-    estado         ENUM('Ingresado','En Diagnóstico','En Reparación','Listo para Retiro','Entregado')
+    estado         ENUM('Ingresado','En Diagnóstico','En Reparación','Listo para Retiro','Entregado','Sin reparación')
                                      NOT NULL DEFAULT 'Ingresado',
     avance         TINYINT UNSIGNED  NOT NULL DEFAULT 10,
     tecnico        VARCHAR(80)       NOT NULL DEFAULT 'Por Asignar',
@@ -53,6 +53,8 @@ CREATE TABLE IF NOT EXISTS ordenes (
     fecha_entrega  DATETIME          NULL,
     entregado_a    VARCHAR(120)      NULL,
     firma_entrega  VARCHAR(255)      NULL,
+    motivo_sin_reparacion VARCHAR(120) NULL,
+    mensaje_publico VARCHAR(280)     NULL,
     fecha_ingreso  DATE              NOT NULL,
     creado_en      TIMESTAMP         NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP         NOT NULL DEFAULT CURRENT_TIMESTAMP

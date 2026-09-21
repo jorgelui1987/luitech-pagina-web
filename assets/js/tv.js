@@ -58,17 +58,20 @@
     izq.appendChild(equipo);
 
     var listo = o.estado === 'Listo para Retiro';
+    var sinRep = o.estado === 'Sin reparación';
     var der = document.createElement('span');
     der.className = 'text-xs font-bold px-3 py-1.5 rounded-lg border whitespace-nowrap flex items-center gap-1.5 ' +
       (listo ? 'bg-emerald-950 text-emerald-400 border-emerald-800'
-             : 'bg-cyan-950 text-cyan-400 border-cyan-800');
+             : (sinRep ? 'bg-red-950 text-red-400 border-red-800'
+                       : 'bg-cyan-950 text-cyan-400 border-cyan-800'));
 
     var icono = document.createElement('i');
     icono.className = listo
       ? 'fa-solid fa-box-open mr-1'
-      : (o.estado === 'En Reparación' ? 'fa-solid fa-screwdriver-wrench animate-pulse' : 'fa-solid fa-stethoscope');
+      : (sinRep ? 'fa-solid fa-triangle-exclamation mr-1'
+                : (o.estado === 'En Reparación' ? 'fa-solid fa-screwdriver-wrench animate-pulse' : 'fa-solid fa-stethoscope'));
     der.appendChild(icono);
-    der.appendChild(document.createTextNode(listo ? ' Retirar' : o.estado));
+    der.appendChild(document.createTextNode(listo ? ' Retirar' : (sinRep ? ' Retirar sin reparar' : o.estado)));
 
     fila.appendChild(izq);
     fila.appendChild(der);
@@ -105,7 +108,8 @@
       var listaProceso = [];
 
       res.ordenes.forEach(function (o) {
-        if (o.estado === 'Listo para Retiro') listaListos.push(o);
+        // 'Sin reparación' también espera retiro: va a la columna de listos.
+        if (o.estado === 'Listo para Retiro' || o.estado === 'Sin reparación') listaListos.push(o);
         else listaProceso.push(o);
       });
 

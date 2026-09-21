@@ -98,7 +98,16 @@
   }
 
   /* ---------------------------------------------------------- TABLA */
-  var OPCIONES_ESTADO = ['Ingresado', 'En Diagnóstico', 'En Reparación', 'Listo para Retiro'];
+  var OPCIONES_ESTADO = ['Ingresado', 'En Diagnóstico', 'En Reparación', 'Listo para Retiro', 'Sin reparación'];
+
+  /* Motivos rápidos para "Sin reparación" (deben coincidir con MOTIVOS_SIN_REPARACION de api/ordenes.php). */
+  var MOTIVOS_SIN_REPARACION = [
+    'No autoriza presupuesto',
+    'Repuesto descontinuado / sin stock',
+    'Falla de placa irreparable',
+    'Costo supera valor del equipo',
+    'Equipo funciona normal, sin falla'
+  ];
 
   function celda(texto, clase) {
     var td = document.createElement('td');
@@ -159,9 +168,39 @@
       select.add(option);
     });
     select.addEventListener('change', function () {
+      // Al pasar a "Sin reparación" se pide motivo + mensaje público de una
+      // vez: es lo que el cliente sin WhatsApp leerá al consultar su código.
+      if (this.value === 'Sin reparación') {
+        pedirSinReparacion(codigo, actual, this);
+        return;
+      }
       actualizarOrden({ codigo: codigo, estado: this.value });
     });
     return select;
+  }
+
+  /** Diálogo para marcar una orden "Sin reparación" con motivo + mensaje público. */
+  function pedirSinReparacion(codigo, actual, select) {
+    var motivo = window.prompt(
+      'Motivo de SIN REPARACIÓN (elige número):\n' +
+      MOTIVOS_SIN_REPARACION.map(function (m, i) { return (i + 1) + '. ' + m; }).join('\n') +
+      '\n\nEscribe el número (1-' + MOTIVOS_SIN_REPARACION.length + '):', '3');
+    if (motivo === null) { select.value = actual; return; } // canceló
+    var idx = parseInt(motivo, 10) - 1;
+    if (isNaN(idx) || idx < 0 || idx >= MOTIVOS_SIN_REPARACION.length) {
+      window.mostrarToast('Motivo inválido, no se cambió el estado', 'error');
+      select.value = actual;
+      return;
+    }
+    var mensaje = window.prompt(
+      'Mensaje que verá el CLIENTE al consultar su código (máx 280 letras):\nEj: Equipo revisado: placa con corto irreparable. Puede retirar sin costo de reparación.',
+      'Equipo revisado en laboratorio: no tuvo reparación rentable. Puede retirar en tienda con su comprobante.');
+    if (mensaje === null) { select.value = actual; return; } // canceló
+    mensaje = mensaje.trim().slice(0, 280);
+    actualizarOrden({
+      codigo: codigo, estado: 'Sin reparación',
+      motivo_sin_reparacion: MOTIVOS_SIN_REPARACION[idx], mensaje_publico: mensaje
+    });
   }
 
   function inputAvance(codigo, avance) {
@@ -1160,6 +1199,10 @@
     dl.appendChild(parDato('Accesorios', o.accesorios));
     dl.appendChild(parDato('Falla declarada', o.falla, true));
     dl.appendChild(parDato('Observaciones', o.obs_recepcion, true));
+    if (o.estado === 'Sin reparación') {
+      dl.appendChild(parDato('Motivo sin reparación', o.motivo_sin_reparacion, true));
+      dl.appendChild(parDato('Mensaje al cliente (web)', o.mensaje_publico, true));
+    }
 
     if (o.firma_ingreso) {
       $('mo-firma').src = o.firma_ingreso;

@@ -29,12 +29,36 @@ try { db()->query('SELECT fecha_listo FROM ordenes LIMIT 1'); }
 catch (Throwable $e) { db()->exec('ALTER TABLE ordenes ADD COLUMN fecha_listo DATE NULL'); }
 try { db()->query('SELECT garantia_hasta FROM ordenes LIMIT 1'); }
 catch (Throwable $e) { db()->exec('ALTER TABLE ordenes ADD COLUMN garantia_hasta DATE NULL'); }
+// Auto-reparación: estado "Sin reparación" + motivo y mensaje público visible en el tracker.
+// - Amplía el ENUM de estado si aún no incluye 'Sin reparación' (idempotente).
+// - Agrega motivo_sin_reparacion (motivo corto elegido en admin) y
+//   mensaje_publico (texto libre que el cliente sin WhatsApp lee al consultar).
+try {
+    $defEstado = db()->query('SHOW COLUMNS FROM ordenes LIKE \'estado\'')->fetch();
+    if ($defEstado && stripos((string)($defEstado['Type'] ?? ''), 'Sin reparación') === false) {
+        db()->exec("ALTER TABLE ordenes MODIFY estado ENUM('Ingresado','En Diagnóstico','En Reparación','Listo para Retiro','Entregado','Sin reparación') NOT NULL DEFAULT 'Ingresado'");
+    }
+} catch (Throwable $e) { /* tabla aún no creada: la crea migrate.php */ }
+try { db()->query('SELECT motivo_sin_reparacion FROM ordenes LIMIT 1'); }
+catch (Throwable $e) { db()->exec('ALTER TABLE ordenes ADD COLUMN motivo_sin_reparacion VARCHAR(120) NULL'); }
+try { db()->query('SELECT mensaje_publico FROM ordenes LIMIT 1'); }
+catch (Throwable $e) { db()->exec('ALTER TABLE ordenes ADD COLUMN mensaje_publico VARCHAR(280) NULL'); }
 
-const ESTADOS_VALIDOS = ['Ingresado', 'En Diagnóstico', 'En Reparación', 'Listo para Retiro', 'Entregado'];
+const ESTADOS_VALIDOS = ['Ingresado', 'En Diagnóstico', 'En Reparación', 'Listo para Retiro', 'Entregado', 'Sin reparación'];
 
 /** Porcentaje estándar de avance al cambiar de estado (el tracker público
- *  enciende sus etapas según el estado; sin esto quedarían desincronizados). */
-const AVANCE_POR_ESTADO = ['Ingresado' => 10, 'En Diagnóstico' => 30, 'En Reparación' => 60, 'Listo para Retiro' => 100, 'Entregado' => 100];
+ *  enciende sus etapas según el estado; sin esto quedarían desincronizados).
+ *  'Sin reparación' queda en 35%: diagnóstico completado, no avanza a reparación. */
+const AVANCE_POR_ESTADO = ['Ingresado' => 10, 'En Diagnóstico' => 30, 'En Reparación' => 60, 'Listo para Retiro' => 100, 'Entregado' => 100, 'Sin reparación' => 35];
+
+/** Motivos predefinidos para el estado "Sin reparación" (el admin elige uno con 1 clic). */
+const MOTIVOS_SIN_REPARACION = [
+    'No autoriza presupuesto',
+    'Repuesto descontinuado / sin stock',
+    'Falla de placa irreparable',
+    'Costo supera valor del equipo',
+    'Equipo funciona normal, sin falla',
+];
 
 /** Piso mínimo de comisión por reparación entregada (incentivo en márgenes chicos).
  *  Definido en api/config.php como COMISION_PISO (compartido con Mercado Pago). */
@@ -146,9 +170,12 @@ switch ($action) {
 
         // Privacidad: la falla reportada NO viaja al portal público (nadie debe
         // enterarse de qué servicio llevó el equipo de otra persona).
+        // El motivo + mensaje público SÍ viajan: es lo que el cliente sin
+        // WhatsApp lee para saber por qué su equipo no tuvo reparación.
         $stmt = db()->prepare(
             'SELECT codigo, equipo, estado, avance, tecnico, fecha_ingreso, fecha_entrega,
-                    garantia_hasta, DATEDIFF(garantia_hasta, CURDATE()) AS garantia_dias
+                    garantia_hasta, DATEDIFF(garantia_hasta, CURDATE()) AS garantia_dias,
+                    motivo_sin_reparacion, mensaje_publico
              FROM ordenes WHERE codigo = ? LIMIT 1'
         );
         $stmt->execute([$codigo]);
@@ -184,8 +211,8 @@ switch ($action) {
 
         $stmt = db()->query(
             "SELECT codigo, equipo, estado, avance FROM ordenes
-             WHERE estado IN ('Listo para Retiro','En Reparación','En Diagnóstico')
-             ORDER BY FIELD(estado,'Listo para Retiro','En Reparación','En Diagnóstico'), id DESC"
+             WHERE estado IN ('Listo para Retiro','En Reparación','En Diagnóstico','Sin reparación')
+             ORDER BY FIELD(estado,'Listo para Retiro','Sin reparación','En Reparación','En Diagnóstico'), id DESC"
         );
         responder(['ok' => true, 'ordenes' => $stmt->fetchAll()]);
     }
@@ -198,7 +225,8 @@ switch ($action) {
             $stmt = db()->prepare('SELECT id, codigo, cliente, cliente_id, equipo, tipo, falla, estado, avance, tecnico, fecha_ingreso,
                     pin_patron, accesorios, obs_recepcion, firma_ingreso,
                     precio_repuestos, mano_obra, total, abono, estado_pago, metodo_pago, garantia_dias, garantia_hasta,
-                    fecha_entrega, entregado_a, firma_entrega, tecnico_id, costo_repuesto, fecha_listo
+                    fecha_entrega, entregado_a, firma_entrega, tecnico_id, costo_repuesto, fecha_listo,
+                    motivo_sin_reparacion, mensaje_publico
              FROM ordenes WHERE tecnico_id = ? ORDER BY id DESC');
             $stmt->execute([$_SESSION['admin_tecnico_id'] ?? 0]);
             responder(['ok' => true, 'ordenes' => $stmt->fetchAll()]);
@@ -207,7 +235,8 @@ switch ($action) {
             'SELECT id, codigo, cliente, cliente_id, equipo, tipo, falla, estado, avance, tecnico, fecha_ingreso,
                     pin_patron, accesorios, obs_recepcion, firma_ingreso,
                     precio_repuestos, mano_obra, total, abono, estado_pago, metodo_pago, garantia_dias, garantia_hasta,
-                    fecha_entrega, entregado_a, firma_entrega, tecnico_id, costo_repuesto, fecha_listo
+                    fecha_entrega, entregado_a, firma_entrega, tecnico_id, costo_repuesto, fecha_listo,
+                    motivo_sin_reparacion, mensaje_publico
              FROM ordenes ORDER BY id DESC'
         );
         responder(['ok' => true, 'ordenes' => $stmt->fetchAll()]);
@@ -385,11 +414,29 @@ switch ($action) {
             $set[]    = 'estado = ?';
             $params[] = $d['estado'];
             // Estantería: marca el día en que la orden queda lista y limpia la
-            // marca si vuelve al taller (la bitácora conserva el histórico)
-            if ($d['estado'] === 'Listo para Retiro') {
+            // marca si vuelve al taller (la bitácora conserva el histórico).
+            // 'Sin reparación' también queda en estantería esperando retiro.
+            if ($d['estado'] === 'Listo para Retiro' || $d['estado'] === 'Sin reparación') {
                 $set[] = 'fecha_listo = CURDATE()';
-            } elseif ($estadoAnterior === 'Listo para Retiro') {
+            } elseif ($estadoAnterior === 'Listo para Retiro' || $estadoAnterior === 'Sin reparación') {
                 $set[] = 'fecha_listo = NULL';
+            }
+            // Motivo + mensaje público de "Sin reparación": es lo que el cliente
+            // sin WhatsApp lee al consultar su código. Si el estado deja de ser
+            // 'Sin reparación', se limpian para no mostrar info vieja.
+            if ($d['estado'] === 'Sin reparación') {
+                $motivo = campo_texto($d, 'motivo_sin_reparacion', 120);
+                if ($motivo !== null && $motivo !== '' && !in_array($motivo, MOTIVOS_SIN_REPARACION, true)) {
+                    responder(['ok' => false, 'error' => 'Motivo inválido'], 400);
+                }
+                $set[]    = 'motivo_sin_reparacion = ?';
+                $params[] = ($motivo !== null && $motivo !== '') ? $motivo : null;
+                $mensaje = campo_texto($d, 'mensaje_publico', 280);
+                $set[]    = 'mensaje_publico = ?';
+                $params[] = ($mensaje !== null && $mensaje !== '') ? $mensaje : null;
+            } elseif ($estadoAnterior === 'Sin reparación') {
+                $set[] = 'motivo_sin_reparacion = NULL';
+                $set[] = 'mensaje_publico = NULL';
             }
         }
         // Abono previo (para derivar cuánto dinero nuevo entra a la caja)
@@ -579,7 +626,7 @@ switch ($action) {
         $stmt2 = db()->prepare(
             'SELECT codigo, estado, avance, tecnico, falla, precio_repuestos, mano_obra, costo_repuesto,
                     total, abono, estado_pago, metodo_pago, garantia_dias, garantia_hasta, tecnico_id,
-                    fecha_entrega, entregado_a, firma_entrega
+                    fecha_entrega, entregado_a, firma_entrega, motivo_sin_reparacion, mensaje_publico
              FROM ordenes WHERE codigo = ?'
         );
         $stmt2->execute([$codigo]);
@@ -838,17 +885,18 @@ switch ($action) {
 
     /* ------------------------------------------------------- ESTANTERÍA */
     case 'estanteria': {
-        // Órdenes 'Listo para Retiro' aún en el estante: días esperando y
-        // teléfono del cliente para el aviso por WhatsApp. Lectura: ambos roles.
+        // Órdenes 'Listo para Retiro' y 'Sin reparación' aún en el estante:
+        // días esperando y teléfono del cliente para el aviso por WhatsApp.
+        // Lectura: ambos roles.
         exigir_admin();
         $rows = db()->query(
-            'SELECT o.codigo, o.cliente, o.equipo, o.total, o.fecha_listo,
+            'SELECT o.codigo, o.cliente, o.equipo, o.estado, o.total, o.fecha_listo,
                     DATEDIFF(CURDATE(), o.fecha_listo) AS dias,
                     (SELECT c.telefono FROM clientes c
                       WHERE c.activo = 1 AND (c.id = o.cliente_id OR LOWER(c.nombre) = LOWER(o.cliente))
                       LIMIT 1) AS telefono
              FROM ordenes o
-             WHERE o.estado = "Listo para Retiro" AND o.fecha_listo IS NOT NULL
+             WHERE o.estado IN ("Listo para Retiro", "Sin reparación") AND o.fecha_listo IS NOT NULL
              ORDER BY o.fecha_listo ASC, o.id ASC'
         )->fetchAll();
         responder(['ok' => true, 'ordenes' => $rows]);

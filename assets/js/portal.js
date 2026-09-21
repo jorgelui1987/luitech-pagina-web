@@ -70,8 +70,18 @@
     'En Reparación':     'bg-cyan-950 border-cyan-800 text-cyan-400',
     'En Diagnóstico':    'bg-amber-950 border-amber-800 text-amber-400',
     'Ingresado':         'bg-slate-800 border-slate-700 text-slate-300',
-    'Entregado':         'bg-emerald-950 border-emerald-800 text-emerald-400'
+    'Entregado':         'bg-emerald-950 border-emerald-800 text-emerald-400',
+    'Sin reparación':    'bg-red-950 border-red-800 text-red-400'
   };
+
+  /* Etapa activa de la línea de tiempo según el estado (las etapas 3 y 4 se
+     llaman por id para no depender del texto del encabezado). */
+  var PASO_POR_ESTADO = {
+    'Ingresado': 1, 'En Diagnóstico': 2, 'En Reparación': 3,
+    'Listo para Retiro': 4, 'Entregado': 4, 'Sin reparación': 2
+  };
+  var TEXTO_PASO_3 = { 'Sin reparación': 'Sin reparación' };
+  var TEXTO_PASO_4 = { 'Sin reparación': 'Retiro en tienda' };
 
   function cargarDatosEnTracker(o) {
     $('track-ticket-id').textContent   = o.codigo;
@@ -113,12 +123,57 @@
 
     // Las etapas se encienden según el ESTADO real de la orden (no solo el %),
     // así nunca quedan desincronizadas del estado que cambia el técnico.
-    var pasoActivo = ({ 'Ingresado': 1, 'En Diagnóstico': 2, 'En Reparación': 3, 'Listo para Retiro': 4 })[o.estado] || 1;
+    // 'Sin reparación' se queda en diagnóstico (paso 2) y renombra las
+    // etapas 3-4 para no mostrar "Reparación/Listo" como si estuviera arreglado.
+    var pasoActivo = PASO_POR_ESTADO[o.estado] || 1;
     if (entregada) pasoActivo = 5;
 
     var minimos = [10, 30, 60, 90, 100];
     var avanceVisual = Math.max(parseInt(o.avance, 10) || 0, minimos[pasoActivo - 1]);
+    // 'Sin reparación' nunca muestra barra llena (no quedó listo para uso).
+    if (!entregada && o.estado === 'Sin reparación') avanceVisual = Math.min(avanceVisual, 35);
     $('track-progress-bar').style.width = avanceVisual + '%';
+
+    var lbl3 = document.querySelector('#step-3 + span');
+    var lbl4 = document.querySelector('#step-4 + span');
+    if (lbl3) {
+      if (!lbl3.dataset.orig) lbl3.dataset.orig = lbl3.textContent;
+      lbl3.textContent = TEXTO_PASO_3[o.estado] || lbl3.dataset.orig;
+    }
+    if (lbl4) {
+      if (!lbl4.dataset.orig) lbl4.dataset.orig = lbl4.textContent;
+      lbl4.textContent = TEXTO_PASO_4[o.estado] || lbl4.dataset.orig;
+    }
+
+    // Aviso "Sin reparación": motivo + mensaje del taller + horario de retiro.
+    // Es lo que lee el cliente sin WhatsApp al consultar su código.
+    var aviso = $('track-sin-reparacion');
+    if (!aviso && badge.parentNode) {
+      aviso = document.createElement('div');
+      aviso.id = 'track-sin-reparacion';
+      aviso.className = 'hidden mt-3 rounded-xl border border-red-800 bg-red-950/60 p-3 text-left';
+      badge.parentNode.appendChild(aviso);
+    }
+    if (aviso) {
+      if (!entregada && o.estado === 'Sin reparación') {
+        aviso.replaceChildren();
+        var t = document.createElement('p');
+        t.className = 'text-red-300 font-bold text-sm';
+        t.textContent = 'Este equipo no tuvo reparación' +
+          (o.motivo_sin_reparacion ? ': ' + o.motivo_sin_reparacion : '');
+        var m = document.createElement('p');
+        m.className = 'text-slate-200 text-xs mt-1';
+        m.textContent = o.mensaje_publico ||
+          'Equipo revisado en laboratorio. Puedes retirar tu equipo en tienda con tu comprobante.';
+        var h = document.createElement('p');
+        h.className = 'text-slate-400 text-[11px] mt-2';
+        h.textContent = 'Retiro: Lun–Vie 09:30–18:00 · Persa Las Cenizas, Local 13, La Serena. Trae tu comprobante de ingreso.';
+        aviso.appendChild(t); aviso.appendChild(m); aviso.appendChild(h);
+        aviso.classList.remove('hidden');
+      } else {
+        aviso.classList.add('hidden');
+      }
+    }
 
     for (var i = 1; i <= 5; i++) {
       var paso = $('step-' + i);
