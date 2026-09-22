@@ -511,6 +511,31 @@
     window.imprimirDocumento(html);
   }
 
+  /** Plancha HOJA CARTA 3 columnas: aprovecha todo el ancho de la hoja para
+   *  no desperdiciar papel (la tira térmica de 1 columna dejaba 2/3 en blanco).
+   *  Carta 216mm - márgenes 16mm = ~200mm útiles / 3 = ~65mm por etiqueta.
+   *  Caben ~27 por hoja (3 x 9 filas). Se corta con tijera/guillotina por la
+   *  línea punteada. En el diálogo de Chrome usar: Tamaño Carta,
+   *  Márgenes Ninguno, Escala 100%, sin encabezados. */
+  function imprimirPlanchaCarta(nombre, urlImg, precioTexto, cantidad) {
+    var tarjetas = '';
+    for (var i = 0; i < cantidad; i++) {
+      tarjetas += '<div class="etq-carta"><p class="n">' + nombre + '</p>' +
+        '<img src="' + urlImg + '" alt="">' +
+        (precioTexto ? '<p class="p">' + precioTexto + '</p>' : '') +
+        '</div>';
+    }
+    var html = '<html><head><title>Plancha Carta x' + cantidad + '</title><style>' +
+      '@page{size:Letter;margin:8mm}body{margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+      '.plancha{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3mm;width:100%;box-sizing:border-box}' +
+      '.etq-carta{border:1px dashed #888;box-sizing:border-box;text-align:center;padding:2mm 1.5mm;page-break-inside:avoid;overflow:hidden}' +
+      '.etq-carta .n{margin:0 0 1mm;font-size:11px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+      '.etq-carta img{width:100%;height:16mm;object-fit:contain;display:block;margin:0 auto;image-rendering:crisp-edges}' +
+      '.etq-carta .p{margin:1mm 0 0;font-size:17px;font-weight:900;line-height:1.1}' +
+      '</style></head><body><div class="plancha">' + tarjetas + '</div></body></html>';
+    window.imprimirDocumento(html);
+  }
+
   /** Etiquetas para papel térmico adhesivo de 80mm: tira continua con todas
    *  las copias separadas por línea de corte punteada (SIN saltos de página,
    *  así no se va papel en blanco; se corta a tijera). Barcode EAN13 si son
@@ -521,9 +546,14 @@
   function imprimirEtiqueta(p) {
     var valor = String(p.barcode || p.codigo || '').trim();
     if (!valor) { window.mostrarToast('El producto no tiene código', 'error'); return; }
-    var cantidad = parseInt(prompt('¿Cuántas etiquetas imprimir?', '1'), 10);
+    var cantidad = parseInt(prompt('¿Cuántas etiquetas imprimir?', '12'), 10);
     if (isNaN(cantidad) || cantidad < 1) return;
     if (cantidad > 100) cantidad = 100;
+    // Selector de papel: Carta = plancha 3 columnas sin desperdicio;
+    // Térmica 80mm = tira de 1 columna (igual que antes).
+    var papel = prompt('¿En qué papel?\n1 = Hoja CARTA (3 columnas, sin desperdiciar)\n2 = Térmica 80mm (tira de 1)', '1');
+    if (papel === null) return;
+    papel = String(papel || '1').trim();
     etiquetaCargarJsBarcode().then(function () {
       var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       try {
@@ -535,6 +565,13 @@
       var urlImg = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgTexto)));
       var nombre = String(p.nombre).replace(/[<>&]/g, '');
       var precioTexto = parseInt(p.precio_venta, 10) > 0 ? '$' + fmt(p.precio_venta) : '';
+      // Si es CARTA no se usa QZ/corte térmico: va directo a la plancha
+      // de 3 columnas (un solo trabajo de impresión por hoja).
+      if (papel === '1') {
+        imprimirPlanchaCarta(nombre, urlImg, precioTexto, cantidad);
+        window.mostrarToast('Plancha Carta: ' + cantidad + ' en 3 columnas ✓ (Carta, Sin márgenes, 100%)', 'success');
+        return;
+      }
       // 1ª vía: QZ Tray → UN TRABAJO POR ETIQUETA, cada uno terminando en su
       // comando de CORTE. En esta impresora el corte se ejecuta seguro al
       // terminar cada trabajo (así se comprobó en pruebas) y así la cuchilla
