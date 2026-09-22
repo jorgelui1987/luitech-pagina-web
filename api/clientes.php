@@ -82,13 +82,38 @@ switch ($action) {
         if (!isset($d['nombre'])) {
             responder(['ok' => false, 'error' => 'El nombre es obligatorio'], 400);
         }
+        // Duplicado controlado con mensaje claro (en vez del genérico 500):
+        // mismo RUT activo -> se dice de quién es; mismo RUT eliminado ->
+        // se reactiva solo. Así "25828408-9 ya registrado" no es un misterio.
+        if (!empty($d['rut'])) {
+            $dup = db()->prepare('SELECT id, nombre, activo FROM clientes WHERE rut = ? LIMIT 1');
+            $dup->execute([$d['rut']]);
+            $ex = $dup->fetch();
+            if ($ex) {
+                if ((int)$ex['activo'] === 1) {
+                    responder(['ok' => false, 'error' => 'Ese RUT ya es de "' . $ex['nombre'] . '" (id ' . $ex['id'] . ')'], 409);
+                }
+                db()->prepare('UPDATE clientes SET nombre = ?, telefono = ?, email = ?, notas = ?, activo = 1 WHERE id = ?')
+                    ->execute([$d['nombre'], $d['telefono'] ?? null, $d['email'] ?? null, $d['notas'] ?? null, $ex['id']]);
+                responder(['ok' => true, 'id' => (int)$ex['id'], 'reactivado' => true]);
+            }
+        }
+        // Normaliza vacíos a NULL: evita el choque del UNIQUE con '' y el
+        // "fantasma" de clientes sin RUT duplicados.
+        foreach (['rut', 'telefono', 'email', 'notas'] as $k) {
+            if (array_key_exists($k, $d) && $d[$k] === '') { $d[$k] = null; }
+        }
         $columnas = implode(', ', array_keys($d));
         $marcas   = implode(', ', array_map(fn($k) => ":$k", array_keys($d)));
         try {
             db()->prepare("INSERT INTO clientes ($columnas) VALUES ($marcas)")->execute($d);
             responder(['ok' => true, 'id' => (int)db()->lastInsertId()]);
         } catch (PDOException $e) {
-            responder(['ok' => false, 'error' => 'No se pudo crear el cliente'], 500);
+            $msg = 'No se pudo crear el cliente';
+            if (strpos($e->getMessage(), 'Duplicate') !== false || (int)($e->errorInfo[1] ?? 0) === 1062) {
+                $msg = 'Ese RUT ya está registrado en otro cliente';
+            }
+            responder(['ok' => false, 'error' => $msg], 409);
         }
     }
 
@@ -105,10 +130,27 @@ switch ($action) {
         if (!$datos) {
             responder(['ok' => false, 'error' => 'Nada que actualizar'], 400);
         }
+        // El RUT no puede quedar en 2 clientes activos distintos.
+        if (!empty($datos['rut'])) {
+            $dup = db()->prepare('SELECT id, nombre FROM clientes WHERE rut = ? AND id <> ? AND activo = 1 LIMIT 1');
+            $dup->execute([$datos['rut'], $id]);
+            $ex = $dup->fetch();
+            if ($ex) {
+                responder(['ok' => false, 'error' => 'Ese RUT ya es de "' . $ex['nombre'] . '" (id ' . $ex['id'] . ')'], 409);
+            }
+        }
         $set = implode(', ', array_map(fn($k) => "$k = :$k", array_keys($datos)));
         $params = $datos;
         $params[':id'] = $id;
-        db()->prepare("UPDATE clientes SET $set WHERE id = :id")->execute($params);
+        try {
+            db()->prepare("UPDATE clientes SET $set WHERE id = :id")->execute($params);
+        } catch (PDOException $e) {
+            $msg = 'No se pudo actualizar el cliente';
+            if (strpos($e->getMessage(), 'Duplicate') !== false || (int)($e->errorInfo[1] ?? 0) === 1062) {
+                $msg = 'Ese RUT ya está registrado en otro cliente';
+            }
+            responder(['ok' => false, 'error' => $msg], 409);
+        }
         responder(['ok' => true]);
     }
 

@@ -523,6 +523,17 @@ function preparar_clientes(PDO $pdo): void
             $pdo->exec("ALTER TABLE clientes ADD COLUMN " . $colCli . " " . $tipoCli);
         }
     }
+    // El RUT NO debe ser UNIQUE global: MySQL permite varios NULL pero un solo
+    // '' y además bloquea re-registrar un RUT de un cliente eliminado
+    // (activo=0). El duplicado se controla por código en clientes.php con
+    // mensaje claro ("ya es de X" / reactivar). Si existe ese índice, se quita.
+    try {
+        $idx = $pdo->query("SHOW INDEX FROM clientes WHERE Key_name = 'rut'")->fetch(PDO::FETCH_ASSOC);
+        if ($idx && (int)$idx['Non_unique'] === 0) {
+            $pdo->exec("ALTER TABLE clientes DROP INDEX rut");
+        }
+    } catch (Throwable $e) { /* si no se puede, el catch de create/update informa */
+    }
 }
 
 /** Busca un cliente activo por nombre exacto (sin tildes ni mayúsculas). */

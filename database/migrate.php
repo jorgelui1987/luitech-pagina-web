@@ -556,6 +556,15 @@ if ($colRutCli && $colRutCli['Null'] === 'NO') {
     $pdo->exec("ALTER TABLE clientes MODIFY rut VARCHAR(15) NULL");
     echo "[migrate] clientes.rut ahora acepta clientes sin RUT\n";
 }
+// El RUT no es UNIQUE global (bloqueaba re-registrar RUT de eliminados y
+// chocaba con ''); el duplicado se controla por código con mensaje claro.
+try {
+    $idxRut = $pdo->query("SHOW INDEX FROM clientes WHERE Key_name = 'rut'")->fetch(PDO::FETCH_ASSOC);
+    if ($idxRut && (int)$idxRut['Non_unique'] === 0) {
+        $pdo->exec("ALTER TABLE clientes DROP INDEX rut");
+        echo "[migrate] índice UNIQUE de clientes.rut eliminado (duplicado por código)\n";
+    }
+} catch (Throwable $e) { echo "[migrate] no se pudo quitar UNIQUE de clientes.rut\n"; }
 
 // --- Gastos del negocio ---------------------------------------------------
 $pdo->exec("
