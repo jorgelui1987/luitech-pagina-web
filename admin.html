@@ -179,6 +179,10 @@
                        class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-2 rounded-lg font-semibold transition-all">
                         <i class="fa-solid fa-users mr-1"></i>Clientes
                     </a>
+                    <a href="registro-tactil.html" target="_blank" rel="noopener" title="Pantalla táctil: el cliente digita sus datos solo (tablet mostrador)"
+                       class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 px-3 py-2 rounded-lg font-black transition-all">
+                        <i class="fa-solid fa-hand-pointer mr-1"></i>Tótem Registro
+                    </a>
                     <a href="finanzas.html" rel="noopener" title="Caja, gastos y reportes"
                        class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-2 rounded-lg font-semibold transition-all">
                         <i class="fa-solid fa-coins mr-1"></i>Finanzas
@@ -209,6 +213,14 @@
         </header>
 
         <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+            <!-- Aviso tablet: clientes pendientes de validar -->
+            <section id="aviso-tablet" class="hidden bg-amber-950/60 border border-amber-700 rounded-xl px-5 py-4 flex flex-wrap items-center gap-3">
+                <i class="fa-solid fa-hand-pointer text-amber-400 text-xl"></i>
+                <p class="text-sm text-amber-200 font-bold flex-1 min-w-[220px]"><span id="aviso-tablet-num">0</span> cliente(s) se registraron solos en la tablet. Valídalos antes de crear la orden.</p>
+                <a href="clientes.html" class="bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black px-4 py-2 rounded-lg">Ver y validar</a>
+                <a href="registro-tactil.html" target="_blank" rel="noopener" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold px-4 py-2 rounded-lg">Abrir tótem</a>
+            </section>
 
             <!-- Formulario: Nueva Orden -->
             <section id="nueva-orden" class="bg-slate-950/50 border border-slate-800/80 p-5 rounded-xl">
@@ -572,6 +584,6 @@
     </div>
 
     <script src="assets/js/common.js?v=enc5" defer></script>
-    <script src="assets/js/admin.js?v=caja1" defer></script>
+    <script src="assets/js/admin.js?v=totem1" defer></script>
 </body>
 </html>

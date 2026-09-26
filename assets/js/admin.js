@@ -1012,11 +1012,19 @@
       if (!res.ok) return;
       clientesCache = res.clientes || [];
       var dl = $('lista-clientes');
-      if (!dl) return;
-      dl.replaceChildren();
-      (res.clientes || []).forEach(function (c) {
-        dl.appendChild(new Option(c.nombre));
-      });
+      if (dl) {
+        dl.replaceChildren();
+        (res.clientes || []).forEach(function (c) {
+          dl.appendChild(new Option(c.nombre));
+        });
+      }
+      var nPen = (res.clientes || []).filter(function (c) { return c.estado_validacion === 'pendiente'; }).length;
+      var boxT = $('aviso-tablet');
+      if (boxT) {
+        boxT.classList.toggle('hidden', !(nPen > 0));
+        var numT = $('aviso-tablet-num');
+        if (numT) numT.textContent = String(nPen);
+      }
     }).catch(function () {});
   }
 
