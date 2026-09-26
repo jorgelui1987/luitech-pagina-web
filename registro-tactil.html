@@ -2,25 +2,41 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=0.85, maximum-scale=0.85, user-scalable=no">
 <title>Registro | Luitech</title>
 <meta name="robots" content="noindex, nofollow">
+<meta name="google" content="notranslate">
+<meta name="theme-color" content="#020617">
 <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg?v=2">
 <link rel="stylesheet" href="assets/css/styles.css?v=mp55">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
 <style>
-.touch-input{font-size:1.3rem!important;padding:1rem!important;border-radius:1rem!important;min-height:62px}
-.touch-btn{min-height:70px;font-size:1.2rem;border-radius:1rem}
-.num-key{min-height:74px;font-size:1.7rem;border-radius:1rem}
-.patron-dot{width:60px;height:60px;border-radius:9999px;border:3px solid #334155;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#475569}
+html{-webkit-text-size-adjust:100%}
+body{-webkit-text-size-adjust:100%}
+.touch-input{font-size:1.05rem!important;padding:0.8rem 0.9rem!important;border-radius:0.9rem!important;min-height:54px;background:#fff!important;color:#0f172a!important;-webkit-text-fill-color:#0f172a!important;border-color:#94a3b8!important}
+.touch-input::placeholder{color:#64748b!important;-webkit-text-fill-color:#64748b!important;opacity:1}
+.touch-input:-webkit-autofill,.touch-input:-webkit-autofill:hover,.touch-input:-webkit-autofill:focus{-webkit-text-fill-color:#0f172a!important;-webkit-box-shadow:0 0 0 1000px #fff inset!important;box-shadow:0 0 0 1000px #fff inset!important}
+.touch-btn{min-height:60px;font-size:1.05rem;border-radius:0.9rem}
+.num-key{min-height:64px;font-size:1.5rem;border-radius:0.9rem}
+.patron-dot{width:56px;height:56px;border-radius:9999px;border:3px solid #334155;display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:#475569;background:#0f172a}
 .patron-dot.on{background:#06b6d4;border-color:#06b6d4;color:#020617}
 .paso{display:none}.paso.activo{display:block}
+main{padding-bottom:90px}
+section.paso{max-height:calc(100vh - 250px);overflow-y:auto}
+@media (max-height:800px){
+.touch-input{min-height:48px;font-size:1rem!important;padding:0.65rem 0.8rem!important}
+.touch-btn{min-height:54px;font-size:1rem}
+.num-key{min-height:56px;font-size:1.3rem}
+h1{font-size:1.3rem!important}h2{font-size:1.25rem!important}
+section.paso{max-height:calc(100vh - 220px)}
+}
 </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen select-none">
+<form id="rg-fake" autocomplete="off" onsubmit="return false" style="display:contents">
 <div id="toast-container" class="fixed top-4 right-4 z-[9999] flex flex-col gap-3 px-4 w-full sm:w-auto items-end pointer-events-none"></div>
-<main class="max-w-2xl mx-auto px-4 py-6">
+<main class="max-w-xl mx-auto px-4 py-4">
 <header class="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-2xl px-5 py-4 mb-5">
 <div class="flex items-center gap-3">
 <img src="assets/img/logo-luitech.png" alt="" width="44" height="44" class="h-11 w-11 rounded-xl object-cover">
@@ -39,14 +55,14 @@
 <h1 class="text-2xl font-black text-white">Toca para registrarte</h1>
 <p class="text-slate-400 text-sm">20 segundos. Sin RUT. Solo nombre y WhatsApp.</p>
 <label class="block text-sm font-bold" for="rg-nombre">Nombre *</label>
-<input id="rg-nombre" class="touch-input w-full bg-slate-950 border border-slate-700 text-white" placeholder="Ej: Juan" maxlength="60" autocomplete="off">
+<input id="rg-nombre" name="rg-nombre-nuevo" class="touch-input w-full border" placeholder="Ej: Juan" maxlength="60" autocomplete="new-password" autocapitalize="words" spellcheck="false">
 <label class="block text-sm font-bold" for="rg-apellido">Apellido</label>
-<input id="rg-apellido" class="touch-input w-full bg-slate-950 border border-slate-700 text-white" placeholder="Ej: Perez" maxlength="80" autocomplete="off">
+<input id="rg-apellido" name="rg-apellido-nuevo" class="touch-input w-full border" placeholder="Ej: Perez" maxlength="80" autocomplete="new-password" autocapitalize="words" spellcheck="false">
 <label class="block text-sm font-bold" for="rg-tel">WhatsApp * (9XXXXXXXX)</label>
-<input id="rg-tel" class="touch-input w-full bg-slate-950 border border-slate-700 text-white font-mono" placeholder="Ej: 9 8765 4321" maxlength="14" inputmode="numeric" autocomplete="off">
+<input id="rg-tel" name="rg-tel-nuevo" class="touch-input w-full border font-mono" placeholder="Ej: 9 8765 4321" maxlength="14" inputmode="numeric" autocomplete="new-password" spellcheck="false">
 <p id="rg-dup" class="hidden text-amber-300 text-sm font-bold"></p>
 <label class="block text-sm font-bold" for="rg-email">Email (opcional)</label>
-<input id="rg-email" class="touch-input w-full bg-slate-950 border border-slate-700 text-white" placeholder="tucorreo@ejemplo.cl" maxlength="120" inputmode="email" autocomplete="off">
+<input id="rg-email" name="rg-email-nuevo" class="touch-input w-full border" placeholder="tucorreo@ejemplo.cl" maxlength="120" inputmode="email" autocomplete="new-password" spellcheck="false">
 <button id="rg-sig1" class="touch-btn w-full bg-cyan-500 text-slate-950 font-black">SIGUIENTE</button>
 </section>
 <!-- PASO 2 -->
@@ -112,7 +128,8 @@
 </section>
 <footer class="text-center text-[11px] text-slate-500 mt-4">No pedimos RUT · Tu clave de equipo solo la ve el tecnico y se borra al entregar</footer>
 </main>
+</form>
 <script src="assets/js/common.js?v=enc5" defer></script>
-<script src="assets/js/registro-tactil.js?v=tab1" defer></script>
+<script src="assets/js/registro-tactil.js?v=tab2" defer></script>
 </body>
 </html>
