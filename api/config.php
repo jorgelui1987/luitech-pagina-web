@@ -494,7 +494,10 @@ function exigir_caja_abierta_hoy(PDO $pdo, string $accion): void
  * ========================================================================== */
 
 /** Garantiza la tabla de clientes y la columna cliente_id en ordenes
- *  (mismo espíritu que preparar_proveedores: hostings sin migrate). */
+ *  (mismo espíritu que preparar_proveedores: hostings sin migrate).
+ *  Extensión tablet táctil (sin RUT): apellido, telefono_norm único,
+ *  código interno CLI-XXXX, PIN de retiro (hash), desbloqueo opcional,
+ *  origen + estado de validación + consentimiento Ley 19.628/21.719. */
 function preparar_clientes(PDO $pdo): void
 {
     $pdo->exec("CREATE TABLE IF NOT EXISTS clientes (
@@ -517,6 +520,16 @@ function preparar_clientes(PDO $pdo): void
     foreach ([
         'notas' => "VARCHAR(255) NULL AFTER email",
         'activo' => "TINYINT(1) NOT NULL DEFAULT 1 AFTER notas",
+        // --- Auto-registro táctil sin RUT (todo opcional/nullable para no romper) ---
+        'apellido' => "VARCHAR(80) NULL AFTER nombre",
+        'telefono_norm' => "VARCHAR(12) NULL AFTER telefono",
+        'codigo_cli' => "VARCHAR(12) NULL AFTER telefono_norm",
+        'pin_retiro_hash' => "VARCHAR(255) NULL AFTER codigo_cli",
+        'desbloqueo_tipo' => "ENUM('ninguno','pin','patron','sin_clave') NOT NULL DEFAULT 'ninguno' AFTER pin_retiro_hash",
+        'desbloqueo_clave' => "VARCHAR(100) NULL AFTER desbloqueo_tipo",
+        'origen' => "VARCHAR(20) NOT NULL DEFAULT 'mostrador' AFTER desbloqueo_clave",
+        'estado_validacion' => "ENUM('pendiente','validado') NOT NULL DEFAULT 'validado' AFTER origen",
+        'acepta_privacidad' => "TINYINT(1) NOT NULL DEFAULT 0 AFTER estado_validacion",
     ] as $colCli => $tipoCli) {
         $tieneCli = $pdo->query("SHOW COLUMNS FROM clientes LIKE '" . $colCli . "'")->fetch(PDO::FETCH_ASSOC);
         if (!$tieneCli) {

@@ -37,7 +37,7 @@
 
       res.clientes.forEach(function (c) {
         var tr = document.createElement('tr');
-        tr.className = 'border-b border-slate-800/40 hover:bg-slate-800/30';
+        tr.className = 'border-b border-slate-800/40 hover:bg-slate-800/30' + (c.estado_validacion === 'pendiente' ? ' bg-amber-950/30' : '');
 
         function td(texto, clase) {
           var c2 = document.createElement('td');
@@ -46,8 +46,8 @@
           return c2;
         }
 
-        tr.appendChild(td(c.nombre, 'p-2 font-bold text-white'));
-        tr.appendChild(td(c.rut || '—', 'p-2 font-mono text-slate-400'));
+        tr.appendChild(td(c.nombre + (c.codigo_cli ? ' (' + c.codigo_cli + ')' : '') + (c.estado_validacion === 'pendiente' ? ' ⏳ tablet' : '') + (c.tiene_desbloqueo ? ' 🔑' : ''), 'p-2 font-bold text-white'));
+        tr.appendChild(td('—', 'p-2 font-mono text-slate-400'));
         tr.appendChild(td(c.telefono || '—', 'p-2 text-slate-400'));
 
         var tdOrd = document.createElement('td');
@@ -161,7 +161,19 @@
   function verFicha(c) {
     api('api/clientes.php?action=ficha&id=' + encodeURIComponent(c.id)).then(function (res) {
       if (!res.ok) { window.mostrarToast(res.error || 'No se pudo cargar la ficha', 'error'); return; }
-      $('ficha-titulo').innerHTML = '<i class="fa-solid fa-folder-open mr-1"></i>Historial de ' + res.cliente.nombre;
+      var cli = res.cliente;
+      $('ficha-titulo').textContent = 'Historial de ' + cli.nombre + (cli.codigo_cli ? ' (' + cli.codigo_cli + ')' : '');
+      // Aviso tablet pendiente + clave de desbloqueo (solo mostrador/tecnico)
+      var extras = [];
+      if (cli.estado_validacion === 'pendiente') extras.push('⏳ Registrado en tablet: valida sus datos y toca Validar');
+      if (cli.desbloqueo_tipo === 'pin' || cli.desbloqueo_tipo === 'patron') extras.push('🔑 Desbloqueo: ' + (cli.desbloqueo_clave || '(sin dato)'));
+      if (cli.desbloqueo_tipo === 'sin_clave') extras.push('⚠️ Cliente NO quiso dejar su clave: solo revisión externa');
+      if (extras.length) window.mostrarToast(extras.join(' · '), 'success');
+      if (cli.estado_validacion === 'pendiente') {
+        if (confirm('Cliente de tablet pendiente: "' + cli.nombre + ' ' + (cli.telefono || '') + '". ¿Validar ahora?')) {
+          api('api/clientes.php?action=validar', { method: 'POST', body: { id: cli.id } }).then(function () { cargarClientes(); });
+        }
+      }
       $('ficha-ordenes').textContent = String(res.ordenes.length);
       $('ficha-gastado').textContent = fmt(res.total_gastado);
       var tbody = $('ficha-body');

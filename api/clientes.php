@@ -58,7 +58,9 @@ switch ($action) {
 
     case 'list': {
         $q = trim((string)($_GET['q'] ?? ''));
-        $sql = 'SELECT c.id, c.nombre, c.rut, c.telefono, c.email, c.notas,
+        $soloPendientes = (($_GET['pendientes'] ?? '') === '1');
+        $sql = 'SELECT c.id, c.nombre, c.rut, c.telefono, c.telefono_norm, c.codigo_cli, c.email, c.notas,
+                       c.origen, c.estado_validacion, c.desbloqueo_tipo,
                        (SELECT COUNT(*) FROM ordenes o WHERE o.cliente_id = c.id OR LOWER(o.cliente) = LOWER(c.nombre)) AS ordenes_total,
                        (SELECT COALESCE(SUM(o.total),0) FROM ordenes o WHERE o.cliente_id = c.id OR LOWER(o.cliente) = LOWER(c.nombre)) AS total_gastado,
                        (SELECT MAX(o.fecha_ingreso) FROM ordenes o WHERE o.cliente_id = c.id OR LOWER(o.cliente) = LOWER(c.nombre)) AS ultima_orden
@@ -71,7 +73,17 @@ switch ($action) {
         $sql .= ' ORDER BY c.nombre LIMIT 300';
         $stmt = db()->prepare($sql);
         $stmt->execute($params);
-        responder(['ok' => true, 'clientes' => $stmt->fetchAll()]);
+        $lista = $stmt->fetchAll();
+        // La clave de desbloqueo NUNCA viaja al listado: solo aviso si hay.
+        foreach ($lista as &$c) {
+            $c['tiene_desbloqueo'] = !empty($c['desbloqueo_tipo']) && $c['desbloqueo_tipo'] !== 'ninguno' && $c['desbloqueo_tipo'] !== 'sin_clave' ? 1 : 0;
+            unset($c['desbloqueo_tipo']);
+        }
+        unset($c);
+        if ($soloPendientes) {
+            $lista = array_values(array_filter($lista, fn($c) => ($c['estado_validacion'] ?? '') === 'pendiente'));
+        }
+        responder(['ok' => true, 'clientes' => $lista]);
     }
 
     case 'create': {
@@ -168,7 +180,7 @@ switch ($action) {
         if ($id <= 0) {
             responder(['ok' => false, 'error' => 'ID inválido'], 400);
         }
-        $st = db()->prepare('SELECT id, nombre, rut, telefono, email, notas FROM clientes WHERE id = ? AND activo = 1 LIMIT 1');
+        $st = db()->prepare('SELECT id, nombre, rut, telefono, telefono_norm, codigo_cli, email, notas, origen, estado_validacion, desbloqueo_tipo, desbloqueo_clave FROM clientes WHERE id = ? AND activo = 1 LIMIT 1');
         $st->execute([$id]);
         $cliente = $st->fetch();
         if (!$cliente) {
@@ -185,7 +197,24 @@ switch ($action) {
         foreach ($lista as $o) {
             $gastado += (int)$o['total'];
         }
+        // Decodifica la clave de desbloqueo solo para el tecnico/mostrador
+        // (nunca viaja al listado). PATRON:1-2-3 / PIN en claro para probar.
+        if (!empty($cliente['desbloqueo_clave']) && str_starts_with((string)$cliente['desbloqueo_clave'], 'ENC:')) {
+            $cliente['desbloqueo_clave'] = (string)base64_decode(substr((string)$cliente['desbloqueo_clave'], 4));
+        }
         responder(['ok' => true, 'cliente' => $cliente, 'ordenes' => $lista, 'total_gastado' => $gastado]);
+    }
+
+    case 'validar': {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            responder(['ok' => false, 'error' => 'Método no permitido'], 405);
+        }
+        $id = (int)(leer_cuerpo()['id'] ?? 0);
+        if ($id <= 0) {
+            responder(['ok' => false, 'error' => 'ID inválido'], 400);
+        }
+        db()->prepare("UPDATE clientes SET estado_validacion = 'validado' WHERE id = ?")->execute([$id]);
+        responder(['ok' => true]);
     }
 
     default:

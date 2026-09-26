@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Registro | Luitech</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg?v=2">
+<link rel="stylesheet" href="assets/css/styles.css?v=mp55">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+<style>
+.touch-input{font-size:1.3rem!important;padding:1rem!important;border-radius:1rem!important;min-height:62px}
+.touch-btn{min-height:70px;font-size:1.2rem;border-radius:1rem}
+.num-key{min-height:74px;font-size:1.7rem;border-radius:1rem}
+.patron-dot{width:60px;height:60px;border-radius:9999px;border:3px solid #334155;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#475569}
+.patron-dot.on{background:#06b6d4;border-color:#06b6d4;color:#020617}
+.paso{display:none}.paso.activo{display:block}
+</style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen select-none">
+<div id="toast-container" class="fixed top-4 right-4 z-[9999] flex flex-col gap-3 px-4 w-full sm:w-auto items-end pointer-events-none"></div>
+<main class="max-w-2xl mx-auto px-4 py-6">
+<header class="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-2xl px-5 py-4 mb-5">
+<div class="flex items-center gap-3">
+<img src="assets/img/logo-luitech.png" alt="" width="44" height="44" class="h-11 w-11 rounded-xl object-cover">
+<div><p class="text-xl font-black tracking-wide bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500">LUITECH</p>
+<p class="text-[11px] text-slate-400 font-semibold">Registro de clientes - totem tactil</p></div>
+</div>
+<p class="text-[11px] text-slate-500 font-bold text-right">Sin RUT<br>solo WhatsApp</p>
+</header>
+<div class="flex items-center gap-2 mb-5 text-xs font-bold">
+<div id="bar1" class="flex-1 h-2 rounded-full bg-cyan-500"></div>
+<div id="bar2" class="flex-1 h-2 rounded-full bg-slate-800"></div>
+<div id="bar3" class="flex-1 h-2 rounded-full bg-slate-800"></div>
+</div>
+<!-- PASO 1 -->
+<section id="paso1" class="paso activo bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
+<h1 class="text-2xl font-black text-white">Toca para registrarte</h1>
+<p class="text-slate-400 text-sm">20 segundos. Sin RUT. Solo nombre y WhatsApp.</p>
+<label class="block text-sm font-bold" for="rg-nombre">Nombre *</label>
+<input id="rg-nombre" class="touch-input w-full bg-slate-950 border border-slate-700 text-white" placeholder="Ej: Juan" maxlength="60" autocomplete="off">
+<label class="block text-sm font-bold" for="rg-apellido">Apellido</label>
+<input id="rg-apellido" class="touch-input w-full bg-slate-950 border border-slate-700 text-white" placeholder="Ej: Perez" maxlength="80" autocomplete="off">
+<label class="block text-sm font-bold" for="rg-tel">WhatsApp * (9XXXXXXXX)</label>
+<input id="rg-tel" class="touch-input w-full bg-slate-950 border border-slate-700 text-white font-mono" placeholder="Ej: 9 8765 4321" maxlength="14" inputmode="numeric" autocomplete="off">
+<p id="rg-dup" class="hidden text-amber-300 text-sm font-bold"></p>
+<label class="block text-sm font-bold" for="rg-email">Email (opcional)</label>
+<input id="rg-email" class="touch-input w-full bg-slate-950 border border-slate-700 text-white" placeholder="tucorreo@ejemplo.cl" maxlength="120" inputmode="email" autocomplete="off">
+<button id="rg-sig1" class="touch-btn w-full bg-cyan-500 text-slate-950 font-black">SIGUIENTE</button>
+</section>
+<!-- PASO 2 -->
+<section id="paso2" class="paso bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+<h2 class="text-2xl font-black text-white">¿Tu equipo tiene bloqueo?</h2>
+<div class="grid grid-cols-2 gap-3">
+<button data-des="ninguno" class="des-btn touch-btn bg-slate-800 border-2 border-slate-700 font-bold">Viene desbloqueado</button>
+<button data-des="pin" class="des-btn touch-btn bg-slate-800 border-2 border-slate-700 font-bold">Tiene PIN / clave</button>
+<button data-des="patron" class="des-btn touch-btn bg-slate-800 border-2 border-slate-700 font-bold">Tiene patron</button>
+<button data-des="sin_clave" class="des-btn touch-btn bg-slate-800 border-2 border-slate-700 font-bold">No quiero dejarla</button>
+</div>
+<div id="box-pin" class="hidden space-y-2">
+<p class="text-sm font-bold text-slate-300">Escribe tu PIN del equipo (solo la ve el tecnico):</p>
+<input id="rg-des-pin" type="password" class="touch-input w-full bg-slate-950 border border-slate-700 text-white text-center" maxlength="60" placeholder="••••" autocomplete="off">
+</div>
+<div id="box-patron" class="hidden space-y-2">
+<p class="text-sm font-bold text-slate-300">Dibuja tu patron tocando los puntos (minimo 4):</p>
+<div id="patron-grid" class="grid grid-cols-3 gap-3 justify-items-center py-2"></div>
+<div class="flex gap-2">
+<button id="patron-borrar" class="flex-1 bg-slate-800 rounded-xl py-3 font-bold text-sm">Borrar</button>
+<p id="patron-estado" class="flex-1 text-center text-sm font-bold text-slate-400 self-center">Toca 4 o mas puntos</p>
+</div>
+</div>
+<p id="box-sinclave" class="hidden text-xs text-amber-300 font-semibold bg-amber-950/50 border border-amber-800 rounded-xl p-3">Sin tu clave solo haremos revision externa. Si se necesita prueba interna te llamaremos al WhatsApp.</p>
+<div class="flex gap-2">
+<button id="rg-atras2" class="touch-btn flex-1 bg-slate-800 font-bold">Atras</button>
+<button id="rg-sig2" class="touch-btn flex-[2] bg-cyan-500 text-slate-950 font-black">SIGUIENTE</button>
+</div>
+</section>
+<section id="paso3" class="paso bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+<h2 class="text-2xl font-black text-white">Crea tu PIN de retiro (4 digitos)</h2>
+<p class="text-slate-400 text-sm">Con este PIN + tu WhatsApp podras retirar tu equipo.</p>
+<div id="pin-pantalla" class="text-center text-5xl font-black text-white bg-slate-950 border border-slate-700 rounded-2xl py-4">••••</div>
+<div class="grid grid-cols-3 gap-3">
+<button class="num-key bg-slate-800 font-black" data-n="1">1</button>
+<button class="num-key bg-slate-800 font-black" data-n="2">2</button>
+<button class="num-key bg-slate-800 font-black" data-n="3">3</button>
+<button class="num-key bg-slate-800 font-black" data-n="4">4</button>
+<button class="num-key bg-slate-800 font-black" data-n="5">5</button>
+<button class="num-key bg-slate-800 font-black" data-n="6">6</button>
+<button class="num-key bg-slate-800 font-black" data-n="7">7</button>
+<button class="num-key bg-slate-800 font-black" data-n="8">8</button>
+<button class="num-key bg-slate-800 font-black" data-n="9">9</button>
+<button id="pin-borrar" class="num-key bg-red-950 text-red-300 font-black">⌫</button>
+<button class="num-key bg-slate-800 font-black" data-n="0">0</button>
+<button id="pin-ok" class="num-key bg-emerald-600 text-white font-black">OK</button>
+</div>
+<label class="flex items-start gap-3 text-xs text-slate-300 bg-slate-950 border border-slate-800 rounded-xl p-3 cursor-pointer">
+<input id="rg-acepta" type="checkbox" class="mt-1 w-6 h-6">
+<span>Autorizo que Luitech use mi WhatsApp solo para avisarme de mi equipo. Sin RUT. Puedo pedir que borren mis datos (Ley 19.628 / 21.719).</span>
+</label>
+<div class="flex gap-2">
+<button id="rg-atras3" class="touch-btn flex-1 bg-slate-800 font-bold">Atras</button>
+<button id="rg-enviar" class="touch-btn flex-[2] bg-emerald-500 text-slate-950 font-black">TERMINAR REGISTRO</button>
+</div>
+</section>
+<section id="paso-ok" class="paso bg-slate-900 border border-emerald-800 rounded-2xl p-8 text-center space-y-3">
+<p class="text-6xl">✅</p>
+<h2 class="text-3xl font-black text-white">¡Gracias <span id="ok-nombre">cliente</span>!</h2>
+<p class="text-slate-300">Tu codigo es <span id="ok-codigo" class="font-black text-cyan-400 text-2xl"></span></p>
+<p class="text-slate-400 text-sm">Muestra esta pantalla en mostrador. Se borra sola en <span id="ok-cuenta">15</span> s por privacidad.</p>
+<button id="ok-nuevo" class="touch-btn w-full bg-slate-800 font-bold">Registrar a otra persona</button>
+</section>
+<footer class="text-center text-[11px] text-slate-500 mt-4">No pedimos RUT · Tu clave de equipo solo la ve el tecnico y se borra al entregar</footer>
+</main>
+<script src="assets/js/common.js?v=enc5" defer></script>
+<script src="assets/js/registro-tactil.js?v=tab1" defer></script>
+</body>
+</html>
