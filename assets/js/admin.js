@@ -2227,6 +2227,10 @@
       filaRecibo('Cliente', escapar(o.cliente)) +
       filaRecibo('Equipo', escapar(o.equipo)) +
       filaRecibo('Servicio', escapar(o.falla)) +
+      // Diagnóstico público en el papel: solo si el taller ya lo publicó.
+      // Si están vacíos no se imprime la línea (ticket 80mm sin huecos).
+      (o.diagnostico_publico ? filaRecibo('Diagnóstico', escapar(o.diagnostico_publico)) : '') +
+      (o.reparacion_realizada ? filaRecibo('Trabajo realizado', escapar(o.reparacion_realizada)) : '') +
       filaRecibo('Retirado por', escapar(o.entregado_a || '—')) +
       '</table>' +
       '<div class="d">' +
