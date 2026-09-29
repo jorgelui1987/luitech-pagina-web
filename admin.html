@@ -467,6 +467,29 @@
                 </label>
             </div>
 
+            <!-- Diagnóstico público: lo que el cliente verá en el portal -->
+            <div class="seccion-modal">
+                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1"><i class="fa-solid fa-stethoscope text-cyan-400 mr-1"></i>Diagnóstico visible para el cliente</p>
+                <div class="grid grid-cols-1 gap-2">
+                    <div>
+                        <label for="mo-diagnostico" class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Lo que encontramos (público)</label>
+                        <textarea id="mo-diagnostico" rows="2" maxlength="500" placeholder="Ej: Corto en circuito de encendido de la placa, no llegaban 19V"
+                                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500"></textarea>
+                    </div>
+                    <div>
+                        <label for="mo-reparacion" class="block text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Lo que se hizo / se hará (público)</label>
+                        <textarea id="mo-reparacion" rows="2" maxlength="500" placeholder="Ej: Se reemplazó MOSFET de encendido + limpieza. Probado 24h OK"
+                                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500"></textarea>
+                    </div>
+                    <div>
+                        <button type="button" id="mo-btn-diagnostico" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold py-2 px-3 rounded-lg transition-all disabled:opacity-40">
+                            <i class="fa-solid fa-eye mr-1"></i> Publicar diagnóstico
+                        </button>
+                        <span class="text-[10px] text-slate-500 ml-2">La bitácora sigue siendo solo del taller.</span>
+                    </div>
+                </div>
+            </div>
+
             <!-- Cobro de la reparación -->
             <div class="seccion-modal">
                 <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1"><i class="fa-solid fa-money-bill-wave text-cyan-400 mr-1"></i>Cobro de la reparación</p>

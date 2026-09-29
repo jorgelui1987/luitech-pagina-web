@@ -43,6 +43,12 @@ try { db()->query('SELECT motivo_sin_reparacion FROM ordenes LIMIT 1'); }
 catch (Throwable $e) { db()->exec('ALTER TABLE ordenes ADD COLUMN motivo_sin_reparacion VARCHAR(120) NULL'); }
 try { db()->query('SELECT mensaje_publico FROM ordenes LIMIT 1'); }
 catch (Throwable $e) { db()->exec('ALTER TABLE ordenes ADD COLUMN mensaje_publico VARCHAR(280) NULL'); }
+// Auto-reparación: diagnóstico público visible en el portal (lo que se encontró
+// y lo que se hizo, redactado para el cliente; la bitácora sigue siendo interna).
+try { db()->query('SELECT diagnostico_publico FROM ordenes LIMIT 1'); }
+catch (Throwable $e) { db()->exec('ALTER TABLE ordenes ADD COLUMN diagnostico_publico VARCHAR(500) NULL'); }
+try { db()->query('SELECT reparacion_realizada FROM ordenes LIMIT 1'); }
+catch (Throwable $e) { db()->exec('ALTER TABLE ordenes ADD COLUMN reparacion_realizada VARCHAR(500) NULL'); }
 
 const ESTADOS_VALIDOS = ['Ingresado', 'En Diagnóstico', 'En Reparación', 'Listo para Retiro', 'Entregado', 'Sin reparación'];
 
@@ -168,13 +174,15 @@ switch ($action) {
             responder(['ok' => false, 'error' => 'Código inválido: usa el código completo de tu boleta (ej: 1029-K7X2)'], 400);
         }
 
-        // Privacidad: la falla reportada NO viaja al portal público (nadie debe
-        // enterarse de qué servicio llevó el equipo de otra persona).
+        // Privacidad: viaja al portal la falla declarada + el diagnóstico público
+        // (lo encontrado y lo realizado, redactado para el cliente).
+        // NO viajan: nombre del cliente, bitácora interna, costos ni accesorios.
         // El motivo + mensaje público SÍ viajan: es lo que el cliente sin
         // WhatsApp lee para saber por qué su equipo no tuvo reparación.
         $stmt = db()->prepare(
             'SELECT codigo, equipo, estado, avance, tecnico, fecha_ingreso, fecha_entrega,
                     garantia_hasta, DATEDIFF(garantia_hasta, CURDATE()) AS garantia_dias,
+                    falla, diagnostico_publico, reparacion_realizada,
                     motivo_sin_reparacion, mensaje_publico
              FROM ordenes WHERE codigo = ? LIMIT 1'
         );
@@ -226,7 +234,7 @@ switch ($action) {
                     pin_patron, accesorios, obs_recepcion, firma_ingreso,
                     precio_repuestos, mano_obra, total, abono, estado_pago, metodo_pago, garantia_dias, garantia_hasta,
                     fecha_entrega, entregado_a, firma_entrega, tecnico_id, costo_repuesto, fecha_listo,
-                    motivo_sin_reparacion, mensaje_publico
+                    motivo_sin_reparacion, mensaje_publico, diagnostico_publico, reparacion_realizada
              FROM ordenes WHERE tecnico_id = ? ORDER BY id DESC');
             $stmt->execute([$_SESSION['admin_tecnico_id'] ?? 0]);
             responder(['ok' => true, 'ordenes' => $stmt->fetchAll()]);
@@ -236,7 +244,7 @@ switch ($action) {
                     pin_patron, accesorios, obs_recepcion, firma_ingreso,
                     precio_repuestos, mano_obra, total, abono, estado_pago, metodo_pago, garantia_dias, garantia_hasta,
                     fecha_entrega, entregado_a, firma_entrega, tecnico_id, costo_repuesto, fecha_listo,
-                    motivo_sin_reparacion, mensaje_publico
+                    motivo_sin_reparacion, mensaje_publico, diagnostico_publico, reparacion_realizada
              FROM ordenes ORDER BY id DESC'
         );
         responder(['ok' => true, 'ordenes' => $stmt->fetchAll()]);
@@ -481,6 +489,24 @@ switch ($action) {
         if (isset($d['costo_repuesto'])) {
             $set[]    = 'costo_repuesto = ?';
             $params[] = max(0, (int)$d['costo_repuesto']);
+        }
+        // Diagnóstico público del portal: lo encontrado y lo realizado,
+        // redactado para el cliente (la bitácora sigue siendo solo del taller).
+        if (isset($d['diagnostico_publico'])) {
+            $diag = campo_texto($d, 'diagnostico_publico', 500);
+            if ($diag === null) {
+                responder(['ok' => false, 'error' => 'Diagnóstico inválido'], 400);
+            }
+            $set[]    = 'diagnostico_publico = ?';
+            $params[] = $diag;
+        }
+        if (isset($d['reparacion_realizada'])) {
+            $rep = campo_texto($d, 'reparacion_realizada', 500);
+            if ($rep === null) {
+                responder(['ok' => false, 'error' => 'Reparación inválida'], 400);
+            }
+            $set[]    = 'reparacion_realizada = ?';
+            $params[] = $rep;
         }
 
         // --- Cobro de la reparación (repuestos, mano de obra, total, abonos) ---

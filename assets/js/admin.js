@@ -1310,6 +1310,7 @@
 
     renderCobroModal(o);
     renderEntregaModal(o);
+    cargarDiagnosticoModal(o);
     cargarBitacora(codigo);
 
     cargarFotosOrden(codigo);
@@ -1328,6 +1329,41 @@
     var o = null;
     ordenesCache.forEach(function (x) { if (x.codigo === ordenModalCodigo) o = x; });
     return o;
+  }
+
+  /** Carga los textos públicos del diagnóstico en el modal (lo que verá el cliente). */
+  function cargarDiagnosticoModal(o) {
+    var d = $('mo-diagnostico');
+    var r = $('mo-reparacion');
+    if (d) d.value = (o && o.diagnostico_publico) || '';
+    if (r) r.value = (o && o.reparacion_realizada) || '';
+  }
+
+  /** Publica el diagnóstico visible para el cliente (falla ya viaja sola). */
+  function guardarDiagnosticoModal() {
+    var o = ordenActualModal();
+    if (!o) return;
+    var boton = $('mo-btn-diagnostico');
+    var cuerpo = {
+      codigo: ordenModalCodigo,
+      diagnostico_publico: String($('mo-diagnostico').value || '').slice(0, 500),
+      reparacion_realizada: String($('mo-reparacion').value || '').slice(0, 500)
+    };
+    boton.disabled = true;
+    api('api/ordenes.php?action=update', { method: 'POST', body: cuerpo })
+      .then(function (res) {
+        boton.disabled = false;
+        if (!res.ok) { window.mostrarToast(res.error || 'No se pudo publicar el diagnóstico', 'error'); return; }
+        patchOrdenModal({
+          diagnostico_publico: cuerpo.diagnostico_publico,
+          reparacion_realizada: cuerpo.reparacion_realizada
+        });
+        window.mostrarToast('Diagnóstico visible para el cliente', 'success');
+      })
+      .catch(function () {
+        boton.disabled = false;
+        window.mostrarToast('Error de conexión con el servidor', 'error');
+      });
   }
 
   /** Aplica cambios locales a la orden del modal (la tabla se refresca sola). */
@@ -2257,6 +2293,7 @@
     $('mo-btn-comprobante').addEventListener('click', function () { imprimirComprobanteIngreso(ordenActualModal()); });
     $('mo-btn-entrega').addEventListener('click', confirmarEntrega);
     $('mo-btn-nota').addEventListener('click', agregarNota);
+    if ($('mo-btn-diagnostico')) $('mo-btn-diagnostico').addEventListener('click', guardarDiagnosticoModal);
     $('mo-nota').addEventListener('keydown', function (e) {
       if (e.key === 'Enter') { e.preventDefault(); agregarNota(); }
     });

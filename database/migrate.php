@@ -102,6 +102,8 @@ $columnasExistentes = $pdo->query('SHOW COLUMNS FROM ordenes')->fetchAll(PDO::FE
 foreach ([
     'motivo_sin_reparacion' => 'ALTER TABLE ordenes ADD COLUMN motivo_sin_reparacion VARCHAR(120) NULL AFTER fecha_listo',
     'mensaje_publico'       => 'ALTER TABLE ordenes ADD COLUMN mensaje_publico VARCHAR(280) NULL AFTER motivo_sin_reparacion',
+    'diagnostico_publico'   => 'ALTER TABLE ordenes ADD COLUMN diagnostico_publico VARCHAR(500) NULL AFTER mensaje_publico',
+    'reparacion_realizada'  => 'ALTER TABLE ordenes ADD COLUMN reparacion_realizada VARCHAR(500) NULL AFTER diagnostico_publico',
 ] as $columna => $sql) {
     if (!in_array($columna, $columnasExistentes, true)) {
         $pdo->exec($sql);

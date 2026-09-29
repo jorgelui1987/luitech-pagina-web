@@ -55,6 +55,8 @@ CREATE TABLE IF NOT EXISTS ordenes (
     firma_entrega  VARCHAR(255)      NULL,
     motivo_sin_reparacion VARCHAR(120) NULL,
     mensaje_publico VARCHAR(280)     NULL,
+    diagnostico_publico VARCHAR(500) NULL,
+    reparacion_realizada VARCHAR(500) NULL,
     fecha_ingreso  DATE              NOT NULL,
     creado_en      TIMESTAMP         NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMP         NOT NULL DEFAULT CURRENT_TIMESTAMP

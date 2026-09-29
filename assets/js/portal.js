@@ -175,6 +175,33 @@
       }
     }
 
+    // Diagnóstico público del taller: falla reportada siempre; "lo encontrado"
+    // y "lo realizado" solo cuando el taller ya los escribió (si están vacíos
+    // muestran "En revisión"). Todo con textContent (seguro ante XSS).
+    var elFalla = $('track-falla');
+    if (elFalla) elFalla.textContent = o.falla || '—';
+    var boxDiag = $('track-diag-box');
+    var elDiag = $('track-diagnostico');
+    if (boxDiag && elDiag) {
+      if (o.diagnostico_publico) {
+        elDiag.textContent = o.diagnostico_publico;
+        boxDiag.classList.remove('hidden');
+      } else {
+        elDiag.textContent = 'En revisión por el taller';
+        boxDiag.classList.remove('hidden');
+      }
+    }
+    var boxRep = $('track-rep-box');
+    var elRep = $('track-reparacion');
+    if (boxRep && elRep) {
+      if (o.reparacion_realizada) {
+        elRep.textContent = o.reparacion_realizada;
+        boxRep.classList.remove('hidden');
+      } else {
+        boxRep.classList.add('hidden');
+      }
+    }
+
     for (var i = 1; i <= 5; i++) {
       var paso = $('step-' + i);
       if (!paso) continue;
