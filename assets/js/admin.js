@@ -333,26 +333,66 @@
     prepararLienzoFirma(false);
   }
 
-  /** Comprime una imagen en el navegador (máx. 1200px, JPEG 72%) → dataURL. */
+  /** Comprime una imagen en el navegador (máx. 1200px, JPEG 72%) → dataURL.
+   *  Devuelve null si el navegador no pudo decodificarla (ej. HEIC de iPhone):
+   *  en ese caso el llamador sube el archivo original sin comprimir. */
   function comprimirFoto(file) {
     return new Promise(function (resolve) {
       var url = URL.createObjectURL(file);
       var img = new Image();
-      img.onload = function () {
-        var MAX = 1200;
-        var w = img.naturalWidth, h = img.naturalHeight;
-        var escala = Math.min(1, MAX / Math.max(w, h));
-        w = Math.round(w * escala);
-        h = Math.round(h * escala);
-        var c = document.createElement('canvas');
-        c.width = w;
-        c.height = h;
-        c.getContext('2d').drawImage(img, 0, 0, w, h);
+      var listo = false;
+      function terminar(valor) {
+        if (listo) return;
+        listo = true;
         URL.revokeObjectURL(url);
-        resolve(c.toDataURL('image/jpeg', 0.72));
+        resolve(valor);
+      }
+      img.onload = function () {
+        try {
+          var MAX = 1200;
+          var w = img.naturalWidth, h = img.naturalHeight;
+          if (!w || !h) { terminar(null); return; }
+          var escala = Math.min(1, MAX / Math.max(w, h));
+          w = Math.round(w * escala);
+          h = Math.round(h * escala);
+          var c = document.createElement('canvas');
+          c.width = w;
+          c.height = h;
+          c.getContext('2d').drawImage(img, 0, 0, w, h);
+          terminar(c.toDataURL('image/jpeg', 0.72));
+        } catch (e) { terminar(null); }
       };
-      img.onerror = function () { URL.revokeObjectURL(url); resolve(null); };
+      img.onerror = function () { terminar(null); };
+      // Si el formato no se decodifica (HEIC/AVIF en algunos navegadores),
+      // el onload nunca llega: se usa un tiempo límite para no colgar la cola.
+      setTimeout(function () { terminar(null); }, 15000);
       img.src = url;
+    });
+  }
+
+  /** ¿Parece una imagen? Algunos celulares entregan type vacío: se acepta por extensión. */
+  function esArchivoImagen(file) {
+    if (file && file.type && file.type.indexOf('image/') === 0) return true;
+    var nombre = String((file && file.name) || '').toLowerCase();
+    return /\.(jpe?g|png|webp|gif|bmp|heic|heif|avif)$/.test(nombre) || !file.type;
+  }
+
+  /** Sube el archivo original sin comprimir (respaldo para HEIC u otros
+   *  formatos que el canvas del navegador no pudo decodificar). */
+  function subirArchivoOriginal(codigo, file) {
+    var fd = new FormData();
+    fd.append('codigo', codigo);
+    fd.append('foto', file, file.name || 'foto.jpg');
+    return fetch('api/ordenes.php?action=subir_foto', {
+      method: 'POST',
+      body: fd,
+      credentials: 'same-origin'
+    }).then(function (res) {
+      return res.json().catch(function () {
+        return { ok: false, error: 'Respuesta inválida del servidor (HTTP ' + res.status + ')' };
+      });
+    }).catch(function () {
+      return { ok: false, error: 'Sin conexión con el servidor al subir la foto' };
     });
   }
 
@@ -366,27 +406,51 @@
     return new Blob([bytes], { type: mime });
   }
 
-  /** Sube una foto ya comprimida a una orden existente (multipart). */
+  /** Sube una foto ya comprimida a una orden existente (multipart). Nunca rechaza:
+   *  siempre resuelve {ok, ...} para que la cola muestre el motivo en un toast. */
   function subirFotoUnica(codigo, dataUrl) {
     var fd = new FormData();
-    fd.append('codigo', codigo);
-    fd.append('foto', dataUrlABlob(dataUrl), 'foto.jpg');
+    try {
+      fd.append('codigo', codigo);
+      fd.append('foto', dataUrlABlob(dataUrl), 'foto.jpg');
+    } catch (e) {
+      return Promise.resolve({ ok: false, error: 'No se pudo preparar la foto para subirla' });
+    }
     return fetch('api/ordenes.php?action=subir_foto', {
       method: 'POST',
       body: fd,
       credentials: 'same-origin'
-    }).then(function (res) { return res.json(); });
+    }).then(function (res) {
+      return res.json().catch(function () {
+        return { ok: false, error: 'Respuesta inválida del servidor (HTTP ' + res.status + ')' };
+      });
+    }).catch(function () {
+      return { ok: false, error: 'Sin conexión con el servidor al subir la foto' };
+    });
   }
 
   function renderFotosNueva() {
     var g = $('new-fotos-galeria');
+    if (!g) return;
     g.replaceChildren();
-    fotosNueva.forEach(function (dataUrl, i) {
+    fotosNueva.forEach(function (item, i) {
       var d = document.createElement('div');
       d.className = 'foto-thumb';
-      var img = document.createElement('img');
-      img.src = dataUrl;
-      img.alt = 'Foto de respaldo ' + (i + 1);
+      var esOriginal = item && typeof item === 'object';
+      if (esOriginal) {
+        var etiqueta = document.createElement('span');
+        etiqueta.className = 'text-[10px] text-slate-300 font-semibold break-all';
+        etiqueta.textContent = '📎 ' + (item.nombre || 'foto') + ' (se subirá original)';
+        etiqueta.style.padding = '18px 6px';
+        etiqueta.style.display = 'block';
+        etiqueta.style.textAlign = 'center';
+        d.appendChild(etiqueta);
+      } else {
+        var img = document.createElement('img');
+        img.src = item;
+        img.alt = 'Foto de respaldo ' + (i + 1);
+        d.appendChild(img);
+      }
       var b = document.createElement('button');
       b.type = 'button';
       b.className = 'foto-borrar';
@@ -396,7 +460,6 @@
         fotosNueva.splice(i, 1);
         renderFotosNueva();
       });
-      d.appendChild(img);
       d.appendChild(b);
       g.appendChild(d);
     });
@@ -1120,12 +1183,15 @@
 
         if (!fotosASubir.length) return;
 
-        // Subir las fotos de respaldo una por una (ya vienen comprimidas)
+        // Subir las fotos de respaldo una por una (comprimidas u originales)
         var subidas = 0, errores = 0, mensajeError = '';
         var cadena = Promise.resolve();
-        fotosASubir.forEach(function (dataUrl) {
+        fotosASubir.forEach(function (item) {
           cadena = cadena.then(function () {
-            return subirFotoUnica(codigoCreado, dataUrl).then(function (r) {
+            var promesa = (item && typeof item === 'object')
+              ? subirArchivoOriginal(codigoCreado, item.original || item)
+              : subirFotoUnica(codigoCreado, item);
+            return promesa.then(function (r) {
               if (r && r.ok) { subidas++; }
               else {
                 errores++;
@@ -1610,10 +1676,40 @@
       res.fotos.forEach(function (f) {
         var d = document.createElement('div');
         d.className = 'foto-thumb';
+        var esHeic = /\.(heic|heif)(\?|$)/i.test(String(f.archivo || ''));
         var img = document.createElement('img');
         img.src = f.archivo;
         img.alt = 'Foto de respaldo del equipo';
         img.loading = 'lazy';
+        // HEIC de iPhone no se previsualiza en todos los navegadores:
+        // se reemplaza por un enlace de descarga para verla igual.
+        img.onerror = function () {
+          var enlace = document.createElement('a');
+          enlace.href = f.archivo;
+          enlace.target = '_blank';
+          enlace.rel = 'noopener';
+          enlace.className = 'text-[10px] text-cyan-300 font-semibold break-all';
+          enlace.style.padding = '18px 6px';
+          enlace.style.display = 'block';
+          enlace.style.textAlign = 'center';
+          enlace.textContent = '📎 Abrir foto (' + String(f.archivo).split('.').pop().toUpperCase() + ')';
+          d.replaceChild(enlace, img);
+        };
+        if (esHeic) {
+          img.style.display = 'none';
+          var enlaceHeic = document.createElement('a');
+          enlaceHeic.href = f.archivo;
+          enlaceHeic.target = '_blank';
+          enlaceHeic.rel = 'noopener';
+          enlaceHeic.className = 'text-[10px] text-cyan-300 font-semibold break-all';
+          enlaceHeic.style.padding = '18px 6px';
+          enlaceHeic.style.display = 'block';
+          enlaceHeic.style.textAlign = 'center';
+          enlaceHeic.textContent = '📎 Abrir foto (' + String(f.archivo).split('.').pop().toUpperCase() + ')';
+          d.appendChild(enlaceHeic);
+        } else {
+          d.appendChild(img);
+        }
         var b = document.createElement('button');
         b.type = 'button';
         b.className = 'foto-borrar';
@@ -1632,7 +1728,6 @@
               window.mostrarToast('Error de conexión con el servidor', 'error');
             });
         });
-        d.appendChild(img);
         d.appendChild(b);
         cont.appendChild(d);
       });
@@ -1641,22 +1736,44 @@
     });
   }
 
-  /** Sube al detalle las fotos elegidas (comprimidas, de a 6 por lote). */
+  /** Sube al detalle las fotos elegidas (comprimidas, de a 6 por lote).
+   *  OJO: se copia la FileList ANTES de limpiar el input; limpiar primero
+   *  vacía la lista viva en algunos navegadores y "no sube nada" sin error. */
   function anadirFotosModal(archivos) {
     var input = $('mo-input-fotos');
-    input.value = '';
-    if (!ordenModalCodigo) return;
-    var lista = Array.prototype.slice.call(archivos || []).slice(0, 6);
-    if (!lista.length) return;
+    var copia = Array.prototype.slice.call(archivos || []);
+    // Limpiar de forma diferida para no invalidar la FileList en curso.
+    setTimeout(function () { if (input) input.value = ''; }, 0);
+    if (!ordenModalCodigo) {
+      window.mostrarToast('Abre primero el detalle de la orden', 'error');
+      return;
+    }
+    if (!copia.length) {
+      window.mostrarToast('No se recibió ninguna foto: vuelve a elegirla', 'error');
+      return;
+    }
+    var lista = copia.slice(0, 6);
+    if (copia.length > 6) {
+      window.mostrarToast('Se subirán las primeras 6 fotos del lote', 'error');
+    }
+    window.mostrarToast('Subiendo ' + lista.length + ' foto(s)…', 'success');
 
     var subidas = 0, errores = 0, mensajeError = '';
     var cadena = Promise.resolve();
     lista.forEach(function (file) {
       cadena = cadena.then(function () {
-        if (!file.type || file.type.indexOf('image/') !== 0) { errores++; return; }
+        if (!esArchivoImagen(file)) {
+          errores++;
+          if (!mensajeError) mensajeError = 'El archivo "' + (file.name || 'sin nombre') + '" no es una imagen';
+          return;
+        }
         return comprimirFoto(file).then(function (dataUrl) {
-          if (!dataUrl) { errores++; return; }
-          return subirFotoUnica(ordenModalCodigo, dataUrl).then(function (r) {
+          // Comprimida OK → se sube el JPEG liviano; si el navegador no pudo
+          // decodificarla (HEIC de iPhone), se sube el original tal cual.
+          var promesa = dataUrl
+            ? subirFotoUnica(ordenModalCodigo, dataUrl)
+            : subirArchivoOriginal(ordenModalCodigo, file);
+          return promesa.then(function (r) {
             if (r && r.ok) { subidas++; }
             else {
               errores++;
@@ -2153,19 +2270,36 @@
       this.value = this.value.replace(/\D/g, '');
     });
     $('new-fotos').addEventListener('change', function (e) {
-      var archivos = Array.prototype.slice.call(e.target.files);
-      e.target.value = '';
+      var archivos = Array.prototype.slice.call(e.target.files || []);
+      var input = e.target;
+      setTimeout(function () { input.value = ''; }, 0);
       var cupo = MAX_FOTOS_NUEVA - fotosNueva.length;
       var elegidos = archivos.slice(0, Math.max(0, cupo));
       if (elegidos.length < archivos.length) {
         window.mostrarToast('Máximo ' + MAX_FOTOS_NUEVA + ' fotos al crear; añade el resto desde el detalle de la orden', 'error');
       }
+      if (!elegidos.length && archivos.length) {
+        window.mostrarToast('Ya tienes el máximo de fotos para crear la orden', 'error');
+        return;
+      }
       var cadena = Promise.resolve();
       elegidos.forEach(function (file) {
         cadena = cadena.then(function () {
-          if (!file.type || file.type.indexOf('image/') !== 0) return;
+          if (!esArchivoImagen(file)) {
+            window.mostrarToast('El archivo "' + (file.name || 'sin nombre') + '" no es una imagen', 'error');
+            return;
+          }
           return comprimirFoto(file).then(function (dataUrl) {
-            if (dataUrl) { fotosNueva.push(dataUrl); renderFotosNueva(); }
+            if (dataUrl) {
+              fotosNueva.push(dataUrl);
+              renderFotosNueva();
+            } else {
+              // No se pudo previsualizar (ej. HEIC de iPhone): igual se guarda
+              // el nombre para subir el original al crear la orden.
+              fotosNueva.push({ original: file, nombre: file.name || 'foto' });
+              renderFotosNueva();
+              window.mostrarToast('Foto "' + (file.name || 'sin nombre') + '" se subirá original (formato del teléfono)', 'success');
+            }
           });
         });
       });

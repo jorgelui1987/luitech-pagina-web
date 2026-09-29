@@ -779,11 +779,30 @@ switch ($action) {
             responder(['ok' => false, 'error' => 'Subida inválida'], 400);
         }
 
-        // Validar el contenido real (no confiar en la extensión ni en el nombre)
+        // Validar el contenido real (no confiar en la extensión ni en el nombre).
+        // Se acepta HEIC/HEIF de iPhone aunque getimagesize no lo lea: igual se
+        // guarda como evidencia y el listado muestra un enlace de descarga.
         $mime = (new finfo(FILEINFO_MIME_TYPE))->file($f['tmp_name']);
-        $extensiones = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
-        if (!isset($extensiones[$mime]) || @getimagesize($f['tmp_name']) === false) {
-            responder(['ok' => false, 'error' => 'Solo se aceptan fotos JPG, PNG o WebP'], 400);
+        $extensiones = [
+            'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp',
+            'image/gif' => 'gif', 'image/bmp' => 'bmp', 'image/avif' => 'avif',
+            'image/heic' => 'heic', 'image/heif' => 'heif',
+            'image/x-heic' => 'heic', 'image/x-heif' => 'heif',
+        ];
+        if (!isset($extensiones[$mime])) {
+            // Algunos servidores reportan el HEIC como video/quicktime o binario:
+            // se acepta por extensión .heic/.heif si el peso es razonable.
+            $nombreCli = strtolower((string)($f['name'] ?? ''));
+            $esHeic = (bool)preg_match('/\.(heic|heif)$/', $nombreCli);
+            if ($esHeic) {
+                $mime = 'image/heic';
+            } else {
+                responder(['ok' => false, 'error' => 'Solo se aceptan fotos JPG, PNG, WebP, HEIC o AVIF'], 400);
+            }
+        }
+        $esHeicFinal = in_array($extensiones[$mime], ['heic', 'heif'], true);
+        if (!$esHeicFinal && @getimagesize($f['tmp_name']) === false) {
+            responder(['ok' => false, 'error' => 'El archivo no es una foto válida'], 400);
         }
 
         $dir = base_uploads() . '/ordenes/' . $codigo;
