@@ -521,6 +521,21 @@ switch ($action) {
         if (isset($d['total'])) {
             $set[]    = 'total = ?';
             $params[] = max(0, (int)$d['total']);
+            // Si se baja el precio por debajo de lo ya cobrado, el abono se topa
+            // al nuevo total (ej. 20000 cobrado -> nuevo total 15000: queda Pagado
+            // en 15000, la diferencia queda como ajuste, no como saldo negativo).
+            $nuevoTotal = max(0, (int)$d['total']);
+            if (!isset($d['abono']) && $nuevoTotal > 0) {
+                $stA = db()->prepare('SELECT abono FROM ordenes WHERE codigo = ?');
+                $stA->execute([$codigo]);
+                $abActual = (int)($stA->fetchColumn() ?: 0);
+                if ($abActual > $nuevoTotal) {
+                    $set[]    = 'abono = ?';
+                    $params[] = $nuevoTotal;
+                    $d['abono'] = $nuevoTotal; // para que el delta de caja no sume de más
+                    $abonoAnterior = $abActual; // el delta saldrá <= 0 y no toca la caja
+                }
+            }
         }
         if (isset($d['abono'])) {
             $set[]    = 'abono = ?';

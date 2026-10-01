@@ -1643,6 +1643,14 @@
     var nuevo = input ? (parseInt(input.value, 10) || 0) : 0;
     if (nuevo < 0) nuevo = 0;
     if (nuevo > 99999999) nuevo = 99999999;
+    var abonado = parseInt(o.abono, 10) || 0;
+    // Si ya hay plata cobrada y quieres bajar el precio por debajo de lo cobrado,
+    // se pide confirmación: ej. total 20000 ya cobrado y nuevo 15000.
+    if (abonado > 0 && nuevo > 0 && nuevo < abonado) {
+      if (!window.confirm('Ya hay $' + abonado + ' cobrado y quieres bajar el precio a $' + nuevo + '.\n\nEl cobro se ajustará a $' + nuevo + ' (la diferencia queda como devolución/ajuste, no se devuelve plata sola).\n\n¿Guardar de todos modos?')) {
+        return;
+      }
+    }
     var boton = $('mo-btn-precio');
     if (boton) boton.disabled = true;
     api('api/ordenes.php?action=update', { method: 'POST', body: { codigo: ordenModalCodigo, total: nuevo } })
