@@ -35,3 +35,12 @@ Options -Indexes
 <FilesMatch "\.(sql|log|md|lock)$">
     Require all denied
 </FilesMatch>
+
+# Nunca exponer el repositorio git ni scripts de test/migración por el navegador
+RedirectMatch 404 /\.git(/|$)
+<FilesMatch "^(test-seguridad|limpiar-rl)\.php$">
+    Require all denied
+</FilesMatch>
+<FilesMatch "^(migrate|migrate-tablet)\.php$">
+    Require all denied
+</FilesMatch>

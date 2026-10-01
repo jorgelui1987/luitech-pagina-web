@@ -93,7 +93,12 @@
   }
 
   function limpiarFormCliente() {
-    $('form-titulo').innerHTML = '<i class="fa-solid fa-plus mr-1"></i>Nuevo cliente';
+    var t = $('form-titulo');
+    t.replaceChildren();
+    var i = document.createElement('i');
+    i.className = 'fa-solid fa-plus mr-1';
+    t.appendChild(i);
+    t.appendChild(document.createTextNode('Nuevo cliente'));
     ['cl-id','cl-nombre','cl-rut','cl-telefono','cl-email','cl-notas'].forEach(function (i) { $(i).value = ''; });
     $('btn-cl-cancelar').classList.add('hidden');
     $('btn-cl-orden').classList.add('hidden');
@@ -102,7 +107,12 @@
 
   function editarCliente(c) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    $('form-titulo').innerHTML = '<i class="fa-solid fa-pen mr-1"></i>Editando: ' + c.nombre;
+    var t = $('form-titulo');
+    t.replaceChildren();
+    var i = document.createElement('i');
+    i.className = 'fa-solid fa-pen mr-1';
+    t.appendChild(i);
+    t.appendChild(document.createTextNode('Editando: ' + c.nombre));
     $('cl-id').value = c.id; $('cl-nombre').value = c.nombre;
     $('cl-rut').value = c.rut || ''; $('cl-telefono').value = c.telefono || '';
     $('cl-email').value = c.email || ''; $('cl-notas').value = c.notas || '';
@@ -143,12 +153,16 @@
 
   function eliminarCliente(c) {
     if (!confirm('¿Eliminar al cliente "' + c.nombre + '"? (sus órdenes se conservan)')) return;
-    api('api/clientes.php?action=delete', { method: 'POST', body: { id: c.id } })
-      .then(function (res) {
-        if (!res.ok) { window.mostrarToast(res.error || 'No se pudo eliminar', 'error'); return; }
-        window.mostrarToast('"' + c.nombre + '" eliminado', 'success');
-        cargarClientes();
-      }).catch(function () {});
+    // Borrado con CSRF: se pide el token de la sesión y se envía en el cuerpo.
+    api('api/clientes.php?action=csrf_token').then(function (tk) {
+      if (!tk || !tk.ok || !tk.csrf) { window.mostrarToast('No se pudo obtener el token de seguridad', 'error'); return; }
+      return api('api/clientes.php?action=delete', { method: 'POST', body: { id: c.id, csrf: tk.csrf } })
+        .then(function (res) {
+          if (!res.ok) { window.mostrarToast(res.error || 'No se pudo eliminar', 'error'); return; }
+          window.mostrarToast('"' + c.nombre + '" eliminado', 'success');
+          cargarClientes();
+        });
+    }).catch(function () { window.mostrarToast('Error de conexión con el servidor', 'error'); });
   }
 
   /** Guarda el nombre del cliente y abre el Panel directo en Nueva Orden. */

@@ -167,12 +167,24 @@ switch ($action) {
     }
 
     case 'delete': {
+        // Acción destructiva: exige token CSRF además de ser administrador.
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             responder(['ok' => false, 'error' => 'Método no permitido'], 405);
         }
-        $id = (int)(leer_cuerpo()['id'] ?? 0);
+        $d = leer_cuerpo();
+        exigir_csrf($d);
+        $id = (int)($d['id'] ?? 0);
+        if ($id <= 0) {
+            responder(['ok' => false, 'error' => 'Identificador inválido'], 400);
+        }
         db()->prepare('UPDATE clientes SET activo = 0 WHERE id = ?')->execute([$id]);
         responder(['ok' => true]);
+    }
+
+    case 'csrf_token': {
+        // Token de sesión para confirmar acciones destructivas desde el JS.
+        exigir_admin(); exigir_rol_admin();
+        responder(['ok' => true, 'csrf' => csrf_token()]);
     }
 
     case 'ficha': {
