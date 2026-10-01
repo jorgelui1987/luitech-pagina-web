@@ -1611,6 +1611,13 @@
     if (botonWA) {
       botonWA.classList.remove('hidden');
     }
+
+    // Sincroniza el campo "Valor reparación" con el total actual (no lo pisa mientras escribes)
+    var inpPrecio = $('mo-precio');
+    if (inpPrecio && document.activeElement !== inpPrecio) {
+      inpPrecio.value = total > 0 ? String(total) : '';
+      inpPrecio.placeholder = total > 0 ? String(total) : '0 = gratis';
+    }
   }
 
   /** Caja pequeña con etiqueta + valor para el bloque de cobro. */
@@ -1629,12 +1636,40 @@
   }
 
   /** Registra abono/cobro total (el estado de pago lo deriva la API). */
+  function guardarPrecioModal() {
+    var o = ordenActualModal();
+    if (!o) return;
+    var input = $('mo-precio');
+    var nuevo = input ? (parseInt(input.value, 10) || 0) : 0;
+    if (nuevo < 0) nuevo = 0;
+    if (nuevo > 99999999) nuevo = 99999999;
+    var boton = $('mo-btn-precio');
+    if (boton) boton.disabled = true;
+    api('api/ordenes.php?action=update', { method: 'POST', body: { codigo: ordenModalCodigo, total: nuevo } })
+      .then(function (res) {
+        if (boton) boton.disabled = false;
+        if (!res.ok) { window.mostrarToast(res.error || 'No se pudo guardar el precio', 'error'); return; }
+        patchOrdenModal({ total: nuevo, estado_pago: (nuevo <= 0 ? 'Pendiente' : ((parseInt(o.abono, 10) || 0) >= nuevo ? 'Pagado' : ((parseInt(o.abono, 10) || 0) > 0 ? 'Abonado' : 'Pendiente'))) });
+        renderCobroModal(ordenActualModal());
+        renderEntregaModal(ordenActualModal());
+        renderizarTablaAdmin();
+        window.mostrarToast(nuevo > 0 ? 'Precio guardado: ' + monto(nuevo) + '. Ya puedes cobrar.' : 'Quedó en $0 (gratis): no se cobra, solo entrega con firma.', 'success');
+      })
+      .catch(function () {
+        if (boton) boton.disabled = false;
+        window.mostrarToast('Error de conexión con el servidor', 'error');
+      });
+  }
+
+  /** Registra abono/cobro total (el estado de pago lo deriva la API). */
   function guardarCobroModal(cobrarTodo) {
     var o = ordenActualModal();
     if (!o) return;
     var total = parseInt(o.total, 10) || 0;
     if (total <= 0) {
-      window.mostrarToast('Esta orden todavía no tiene valor de reparación', 'error');
+      window.mostrarToast('Pon primero el valor en “Valor reparación” y pulsa Guardar precio. Si es gratis déjalo en 0 y solo entrega con firma.', 'error');
+      var inp = $('mo-precio');
+      if (inp) inp.focus();
       return;
     }
     var abonoActual = parseInt(o.abono, 10) || 0;
@@ -2291,6 +2326,7 @@
     });
 
     // Modal de detalle: cobro, entrega, recibo y bitácora
+    if ($('mo-btn-precio')) $('mo-btn-precio').addEventListener('click', guardarPrecioModal);
     $('mo-btn-cobro').addEventListener('click', function () { guardarCobroModal(false); });
     $('mo-btn-cobro-total').addEventListener('click', function () { guardarCobroModal(true); });
     $('mo-btn-recibo').addEventListener('click', function () { imprimirRecibo(ordenActualModal()); });
