@@ -245,7 +245,9 @@ class ComboPublicidadController extends Controller
             "✅ *Su equipo está listo para recoger!*\n" .
             "📍 Lo esperamos en nuestro local. ¡Gracias por su preferencia!";
 
-        $urlEstado = route('reparaciones.public-status', $reparacion->numero_orden);
+        $urlEstado = $reparacion->tenant
+            ? $reparacion->tenant->urlSeguimientoOrden($reparacion->numero_orden)
+            : route('reparaciones.public-status', $reparacion->numero_orden);
         if ($urlEstado) {
             $mensaje .= "\n\n🔗 *Estado en línea:*\n{$urlEstado}";
         }
@@ -339,7 +341,9 @@ class ComboPublicidadController extends Controller
             $config = Configuracion::empresa();
             $nombreTienda = $config?->nombre_tienda ?? 'CRM Celulares';
             $cliente = $reparacion->cliente;
-            $urlEstado = route('reparaciones.public-status', $reparacion->numero_orden);
+            $urlEstado = $reparacion->tenant
+                ? $reparacion->tenant->urlSeguimientoOrden($reparacion->numero_orden)
+                : route('reparaciones.public-status', $reparacion->numero_orden);
 
             if ($cliente) {
                 $telefono = $cliente->telefono ?? $cliente->celular;

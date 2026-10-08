@@ -1,4 +1,6 @@
 @php
+    // REGLA SAAS: la pantalla SIEMPRE exige slug. El controlador ya resolvió
+    // la tienda (o 404): aquí $empresaPantalla y $slugPantalla vienen con datos.
     $nombreTienda     = $empresaPantalla->nombre_tienda ?? 'LUITECH';
     $direccionTienda  = $empresaPantalla->direccion ?? '';
     $telefonoTienda   = $empresaPantalla->telefono ?? '';
@@ -33,12 +35,6 @@
             <div class="tv-clock-date" id="tv-date">—</div>
         </div>
     </header>
-
-    @if($empresaPantalla === null)
-        <div style="background:#7f1d1d;color:#fecaca;padding:10px 18px;text-align:center;font-weight:600;font-size:15px;">
-            Pantalla sin tienda asignada: abre la pantalla con la URL de tu tienda (ej. <b>/pantalla/tu-tienda</b>).
-        </div>
-    @endif
 
     <!-- Consulta privada: cada cliente ve SOLO su turno con su código completo -->
     <div class="tv-privacy">
@@ -106,13 +102,14 @@
         <div class="tv-controls">
             <button type="button" id="tv-sound"><i class="fa-solid fa-volume-xmark"></i> Sonido</button>
             <button type="button" id="tv-fs"><i class="fa-solid fa-expand"></i> Pantalla completa</button>
-            <a href="{{ url('/estado') }}"><i class="fa-solid fa-arrow-right-from-bracket"></i> Salir</a>
+            <a href="{{ route('reparaciones.public-status.search', ['slug' => $slugPantalla]) }}"><i class="fa-solid fa-arrow-right-from-bracket"></i> Salir</a>
         </div>
     </footer>
 </div>
 <script>
-    const DATA_URL = @js($slugPantalla ? route('public.pantalla.data', ['slug' => $slugPantalla]) : route('public.pantalla.data'));
-    const MI_TURNO_URL = @js($slugPantalla ? route('public.pantalla.mi-turno', ['slug' => $slugPantalla]) : route('public.pantalla.mi-turno'));
+    // REGLA SAAS: la pantalla SIEMPRE tiene slug (la ruta sin slug da 404).
+    const DATA_URL = @js(route('public.pantalla.data', ['slug' => $slugPantalla]));
+    const MI_TURNO_URL = @js(route('public.pantalla.mi-turno', ['slug' => $slugPantalla]));
     const CONSEJOS = @json($consejos);
 
     let prevReady = null;   // códigos "listos" vistos (1ª carga = referencia, sin chime)

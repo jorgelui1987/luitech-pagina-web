@@ -11,8 +11,9 @@ use Tests\TestCase;
 
 /**
  * Verifica el aislamiento entre empresas en las rutas públicas:
- *  - Pantalla de Sala de Espera (/pantalla y /pantalla/data)
- *  - Consulta Express (/r/{numero_orden})
+ *  - Pantalla de Sala de Espera (/pantalla/{slug} y /pantalla/data/{slug})
+ *  - Consulta Express (/r/{numero_orden} y /r/{slug}/{numero_orden})
+ * REGLA SAAS: toda ruta pública sin login lleva la empresa en la URL (slug).
  */
 class PublicReparacionIsolationTest extends TestCase
 {
@@ -130,53 +131,20 @@ class PublicReparacionIsolationTest extends TestCase
 
     // ── TESTS ──
 
-    public function test_pantalla_data_sin_empresa_identificada_responde_vacio(): void
+    public function test_pantalla_sin_slug_responde_404(): void
     {
-        // Sin sesión y con host localhost (dominio principal): la pantalla
-        // NO debe "adivinar" la empresa con actividad más reciente.
-        $response = $this->get(route('public.pantalla.data'));
+        // REGLA SAAS: /pantalla sin slug NO adivina empresa (ni por ?tienda=,
+        // ni sesión, ni actividad): responde 404 con la instrucción.
+        $response = $this->get('/pantalla');
 
-        $response->assertOk();
-        $data = $response->json();
-
-        $this->assertSame(['listos' => 0, 'proceso' => 0], $data['counts']);
-        $this->assertCount(0, $data['listos']);
-        $this->assertCount(0, $data['proceso']);
+        $response->assertNotFound();
     }
 
-    public function test_pantalla_data_muestra_solo_ordenes_del_usuario_autenticado(): void
+    public function test_pantalla_data_sin_slug_responde_404(): void
     {
-        $this->actingAs($this->user1);
+        $response = $this->get('/pantalla/data');
 
-        $data = $this->get(route('public.pantalla.data'))->json();
-        $codigos = $this->codigosVisibles($data);
-
-        // Privacidad en sala: códigos enmascarados (···-XXXX), nunca completos
-        $this->assertContains(
-            \App\Http\Controllers\PublicReparacionController::enmascararCodigo($this->ordenTenant1->numero_orden),
-            $codigos
-        );
-        $this->assertNotContains($this->ordenTenant1->numero_orden, $codigos);
-        $this->assertNotContains(
-            \App\Http\Controllers\PublicReparacionController::enmascararCodigo($this->ordenTenant2->numero_orden),
-            $codigos
-        );
-    }
-
-    public function test_pantalla_data_parametro_tienda_filtra_por_tenant(): void
-    {
-        $data = $this->get(route('public.pantalla.data', ['tienda' => $this->tenant2->id]))->json();
-        $codigos = $this->codigosVisibles($data);
-
-        $this->assertContains(
-            \App\Http\Controllers\PublicReparacionController::enmascararCodigo($this->ordenTenant2->numero_orden),
-            $codigos
-        );
-        $this->assertNotContains($this->ordenTenant2->numero_orden, $codigos);
-        $this->assertNotContains(
-            \App\Http\Controllers\PublicReparacionController::enmascararCodigo($this->ordenTenant1->numero_orden),
-            $codigos
-        );
+        $response->assertNotFound();
     }
 
     public function test_pantalla_data_por_slug_filtra_por_tenant(): void
@@ -189,6 +157,25 @@ class PublicReparacionIsolationTest extends TestCase
             $codigos
         );
         $this->assertNotContains($this->ordenTenant1->numero_orden, $codigos);
+        $this->assertNotContains(
+            \App\Http\Controllers\PublicReparacionController::enmascararCodigo($this->ordenTenant2->numero_orden),
+            $codigos
+        );
+    }
+
+    public function test_pantalla_data_sesion_de_otro_tecnico_no_cambia_la_tienda(): void
+    {
+        // La TV es compartida: la sesión abierta del técnico NO decide qué ve.
+        // Solo el slug manda: tienda-uno muestra solo tienda-uno.
+        $this->actingAs($this->user2);
+
+        $data = $this->get(route('public.pantalla.data', ['slug' => 'tienda-uno']))->json();
+        $codigos = $this->codigosVisibles($data);
+
+        $this->assertContains(
+            \App\Http\Controllers\PublicReparacionController::enmascararCodigo($this->ordenTenant1->numero_orden),
+            $codigos
+        );
         $this->assertNotContains(
             \App\Http\Controllers\PublicReparacionController::enmascararCodigo($this->ordenTenant2->numero_orden),
             $codigos
@@ -211,7 +198,7 @@ class PublicReparacionIsolationTest extends TestCase
 
     public function test_mi_turno_devuelve_solo_la_orden_consultada(): void
     {
-        $data = $this->get(route('public.pantalla.mi-turno', ['codigo' => 'RPT-000003-A2B4']))->json();
+        $data = $this->get(route('public.pantalla.mi-turno', ['slug' => 'tienda-uno', 'codigo' => 'RPT-000003-A2B4']))->json();
 
         $this->assertTrue($data['ok']);
         $this->assertSame('RPT-000003-A2B4', $data['orden']['codigo']);
@@ -220,7 +207,7 @@ class PublicReparacionIsolationTest extends TestCase
 
     public function test_mi_turno_sin_sufijo_no_revela_orden_con_sufijo(): void
     {
-        $data = $this->get(route('public.pantalla.mi-turno', ['codigo' => '000003']))->json();
+        $data = $this->get(route('public.pantalla.mi-turno', ['slug' => 'tienda-uno', 'codigo' => '000003']))->json();
 
         $this->assertFalse($data['ok']);
     }
@@ -229,9 +216,59 @@ class PublicReparacionIsolationTest extends TestCase
     {
         $this->actingAs($this->user2);
 
-        $data = $this->get(route('public.pantalla.mi-turno', ['codigo' => 'RPT-000003-A2B4']))->json();
+        $data = $this->get(route('public.pantalla.mi-turno', ['slug' => 'tienda-dos', 'codigo' => 'RPT-000003-A2B4']))->json();
 
         $this->assertFalse($data['ok']);
+    }
+
+    public function test_mi_turno_sin_slug_responde_404(): void
+    {
+        $response = $this->get('/pantalla/mi-turno?codigo=RPT-000003-A2B4');
+
+        $response->assertNotFound();
+    }
+
+    public function test_consulta_por_tienda_muestra_solo_su_orden(): void
+    {
+        $response = $this->get(route('reparaciones.public-status.tienda', [
+            'slug' => 'tienda-uno',
+            'numero_orden' => $this->ordenTenant1->numero_orden,
+        ]));
+
+        $response->assertOk();
+        $response->assertSee($this->ordenTenant1->numero_orden, false);
+    }
+
+    public function test_consulta_por_tienda_no_muestra_orden_de_otra_empresa(): void
+    {
+        $response = $this->get(route('reparaciones.public-status.tienda', [
+            'slug' => 'tienda-dos',
+            'numero_orden' => $this->ordenTenant1->numero_orden,
+        ]));
+
+        $response->assertOk();
+        $response->assertSee('no fue encontrada', false);
+    }
+
+    public function test_portal_por_tienda_conserva_el_slug(): void
+    {
+        $response = $this->get(route('reparaciones.public-status.search', ['slug' => 'tienda-uno']));
+
+        $response->assertOk();
+        $response->assertSee('name="slugTienda" value="tienda-uno"', false);
+    }
+
+    public function test_busqueda_aislada_por_tienda_no_muestra_orden_ajena(): void
+    {
+        // Cliente en el portal de tienda-dos busca una orden de tienda-uno
+        $response = $this->get(route('reparaciones.public-status.search', [
+            'slug' => 'tienda-dos',
+            'numero_orden' => $this->ordenTenant1->numero_orden,
+            'slugTienda' => 'tienda-dos',
+        ]));
+
+        $response->assertOk();
+        $response->assertSee('no fue encontrada', false);
     }
 
     public function test_consulta_desde_subdominio_no_muestra_ordenes_de_otra_empresa(): void
@@ -255,20 +292,12 @@ class PublicReparacionIsolationTest extends TestCase
 
     public function test_consulta_en_dominio_principal_muestra_la_orden_de_su_empresa(): void
     {
-        // QR de la boleta: dominio principal (sin subdominio ni sesión) muestra
-        // la orden consultada y con la configuración de la empresa dueña.
+        // QR de la boleta legacy (sin slug): dominio principal (sin subdominio
+        // ni sesión) muestra la orden consultada con su tienda.
         $response = $this->get(route('reparaciones.public-status', $this->ordenTenant1->numero_orden));
 
         $response->assertOk();
         $response->assertSee($this->ordenTenant1->numero_orden, false);
-    }
-
-    public function test_pantalla_sin_tienda_muestra_aviso(): void
-    {
-        $response = $this->get(route('public.pantalla'));
-
-        $response->assertOk();
-        $response->assertSee('Pantalla sin tienda asignada', false);
     }
 
     public function test_pantalla_por_slug_renderiza_con_su_tienda(): void
@@ -277,6 +306,37 @@ class PublicReparacionIsolationTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('tienda-uno', false);
+    }
+
+    public function test_consulta_en_dominio_principal_sigue_funcionando_legacy(): void
+    {
+        // Compatibilidad con QR/boletas antiguas sin slug: dominio principal
+        // (sin subdominio ni sesión) muestra la orden con su tienda.
+        // (Duplicado intencional del legacy: si se endurece /r/ genérico,
+        // este test marca qué boletas antiguas se verían afectadas.)
+        $response = $this->get(route('reparaciones.public-status', $this->ordenTenant1->numero_orden));
+
+        $response->assertOk();
+        $response->assertSee($this->ordenTenant1->numero_orden, false);
+    }
+
+    public function test_qr_nuevo_apunta_a_ruta_con_slug(): void
+    {
+        $url = $this->tenant1->urlSeguimientoOrden($this->ordenTenant1->numero_orden);
+
+        $this->assertStringContainsString('/r/tienda-uno/' . $this->ordenTenant1->numero_orden, $url);
+    }
+
+    public function test_pantalla_de_cada_tienda_tiene_su_url(): void
+    {
+        $this->assertStringContainsString(
+            '/pantalla/tienda-uno',
+            (string) $this->tenant1->urlPantalla()
+        );
+        $this->assertStringContainsString(
+            '/pantalla/tienda-dos',
+            (string) $this->tenant2->urlPantalla()
+        );
     }
 
     public function test_codigo_con_sufijo_acepta_formatos_flexibles(): void

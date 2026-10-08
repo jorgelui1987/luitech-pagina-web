@@ -241,7 +241,9 @@ class ReparacionController extends Controller
         if ($cliente) {
             $telefono = $cliente->telefono ?? $cliente->celular;
             if ($telefono) {
-                $urlEstado = route('reparaciones.public-status', $reparacion->numero_orden);
+                $urlEstado = $reparacion->tenant
+                    ? $reparacion->tenant->urlSeguimientoOrden($reparacion->numero_orden)
+                    : route('reparaciones.public-status', $reparacion->numero_orden);
                 $plantillaRecibido = $reparacion->tenant?->configuracion_extra['plantilla_recibido'] ?? null;
                 $whatsappUrl = WhatsAppHelper::generarUrl(
                     $telefono,
@@ -535,7 +537,9 @@ class ReparacionController extends Controller
         }
 
         // Link para ver el estado en línea (lo que muestra el QR en la impresión)
-        $urlEstado = route('reparaciones.public-status', $reparacion->numero_orden);
+        $urlEstado = $reparacion->tenant
+            ? $reparacion->tenant->urlSeguimientoOrden($reparacion->numero_orden)
+            : route('reparaciones.public-status', $reparacion->numero_orden);
         $texto .= "\n🔗 *Sigue tu reparación aquí:*\n" . $urlEstado;
 
         // URL de la mini página web
@@ -818,7 +822,9 @@ class ReparacionController extends Controller
             $empresa = Configuracion::empresa();
             $nombreTienda = $empresa?->nombre_tienda ?? 'CRM Celulares';
             $cliente = $reparacion->cliente;
-            $urlEstado = route('reparaciones.public-status', $reparacion->numero_orden);
+            $urlEstado = $reparacion->tenant
+                ? $reparacion->tenant->urlSeguimientoOrden($reparacion->numero_orden)
+                : route('reparaciones.public-status', $reparacion->numero_orden);
 
             if ($nuevoEstado === 'listo') {
                 $plantillaListo = $reparacion->tenant?->configuracion_extra['plantilla_listo'] ?? null;

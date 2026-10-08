@@ -12,6 +12,56 @@ use Illuminate\Http\Request;
 class PublicReparacionController extends Controller
 {
     /**
+     * Portal de búsqueda (Consulta Express) con tienda opcional: /estado/{slug?}
+     * Con slug muestra el portal rotulado de ESA tienda; sin slug, el genérico.
+     * El formulario conserva el slug para que la búsqueda quede aislada.
+     */
+    public function portal(?string $slug = null)
+    {
+        $tienda = null;
+        if ($slug !== null) {
+            $tenantId = $this->resolverTenantPorSlug($slug);
+            $tienda = Configuracion::withoutGlobalScopes()->where('tenant_id', $tenantId)->first();
+        }
+
+        return view('public.estado-search', [
+            'slugTienda' => $slug,
+            'tiendaPortal' => $tienda,
+        ]);
+    }
+
+    /**
+     * Consulta aislada por tienda: /r/{slug}/{numero_orden} (QR nuevo de la boleta).
+     * El slug manda: si la orden no es de ESA tienda responde "no encontrada"
+     * sin revelar su existencia. Nunca consulta sin empresa.
+     */
+    public function statusPorTienda(string $slug, string $numero_orden)
+    {
+        $tenantId = $this->resolverTenantPorSlug($slug);
+
+        $valorOriginal = strtoupper(trim($numero_orden));
+        $candidatos = array_values(array_unique([
+            $this->normalizarNumeroOrden($valorOriginal),
+            $valorOriginal,
+        ]));
+
+        $reparacion = Reparacion::withoutGlobalScopes()
+            ->whereIn('numero_orden', $candidatos)
+            ->where('tenant_id', $tenantId)
+            ->first();
+
+        if (!$reparacion) {
+            return view('public.estado-search', [
+                'error'   => 'La orden ' . $candidatos[0] . ' no fue encontrada en esta tienda. Verifica el código de tu boleta e intenta nuevamente.',
+                'buscado' => $candidatos[0],
+                'slugTienda' => $slug,
+            ]);
+        }
+
+        return $this->mostrarEstado($reparacion);
+    }
+
+    /**
      * Vista pública para que el cliente escanee el QR
      * y vea el estado de su reparación, condiciones y garantía.
      * Sin código de orden muestra el portal de búsqueda (Consulta Express).
@@ -23,9 +73,10 @@ class PublicReparacionController extends Controller
             $numero_orden = request('numero_orden');
         }
 
-        // Sin código: mostrar el portal de búsqueda en lugar de un 404
+        // Sin código: mostrar el portal de búsqueda en lugar de un 404.
+        // Si el formulario trae slugTienda, se conserva para aislar la búsqueda.
         if (!$numero_orden) {
-            return view('public.estado-search');
+            return $this->portal(request('slugTienda'));
         }
 
         // Normalizar y buscar (acepta "1024", "RPT-001024", "rpt001024", etc.)
@@ -41,6 +92,27 @@ class PublicReparacionController extends Controller
 
         // No encontrada: portal de búsqueda con mensaje amigable
         if (!$reparacion) {
+            // Si el portal trae tienda (búsqueda aislada), se valida contra ella
+            $slugBusqueda = request('slugTienda');
+            if (is_string($slugBusqueda) && $slugBusqueda !== '') {
+                try {
+                    $this->resolverTenantPorSlug($slugBusqueda);
+                } catch (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e) {
+                    $slugBusqueda = null;
+                }
+            } else {
+                $slugBusqueda = null;
+            }
+
+            // Búsqueda aislada por tienda: la orden debe ser de ESA tienda
+            if ($slugBusqueda !== null) {
+                return view('public.estado-search', [
+                    'error'   => 'La orden ' . $candidatos[0] . ' no fue encontrada en esta tienda. Verifica el código de tu boleta e intenta nuevamente.',
+                    'buscado' => request('numero_orden', $candidatos[0]),
+                    'slugTienda' => $slugBusqueda,
+                ]);
+            }
+
             return view('public.estado-search', [
                 'error'   => 'La orden ' . $candidatos[0] . ' no fue encontrada. Verifica el código de tu boleta e intenta nuevamente.',
                 'buscado' => request('numero_orden', $candidatos[0]),
@@ -48,10 +120,21 @@ class PublicReparacionController extends Controller
         }
 
         // Aislamiento entre empresas: si la consulta se hace desde el portal de
-        // una empresa concreta (subdominio de la tienda o sesión de su personal),
-        // solo se pueden ver órdenes de ESA empresa. Si la orden pertenece a otra
-        // empresa, se informa "no encontrada" (sin revelar su existencia).
-        $tenantPortal = $this->resolverTenantPortal();
+        // una empresa concreta (slug del formulario, subdominio de la tienda o
+        // sesión de su personal), solo se pueden ver órdenes de ESA empresa.
+        // Si la orden pertenece a otra empresa, se informa "no encontrada"
+        // (sin revelar su existencia).
+        $slugBusqueda = request('slugTienda');
+        $tenantPortal = null;
+        if (is_string($slugBusqueda) && $slugBusqueda !== '') {
+            try {
+                $tenantPortal = $this->resolverTenantPorSlug($slugBusqueda);
+            } catch (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e) {
+                $tenantPortal = $this->resolverTenantPortal();
+            }
+        } else {
+            $tenantPortal = $this->resolverTenantPortal();
+        }
         if ($tenantPortal !== null && (int) $reparacion->tenant_id !== $tenantPortal) {
             return view('public.estado-search', [
                 'error'   => 'La orden ' . $candidatos[0] . ' no fue encontrada. Verifica el código de tu boleta e intenta nuevamente.',
@@ -59,6 +142,14 @@ class PublicReparacionController extends Controller
             ]);
         }
 
+        return $this->mostrarEstado($reparacion);
+    }
+
+    /**
+     * Render compartido del estado de una orden ya localizada y autorizada.
+     */
+    private function mostrarEstado(Reparacion $reparacion)
+    {
         // Cargar relaciones SIN TenantScope para evitar que el scope
         // filtre por el tenant del usuario autenticado (que puede ser diferente
         // al tenant de la reparación cuando se accede desde el QR público)
@@ -117,11 +208,11 @@ class PublicReparacionController extends Controller
 
     /**
      * Modo Sala de Espera (TV): pantalla completa con los turnos del taller.
-     * Con slug (/pantalla/mitienda) muestra SOLO esa empresa. Sin slug,
-     * resuelve por ?tienda=, sesión del usuario o subdominio; si no hay
-     * empresa identificada, la pantalla queda vacía (nunca muestra otras).
+     * SIEMPRE exige slug (/pantalla/mitienda) y muestra SOLO esa empresa.
+     * La ruta sin slug responde 404 (ver routes/web.php): nunca se "adivina"
+     * empresa por ?tienda=, sesión o actividad reciente.
      */
-    public function pantalla(Request $request, ?string $slug = null)
+    public function pantalla(Request $request, string $slug)
     {
         $consejos = [
             ['titulo' => 'Cuida tu batería', 'desc' => 'Evita que tu celular se descargue por debajo del 20% o se cargue por encima del 80% de forma habitual: extenderás la vida útil de tu batería.'],
@@ -132,9 +223,7 @@ class PublicReparacionController extends Controller
             ['titulo' => 'Humedad: actúa rápido', 'desc' => 'Si tu equipo se moja, apágalo de inmediato y no intentes cargarlo. Tráelo cuanto antes: el tiempo es clave para salvar la placa.'],
         ];
 
-        $tenantId = $slug !== null
-            ? $this->resolverTenantPorSlug($slug)
-            : $this->resolverTenantPantalla($request);
+        $tenantId = $this->resolverTenantPorSlug($slug);
 
         // Promociones del taller (Configuración → Promociones para la pantalla TV):
         // se muestran primero en la rotación de la sala de espera.
@@ -167,7 +256,7 @@ class PublicReparacionController extends Controller
      * Sin sufijo anti-adivinanza responde "no encontrada": nadie puede barrer
      * órdenes ajenas desde la TV. Mismo aislamiento por empresa que status().
      */
-    public function miTurno(Request $request, ?string $slug = null)
+    public function miTurno(Request $request, string $slug)
     {
         $valor = strtoupper(trim((string) ($request->query('codigo', ''))));
         if ($valor === '') {
@@ -201,13 +290,11 @@ class PublicReparacionController extends Controller
             return response()->json(['ok' => false, 'error' => 'No se encontró ese código. Revisa tu boleta.'], 404);
         }
 
-        // Aislamiento por empresa: slug de la pantalla o portal (sin revelar existencia).
-        // OJO: resolverTenantPorSlug hace abort(404) HTML si el slug no existe;
-        // aquí debe ser JSON para no romper el fetch de la TV.
+        // Aislamiento por empresa: el slug de la pantalla manda (sin revelar
+        // existencia). OJO: resolverTenantPorSlug hace abort(404) HTML si el
+        // slug no existe; aquí debe ser JSON para no romper el fetch de la TV.
         try {
-            $tenantEsperado = $slug !== null
-                ? $this->resolverTenantPorSlug($slug)
-                : ($this->resolverTenantPantalla($request) ?? $this->resolverTenantPortal());
+            $tenantEsperado = $this->resolverTenantPorSlug($slug);
         } catch (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e) {
             return response()->json(['ok' => false, 'error' => 'No se encontró ese código. Revisa tu boleta.'], 404);
         }
@@ -261,26 +348,12 @@ class PublicReparacionController extends Controller
 
     /**
      * Datos en vivo del modo TV (consultado por la pantalla cada 15 s).
-     * Con slug: solo esa empresa. Sin slug: resuelve por ?tienda=, sesión
-     * del usuario o subdominio. Si no hay empresa identificada responde
-     * vacío: jamás muestra órdenes de otras empresas.
+     * SIEMPRE exige slug (/pantalla/data/mitienda): solo esa empresa.
+     * Sin slug la ruta ni siquiera existe (404 en routes/web.php).
      */
-    public function pantallaData(Request $request, ?string $slug = null)
+    public function pantallaData(Request $request, string $slug)
     {
-        $tenantId = $slug !== null
-            ? $this->resolverTenantPorSlug($slug)
-            : $this->resolverTenantPantalla($request);
-
-        // Sin empresa identificada: respuesta vacía (aislamiento entre empresas)
-        if (!$tenantId) {
-            return response()->json([
-                'tienda'    => ['nombre' => '', 'direccion' => '', 'telefono' => ''],
-                'listos'    => [],
-                'proceso'   => [],
-                'counts'    => ['listos' => 0, 'proceso' => 0],
-                'timestamp' => now()->format('H:i:s'),
-            ]);
-        }
+        $tenantId = $this->resolverTenantPorSlug($slug);
 
         $estadosActivos = ['recibido', 'en_diagnostico', 'esperando_repuesto', 'en_reparacion', 'listo'];
 
@@ -354,28 +427,13 @@ class PublicReparacionController extends Controller
     }
 
     /**
-     * Resuelve el tenant para la pantalla de sala de espera.
-     * Orden de resolución:
-     *  1) slug en la URL (/pantalla/mitienda) — resuelto antes de llamar aquí;
-     *  2) parámetro ?tienda= (id explícito);
-     *  3) usuario autenticado (personal de la empresa);
-     *  4) subdominio/dominio del portal.
-     * Si no se puede identificar la empresa devuelve null: en ese caso la
-     * pantalla NO muestra órdenes (cada empresa debe abrir su propia URL,
-     * nunca se "adivina" la empresa con la actividad más reciente).
+     * @deprecated El ?tienda= se eliminó por enumerable y la sesión del técnico
+     * no debe decidir qué ve la TV compartida. La pantalla exige slug y ya no
+     * llama a este método; se conserva vacío para no romper firmas externas.
      */
     private function resolverTenantPantalla(Request $request): ?int
     {
-        $param = $request->query('tienda');
-        if ($param !== null && ctype_digit((string) $param) && (int) $param > 0) {
-            return (int) $param;
-        }
-
-        if (auth()->check() && auth()->user()->tenant_id) {
-            return (int) auth()->user()->tenant_id;
-        }
-
-        return Tenant::current()?->id;
+        return null;
     }
 
     /**

@@ -4,16 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#020617">
-    <title>@yield('title', 'Consulta tu reparación') — {{ $empresa->nombre_tienda ?? 'Luitech' }}</title>
+    <title>@yield('title', 'Consulta tu reparación') — {{ ($empresa->nombre_tienda ?? null) ?: 'Luitech' }}</title>
 
     <!-- Favicon -->
-    @php $faviconPublico = ($tenant->logo ?? null); @endphp
+    @php $faviconPublico = (($tenant ?? null)->logo ?? null); @endphp
     <link rel="icon" type="image/png" href="{{ $faviconPublico ? route('storage.serve', ['path' => preg_replace('#^storage/#', '', ltrim($faviconPublico, '/'))]) : asset('logo-luitech.png') }}">
     <link rel="apple-touch-icon" href="{{ $faviconPublico ? route('storage.serve', ['path' => preg_replace('#^storage/#', '', ltrim($faviconPublico, '/'))]) : asset('logo-luitech.png') }}">
     <!-- Vista previa al compartir (Open Graph) -->
     <meta property="og:type" content="website">
-    <meta property="og:site_name" content="{{ $empresa->nombre_tienda ?? 'LUITECH' }}">
-    <meta property="og:title" content="{{ $empresa->nombre_tienda ?? 'LUITECH' }} · Servicio Técnico de Celulares y Computadores">
+    <meta property="og:site_name" content="{{ ($empresa->nombre_tienda ?? null) ?: 'LUITECH' }}">
+    <meta property="og:title" content="{{ ($empresa->nombre_tienda ?? null) ?: 'LUITECH' }} · Servicio Técnico de Celulares y Computadores">
     <meta property="og:description" content="Reparación de celulares, tablets y PC con garantía escrita. Cotiza online, sigue tu reparación en tiempo real y agenda por WhatsApp.">
     <meta property="og:image" content="{{ asset('logo-luitech.png') }}">
     <meta name="twitter:card" content="summary">
@@ -29,21 +29,25 @@
     @stack('styles')
 </head>
 @php
-    $brandName = $empresa->nombre_tienda ?? 'LUITECH';
-    $brandSub  = ($empresa->direccion ?? '') !== '' ? $empresa->direccion : 'Servicio Técnico';
+    $brandName = ($empresa->nombre_tienda ?? null) ?: 'LUITECH';
+    $brandSub  = (($empresa->direccion ?? '') !== '') ? $empresa->direccion : 'Servicio Técnico';
     $waDigits  = preg_replace('/\D/', '', (string) ($empresa->telefono ?? ''));
     $waNumber  = $waDigits !== '' ? (str_starts_with($waDigits, '56') ? $waDigits : '56' . $waDigits) : null;
-    // Enlace de la Sala de Espera: si hay tienda identificada (página pública
-    // por slug o subdominio), apunta a la pantalla de ESA tienda.
-    $pantallaSlug = ($tenant->slug_publico ?? null) ?: (\App\Models\Tenant::current()?->slug_publico ?? null);
-    $pantallaUrl  = route('public.pantalla', ['slug' => $pantallaSlug]);
+    // Enlace de la Sala de Espera: REGLA SAAS, siempre con slug de ESA tienda.
+    // Sin slug la ruta /pantalla responde 404: nunca se adivina empresa.
+    // OJO: $tenant puede no venir (landing genérica): todo con ?? para no romper.
+    $pantallaSlug = (($tenant ?? null)->slug_publico ?? null) ?: (\App\Models\Tenant::current()?->slug_publico ?? null);
+    $pantallaUrl  = $pantallaSlug ? route('public.pantalla', ['slug' => $pantallaSlug]) : url('/estado');
+    $consultaUrl  = $pantallaSlug
+        ? route('reparaciones.public-status.search', ['slug' => $pantallaSlug])
+        : route('reparaciones.public-status.search');
 @endphp
 <body class="lp-body">
 
     <!-- Header principal -->
     <header class="lp-header">
         <div class="lp-container lp-header-inner">
-            <a class="lp-logo" href="{{ url('/estado') }}">
+            <a class="lp-logo" href="{{ $consultaUrl }}">
                 @if(!empty($empresa->logo))
                     <img class="lp-logo-img" src="{{ route('storage.serve', ['path' => preg_replace('#^storage/#', '', ltrim($empresa->logo, '/'))]) }}" alt="{{ $brandName }}">
                 @else
@@ -55,7 +59,7 @@
                 </span>
             </a>
             <nav class="lp-nav">
-                <a class="lp-nav-link" href="{{ route('reparaciones.public-status.search') }}">Consulta Express</a>
+                <a class="lp-nav-link" href="{{ $consultaUrl }}">Consulta Express</a>
                 <a class="lp-btn lp-btn-ghost lp-btn-sm" href="{{ $pantallaUrl }}" target="_blank" rel="noopener" title="Abrir pantalla de sala de espera">
                     <i class="fa-solid fa-tv"></i> Sala de Espera
                 </a>
@@ -95,7 +99,7 @@
             </div>
             <div>
                 <h4>Enlaces</h4>
-                <p><a href="{{ route('reparaciones.public-status.search') }}">Consulta Express</a></p>
+                <p><a href="{{ $consultaUrl }}">Consulta Express</a></p>
                 <p><a href="{{ $pantallaUrl }}" target="_blank" rel="noopener">Pantalla de Sala de Espera</a></p>
             </div>
             <div>

@@ -61,21 +61,33 @@ Route::get('/manifest.json', [PwaController::class, 'manifest'])->name('pwa.mani
 Route::get('/pwa/icon/{size}', [PwaController::class, 'icon'])->where('size', '192|512')->name('pwa.icon');
 
 // ── RUTA PÚBLICA PARA QR DE REPARACIONES (sin autenticación) ──────────────
+// Regla SaaS: toda ruta pública sin login lleva la empresa en la URL (slug).
+// - /r/{slug}/{numero_orden}: QR de la boleta y links de WhatsApp (aislado).
+// - /r/{numero_orden} y /estado: compatibilidad con boletas/QR antiguos.
+//   Si hay empresa identificada (subdominio/sesión) se aísla; si no, muestra
+//   la orden pero rotulada con su tienda para que el cliente detecte cruces.
+Route::get('/r/{slug}/{numero_orden}', [\App\Http\Controllers\PublicReparacionController::class, 'statusPorTienda'])
+    ->name('reparaciones.public-status.tienda')
+    ->where('slug', '[A-Za-z0-9][A-Za-z0-9\-_]{1,60}');
 Route::get('/r/{numero_orden}', [\App\Http\Controllers\PublicReparacionController::class, 'status'])
     ->name('reparaciones.public-status');
-Route::get('/estado', [\App\Http\Controllers\PublicReparacionController::class, 'status'])
+Route::get('/estado/{slug?}', [\App\Http\Controllers\PublicReparacionController::class, 'portal'])
     ->name('reparaciones.public-status.search');
 
 // ── MODO SALA DE ESPERA (pantalla TV, sin autenticación) ───────────────────
-// OJO: las rutas fijas van ANTES que las de {slug?}: si no, "mi-turno" se
-// interpretaría como slug de tienda y la consulta privada daría 404.
-Route::get('/pantalla/mi-turno/{slug?}', [\App\Http\Controllers\PublicReparacionController::class, 'miTurno'])
+// Regla SaaS: la pantalla SIEMPRE exige slug (/pantalla/mitienda). La URL sin
+// slug responde 404 con la instrucción, nunca "adivina" empresa por ?tienda=
+// (enumerable), sesión abierta del técnico o actividad reciente. Cada negocio
+// guarda su URL como página de inicio de su TV y jamás ve datos de otro.
+Route::get('/pantalla/mi-turno/{slug}', [\App\Http\Controllers\PublicReparacionController::class, 'miTurno'])
     ->name('public.pantalla.mi-turno')->middleware('throttle:30,1');
-Route::get('/pantalla/data/{slug?}', [\App\Http\Controllers\PublicReparacionController::class, 'pantallaData'])
+Route::get('/pantalla/data/{slug}', [\App\Http\Controllers\PublicReparacionController::class, 'pantallaData'])
     ->name('public.pantalla.data');
-Route::get('/pantalla/{slug?}', [\App\Http\Controllers\PublicReparacionController::class, 'pantalla'])
-    ->name('public.pantalla')
-    ->where('slug', '^(?!mi-turno$|data$).*$');
+Route::get('/pantalla/{slug}', [\App\Http\Controllers\PublicReparacionController::class, 'pantalla'])
+    ->name('public.pantalla');
+Route::get('/pantalla', function () {
+    abort(404, 'Pantalla sin tienda asignada: abre la pantalla con la URL de tu tienda (ej. /pantalla/tu-tienda). Guárdala como página de inicio de la TV.');
+});
 
 // ── PÁGINA PÚBLICA DE LA TIENDA (mini-web) ────────────────────────────────
 Route::get('/t/{slug}', [ComboPublicidadController::class, 'tiendaPublica'])->name('public.tienda');

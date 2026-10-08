@@ -2,11 +2,18 @@
 
 @section('title', 'Consulta Express')
 
+@php
+    // REGLA SAAS: el portal puede venir con tienda (/estado/{slug}) o genérico.
+    // Con tienda, el formulario conserva slugTienda para aislar la búsqueda.
+    // OJO: $tiendaPortal puede no venir (errores legacy): isset para no romper.
+    $nombrePortal = isset($tiendaPortal) ? ($tiendaPortal->nombre_tienda ?? null) : null;
+@endphp
+
 @section('content')
 <section class="lp-hero">
     <div class="lp-container lp-hero-grid">
         <div>
-            <span class="lp-hero-chip"><i class="fa-solid fa-location-dot"></i> Atención en local</span>
+            <span class="lp-hero-chip"><i class="fa-solid fa-location-dot"></i> {{ $nombrePortal ?? 'Atención en local' }}</span>
             <h1 class="lp-hero-title">Tu tecnología en manos de <span class="lp-hero-grad">expertos</span>.</h1>
             <p class="lp-hero-text">Consulta el estado de tu reparación en segundos: digita el código de tu boleta y revisa el avance paso a paso de tu equipo, sin llamadas ni esperas.</p>
             <div class="lp-hero-actions">
@@ -17,9 +24,15 @@
 
         <div class="lp-card" id="consulta">
             <span class="lp-card-corner">Rápido</span>
-            <h3><i class="fa-solid fa-route"></i> Consulta Express</h3>
+            <h3><i class="fa-solid fa-route"></i> Consulta Express{{ $nombrePortal ? ' · ' . $nombrePortal : '' }}</h3>
             <p>Ingresa el código de reparación que aparece en tu boleta de recepción y mira el avance actual de tu equipo.</p>
-            <form method="GET" action="{{ route('reparaciones.public-status.search') }}">
+            @if(!empty($error))
+                <p class="lp-error">{{ $error }}</p>
+            @endif
+            <form method="GET" action="{{ isset($slugTienda) && $slugTienda ? route('reparaciones.public-status.search', ['slug' => $slugTienda]) : route('reparaciones.public-status.search') }}">
+                @if(isset($slugTienda) && $slugTienda)
+                    <input type="hidden" name="slugTienda" value="{{ $slugTienda }}">
+                @endif
                 <label class="lp-label" for="express-code">Código de reparación</label>
                 <div class="lp-input-group">
                     <span class="lp-input-prefix">RPT-</span>

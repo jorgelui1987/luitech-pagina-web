@@ -17,7 +17,7 @@
     $tipoDispositivoLabel = $tipoDispositivo[$reparacion->tipo_dispositivo] ?? ($reparacion->tipo_dispositivo ?? '—');
     $nombreImpuesto = ($empresa?->pais ?? '') === 'CL' ? 'IVA' : 'IGV';
     $impuestoPct = $reparacion->porcentajeImpuesto();
-    $qrUrl = route('reparaciones.public-status', $reparacion->numero_orden);
+    $qrUrl = $reparacion->tenant ? $reparacion->tenant->urlSeguimientoOrden($reparacion->numero_orden) : route('reparaciones.public-status', $reparacion->numero_orden);
 
     // Una sola firma: priorizar la de entrega
     $firmaMostrar = $reparacion->firma_entrega ?: $reparacion->firma_recepcion;

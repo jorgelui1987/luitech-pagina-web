@@ -121,6 +121,37 @@ class Tenant extends Model
     }
 
     /**
+     * URL pública de seguimiento de una orden SIEMPRE con slug de ESTA tienda:
+     * /r/{slug}/{numero_orden}. Regla SaaS: sin slug el QR/link genérico
+     * (/r/{codigo}) puede mostrar la orden fuera de su tienda en el dominio
+     * principal. Si no hay slug, cae al genérico (boletas legacy).
+     */
+    public function urlSeguimientoOrden(string $numeroOrden): string
+    {
+        if ($this->slug_publico) {
+            return route('reparaciones.public-status.tienda', [
+                'slug' => $this->slug_publico,
+                'numero_orden' => $numeroOrden,
+            ]);
+        }
+
+        return route('reparaciones.public-status', $numeroOrden);
+    }
+
+    /**
+     * URL de la pantalla de sala de espera de ESTA tienda (/pantalla/{slug}).
+     * Sin slug no hay URL: la ruta /pantalla sin slug responde 404.
+     */
+    public function urlPantalla(): ?string
+    {
+        if (!$this->slug_publico) {
+            return null;
+        }
+
+        return route('public.pantalla', ['slug' => $this->slug_publico]);
+    }
+
+    /**
      * Obtiene el tenant actual basado en el subdominio/dominio.
      */
     public static function current(): ?self
