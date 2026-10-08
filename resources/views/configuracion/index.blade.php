@@ -627,6 +627,8 @@
             $tenantActual = auth()->user()->tenant;
             $slugPublico = $tenantActual?->slug_publico;
             $urlPublica = $slugPublico ? url('/t/' . $slugPublico) : null;
+            // Botón "Pantalla en TV": abre la sala de espera de ESTA tienda (/pantalla/{slug}).
+            $urlPantallaTv = $tenantActual?->urlPantalla();
         @endphp
         <div class="card mb-4" style="border:2px solid #0891b2;">
             <div class="card-body p-4">
@@ -644,6 +646,19 @@
                         Comparte este link: <strong>{{ $urlPublica }}</strong>
                     </div>
                 </div>
+                @if($urlPantallaTv)
+                <div class="p-3 mb-3 text-center" style="background:#eff6ff;border-radius:12px;border:1px dashed #3b82f6;">
+                    <div style="font-size:12px;color:#1e40af;" class="mb-2">
+                        <i class="fas fa-tv me-1"></i>Sala de espera de tu tienda
+                    </div>
+                    <a href="{{ $urlPantallaTv }}" target="_blank" rel="noopener" class="btn btn-primary btn-sm" style="border-radius:20px;">
+                        <i class="fas fa-tv me-2"></i>Pantalla en TV
+                    </a>
+                    <div class="form-text mt-2" style="font-size:11px;">
+                        Abre tu pantalla (<strong>{{ $urlPantallaTv }}</strong>) y guárdala como página de inicio de la TV. Muestra solo tus órdenes.
+                    </div>
+                </div>
+                @endif
                 @else
                 <div class="alert alert-warning py-2 px-3" style="font-size:12px;">
                     <i class="fas fa-exclamation-triangle me-1"></i>

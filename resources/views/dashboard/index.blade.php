@@ -52,6 +52,14 @@
                 <i class="fas fa-box-open me-1"></i> Nuevo Producto
             </a>
         </div>
+        @php $urlPantallaTvDash = auth()->user()->tenant?->urlPantalla(); @endphp
+        @if($urlPantallaTvDash)
+        <div class="col-6 col-md-3">
+            <a href="{{ $urlPantallaTvDash }}" target="_blank" rel="noopener" class="btn btn-dark w-100 py-2" style="font-weight:700;">
+                <i class="fas fa-tv me-1"></i> Pantalla en TV
+            </a>
+        </div>
+        @endif
     </div>
 </div>
 
