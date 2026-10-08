@@ -123,6 +123,11 @@ class PublicReparacionIsolationTest extends TestCase
             ->all();
     }
 
+    private function detalleEnmascarado(array $data): array
+    {
+        return collect($data['listos'])->merge($data['proceso'])->all();
+    }
+
     // ── TESTS ──
 
     public function test_pantalla_data_sin_empresa_identificada_responde_vacio(): void
@@ -146,8 +151,16 @@ class PublicReparacionIsolationTest extends TestCase
         $data = $this->get(route('public.pantalla.data'))->json();
         $codigos = $this->codigosVisibles($data);
 
-        $this->assertContains($this->ordenTenant1->numero_orden, $codigos);
-        $this->assertNotContains($this->ordenTenant2->numero_orden, $codigos);
+        // Privacidad en sala: códigos enmascarados (···-XXXX), nunca completos
+        $this->assertContains(
+            \App\Http\Controllers\PublicReparacionController::enmascararCodigo($this->ordenTenant1->numero_orden),
+            $codigos
+        );
+        $this->assertNotContains($this->ordenTenant1->numero_orden, $codigos);
+        $this->assertNotContains(
+            \App\Http\Controllers\PublicReparacionController::enmascararCodigo($this->ordenTenant2->numero_orden),
+            $codigos
+        );
     }
 
     public function test_pantalla_data_parametro_tienda_filtra_por_tenant(): void
@@ -155,8 +168,15 @@ class PublicReparacionIsolationTest extends TestCase
         $data = $this->get(route('public.pantalla.data', ['tienda' => $this->tenant2->id]))->json();
         $codigos = $this->codigosVisibles($data);
 
-        $this->assertContains($this->ordenTenant2->numero_orden, $codigos);
-        $this->assertNotContains($this->ordenTenant1->numero_orden, $codigos);
+        $this->assertContains(
+            \App\Http\Controllers\PublicReparacionController::enmascararCodigo($this->ordenTenant2->numero_orden),
+            $codigos
+        );
+        $this->assertNotContains($this->ordenTenant2->numero_orden, $codigos);
+        $this->assertNotContains(
+            \App\Http\Controllers\PublicReparacionController::enmascararCodigo($this->ordenTenant1->numero_orden),
+            $codigos
+        );
     }
 
     public function test_pantalla_data_por_slug_filtra_por_tenant(): void
@@ -164,8 +184,54 @@ class PublicReparacionIsolationTest extends TestCase
         $data = $this->get(route('public.pantalla.data', ['slug' => 'tienda-uno']))->json();
         $codigos = $this->codigosVisibles($data);
 
-        $this->assertContains($this->ordenTenant1->numero_orden, $codigos);
-        $this->assertNotContains($this->ordenTenant2->numero_orden, $codigos);
+        $this->assertContains(
+            \App\Http\Controllers\PublicReparacionController::enmascararCodigo($this->ordenTenant1->numero_orden),
+            $codigos
+        );
+        $this->assertNotContains($this->ordenTenant1->numero_orden, $codigos);
+        $this->assertNotContains(
+            \App\Http\Controllers\PublicReparacionController::enmascararCodigo($this->ordenTenant2->numero_orden),
+            $codigos
+        );
+    }
+
+    public function test_pantalla_data_no_expone_detalle_de_equipo_ajeno(): void
+    {
+        $data = $this->get(route('public.pantalla.data', ['slug' => 'tienda-uno']))->json();
+        $items = $this->detalleEnmascarado($data);
+
+        $this->assertNotEmpty($items);
+        foreach ($items as $item) {
+            // Solo tipo genérico ("Celular", "Equipo"...), jamás marca/modelo
+            $this->assertStringNotContainsString('iPhone', (string) ($item['equipo'] ?? ''));
+            $this->assertStringNotContainsString('Xiaomi', (string) ($item['equipo'] ?? ''));
+            $this->assertStringStartsWith('···-', (string) ($item['codigo'] ?? ''));
+        }
+    }
+
+    public function test_mi_turno_devuelve_solo_la_orden_consultada(): void
+    {
+        $data = $this->get(route('public.pantalla.mi-turno', ['codigo' => 'RPT-000003-A2B4']))->json();
+
+        $this->assertTrue($data['ok']);
+        $this->assertSame('RPT-000003-A2B4', $data['orden']['codigo']);
+        $this->assertArrayNotHasKey('cliente', $data['orden']);
+    }
+
+    public function test_mi_turno_sin_sufijo_no_revela_orden_con_sufijo(): void
+    {
+        $data = $this->get(route('public.pantalla.mi-turno', ['codigo' => '000003']))->json();
+
+        $this->assertFalse($data['ok']);
+    }
+
+    public function test_mi_turno_de_otra_empresa_responde_no_encontrada(): void
+    {
+        $this->actingAs($this->user2);
+
+        $data = $this->get(route('public.pantalla.mi-turno', ['codigo' => 'RPT-000003-A2B4']))->json();
+
+        $this->assertFalse($data['ok']);
     }
 
     public function test_consulta_desde_subdominio_no_muestra_ordenes_de_otra_empresa(): void

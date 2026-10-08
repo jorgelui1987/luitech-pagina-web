@@ -162,6 +162,104 @@ class PublicReparacionController extends Controller
     }
 
     /**
+     * Consulta privada de la sala ("Ver mi turno"): con el código COMPLETO de la
+     * boleta devuelve SOLO esa orden (equipo genérico + estado + avance).
+     * Sin sufijo anti-adivinanza responde "no encontrada": nadie puede barrer
+     * órdenes ajenas desde la TV. Mismo aislamiento por empresa que status().
+     */
+    public function miTurno(Request $request, ?string $slug = null)
+    {
+        $valor = strtoupper(trim((string) ($request->query('codigo', ''))));
+        if ($valor === '') {
+            return response()->json(['ok' => false, 'error' => 'Ingresa tu código completo de la boleta.'], 422);
+        }
+        $normalizado = $this->normalizarNumeroOrden($valor);
+        // Exigir sufijo anti-adivinanza para órdenes nuevas (formato RPT-000003-A2B4)
+        $tieneSufijo = (bool) preg_match('/^RPT-\d{6}-[A-Z0-9]{4}$/', $normalizado);
+        $esAntigua = (bool) preg_match('/^RPT-\d{6}$/', $normalizado);
+
+        $reparacion = Reparacion::withoutGlobalScopes()
+            ->where('numero_orden', $normalizado)
+            ->first();
+
+        // Orden nueva sin sufijo: no revelar nada (como el test de status())
+        if (!$tieneSufijo && !$esAntigua) {
+            return response()->json(['ok' => false, 'error' => 'No se encontró ese código. Revisa tu boleta.'], 404);
+        }
+        // Base sin sufijo no expone orden con sufijo
+        if ($esAntigua && $reparacion === null) {
+            // Buscar si existe la orden con sufijo para esa base: no revelar
+            $base = substr($normalizado, 4);
+            $existeConSufijo = Reparacion::withoutGlobalScopes()
+                ->where('numero_orden', 'like', 'RPT-' . $base . '-%')
+                ->exists();
+            if ($existeConSufijo) {
+                return response()->json(['ok' => false, 'error' => 'No se encontró ese código. Revisa tu boleta.'], 404);
+            }
+        }
+        if (!$reparacion) {
+            return response()->json(['ok' => false, 'error' => 'No se encontró ese código. Revisa tu boleta.'], 404);
+        }
+
+        // Aislamiento por empresa: slug de la pantalla o portal (sin revelar existencia).
+        // OJO: resolverTenantPorSlug hace abort(404) HTML si el slug no existe;
+        // aquí debe ser JSON para no romper el fetch de la TV.
+        try {
+            $tenantEsperado = $slug !== null
+                ? $this->resolverTenantPorSlug($slug)
+                : ($this->resolverTenantPantalla($request) ?? $this->resolverTenantPortal());
+        } catch (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e) {
+            return response()->json(['ok' => false, 'error' => 'No se encontró ese código. Revisa tu boleta.'], 404);
+        }
+        if ($tenantEsperado !== null && (int) $reparacion->tenant_id !== $tenantEsperado) {
+            return response()->json(['ok' => false, 'error' => 'No se encontró ese código. Revisa tu boleta.'], 404);
+        }
+
+        $labels = [
+            'recibido' => 'Recibido', 'en_diagnostico' => 'En diagnóstico',
+            'esperando_repuesto' => 'Esperando repuesto', 'en_reparacion' => 'En reparación',
+            'listo' => 'Listo para retiro', 'entregado' => 'Entregado',
+            'no_reparable' => 'No reparable',
+        ];
+        $avances = [
+            'recibido' => 10, 'en_diagnostico' => 30, 'esperando_repuesto' => 45,
+            'en_reparacion' => 65, 'listo' => 85, 'entregado' => 100, 'no_reparable' => 65,
+        ];
+        $tiposGenericos = [
+            'celular' => 'Celular', 'tablet' => 'Tablet',
+            'portatil' => 'Portátil', 'notebook' => 'Portátil', 'otros' => 'Equipo',
+        ];
+        $tipoGenerico = $tiposGenericos[strtolower((string) ($reparacion->tipo_dispositivo ?? ''))]
+            ?? ($reparacion->dispositivo ? 'Equipo' : 'Equipo en servicio');
+
+        return response()->json([
+            'ok' => true,
+            'orden' => [
+                'codigo' => $reparacion->numero_orden,
+                'equipo' => $tipoGenerico,
+                'estado' => $labels[$reparacion->estado] ?? ucfirst((string) $reparacion->estado),
+                'avance' => $avances[$reparacion->estado] ?? 50,
+            ],
+        ]);
+    }
+
+    /**
+     * Enmascara un código para la pantalla compartida: RPT-001024-A2B4 → ···-A2B4.
+     * Sin el código completo nadie puede consultar la orden ajena en /r/{codigo}.
+     */
+    public static function enmascararCodigo(string $codigo): string
+    {
+        $codigo = strtoupper(trim($codigo));
+        $partes = explode('-', $codigo);
+        $sufijo = end($partes);
+        if (is_string($sufijo) && preg_match('/^[A-Z0-9]{4}$/', $sufijo) && count($partes) >= 3) {
+            return '···-' . $sufijo;
+        }
+
+        return '···-' . substr($codigo, -4);
+    }
+
+    /**
      * Datos en vivo del modo TV (consultado por la pantalla cada 15 s).
      * Con slug: solo esa empresa. Sin slug: resuelve por ?tienda=, sesión
      * del usuario o subdominio. Si no hay empresa identificada responde
@@ -206,13 +304,26 @@ class PublicReparacionController extends Controller
         $proceso = [];
 
         foreach ($ordenes as $r) {
-            $equipo = trim((($r->marca ?? '') . ' ' . ($r->modelo ?? ''))) ?: ($r->dispositivo ?: 'Equipo en servicio');
+            // Privacidad en sala (pantalla compartida sin login): NO se envía el
+            // código completo (es la llave de la consulta privada /r/{codigo}) ni
+            // el detalle del equipo (marca/modelo). Solo viaja código enmascarado
+            // (···-A2B4) + tipo genérico + estado, para que cada cliente reconozca
+            // su turno sin ver datos ajenos ni poder consultar órdenes de otros.
+            $mask = self::enmascararCodigo((string) ($r->numero_orden ?? ''));
+            $tiposGenericos = [
+                'celular' => 'Celular', 'tablet' => 'Tablet',
+                'portatil' => 'Portátil', 'notebook' => 'Portátil',
+                'otros' => 'Equipo',
+            ];
+            $tipoGenerico = $tiposGenericos[strtolower((string) ($r->tipo_dispositivo ?? ''))]
+                ?? ($r->dispositivo ? 'Equipo' : 'Equipo en servicio');
 
             $item = [
-                'codigo'     => $r->numero_orden,
-                'equipo'     => $equipo,
-                'urgente'    => in_array($r->prioridad, ['alta', 'urgente']),
-                'avance'     => $avances[$r->estado] ?? 50,
+                'codigo' => $mask, // compat: la vista muestra este campo
+                'codigo_mask' => $mask,
+                'equipo' => $tipoGenerico, // solo tipo genérico, sin marca/modelo
+                'urgente' => false, // no se revela prioridad ajena en sala
+                'avance' => $avances[$r->estado] ?? 50,
                 'estado_key' => $r->estado,
             ];
 

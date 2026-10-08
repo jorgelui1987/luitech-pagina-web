@@ -67,10 +67,15 @@ Route::get('/estado', [\App\Http\Controllers\PublicReparacionController::class, 
     ->name('reparaciones.public-status.search');
 
 // ── MODO SALA DE ESPERA (pantalla TV, sin autenticación) ───────────────────
+// OJO: las rutas fijas van ANTES que las de {slug?}: si no, "mi-turno" se
+// interpretaría como slug de tienda y la consulta privada daría 404.
+Route::get('/pantalla/mi-turno/{slug?}', [\App\Http\Controllers\PublicReparacionController::class, 'miTurno'])
+    ->name('public.pantalla.mi-turno')->middleware('throttle:30,1');
 Route::get('/pantalla/data/{slug?}', [\App\Http\Controllers\PublicReparacionController::class, 'pantallaData'])
     ->name('public.pantalla.data');
 Route::get('/pantalla/{slug?}', [\App\Http\Controllers\PublicReparacionController::class, 'pantalla'])
-    ->name('public.pantalla');
+    ->name('public.pantalla')
+    ->where('slug', '^(?!mi-turno$|data$).*$');
 
 // ── PÁGINA PÚBLICA DE LA TIENDA (mini-web) ────────────────────────────────
 Route::get('/t/{slug}', [ComboPublicidadController::class, 'tiendaPublica'])->name('public.tienda');
