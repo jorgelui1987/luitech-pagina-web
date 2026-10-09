@@ -88,6 +88,10 @@
                 <h4>Reportes y Excel</h4>
                 <p>Reportes financieros, exportacion a Excel y respaldo de tu info.</p>
             </div>
+        </div>
+    </div>
+</section>
+
 <section id="demo" class="lp-section lp-section-alt">
     <div class="lp-container">
         <div class="lp-section-head">
@@ -243,12 +247,4 @@
         });
     });
 @endpush
-            </div>
-        </div>
-    </div>
-</section>
-
-        </div>
-    </div>
-</section>
 

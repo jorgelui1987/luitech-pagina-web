@@ -321,8 +321,8 @@ input[type="date"].lp-input{color-scheme:dark}
 @media (max-width:640px){.lp-form-grid{grid-template-columns:1fr}.lp-map{height:280px}}
 
 /* ── Planes y precios ── */
-.lp-pricing{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;align-items:stretch;max-width:1020px;margin:0 auto}
-.lp-pricing-4{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;align-items:stretch}
+.lp-pricing{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px;align-items:stretch;max-width:1020px;margin:0 auto}
+.lp-pricing-4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:22px;align-items:stretch}
 .lp-plan{position:relative;background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:28px 24px;display:flex;flex-direction:column;transition:all .2s}
 .lp-plan:hover{border-color:#2b4166;box-shadow:0 0 24px rgba(6,182,212,.12);transform:translateY(-4px)}
 .lp-plan.is-popular,.lp-plan-pop{border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan),0 12px 32px rgba(6,182,212,.18)}
@@ -338,7 +338,7 @@ input[type="date"].lp-input{color-scheme:dark}
 .lp-plan ul li i{color:var(--emerald);font-size:12px;margin-top:3px;flex:none}
 .lp-plan ul li.no{color:var(--faint)}
 .lp-plan ul li.no i{color:var(--faint)}
-@media (max-width:980px){.lp-pricing{grid-template-columns:1fr 1fr}}
+@media (max-width:980px){.lp-pricing{grid-template-columns:1fr;max-width:520px}}
 @media (max-width:640px){.lp-pricing,.lp-pricing-4{grid-template-columns:1fr}}
 .lp-plans-note{max-width:1020px;margin:18px auto 0;text-align:center}
 
