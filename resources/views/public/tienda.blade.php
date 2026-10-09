@@ -503,6 +503,7 @@
                         <p class="text-muted" style="font-size:14px;">Ingresa tu número de orden para ver el estado de tu equipo.</p>
                         <div class="tracking-form">
                             <form action="{{ route('reparaciones.public-status.search') }}" method="GET" class="d-flex gap-2">
+                                <input type="hidden" name="slugTienda" value="{{ $tenant->slug_publico }}">
                                 <input type="text" name="numero_orden" class="form-control"
                                        placeholder="N° de orden (ej: R-0001)"
                                        value="{{ request('numero_orden') }}" required>
@@ -535,6 +536,28 @@
 
             <!-- ── Columna lateral ── -->
             <div class="col-lg-4">
+                <!-- Consulta Express: seguimiento de ESA tienda (aislado por slug) -->
+                <div class="card-modern mb-4 animate-fade animate-delay-1">
+                    <div class="card-header-modern">
+                        <div class="icon-circle" style="background:#e0f2fe;color:#0891b2;">
+                            <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"/></svg>
+                        </div>
+                        <h5 class="fw-bold mb-0">Consulta tu reparación</h5>
+                    </div>
+                    <div class="card-body-modern">
+                        <p class="text-muted" style="font-size:14px;">Ingresa el código de tu boleta y mira el avance de tu equipo.</p>
+                        <form method="GET" action="{{ route('reparaciones.public-status.search') }}">
+                            <input type="hidden" name="slugTienda" value="{{ $tenant->slug_publico }}">
+                            <div class="mb-2">
+                                <input type="text" name="numero_orden" class="form-control" style="border-radius:10px;text-transform:uppercase;" placeholder="Ej: RPT-001024-A2B4" autocomplete="off" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100" style="border-radius:10px;">
+                                Ver mi turno
+                            </button>
+                        </form>
+                        <p class="text-muted small mt-2 mb-0">También puedes escanear el QR de tu boleta.</p>
+                    </div>
+                </div>
                 <!-- Cupones -->
                 @if($cupones->isNotEmpty())
                 <div class="card-modern mb-4 animate-fade animate-delay-1">
