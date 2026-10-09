@@ -391,12 +391,18 @@ class ReparacionController extends Controller
             })
             ->first();
 
-        // Obtener URL de la mini página web
-        $tenant = $reparacion->tenant;
+        // Obtener URL de la mini página web + QR directo a ESTA orden (con slug).
+        // Sin global scopes: el ticket se imprime con cualquier sesión y el
+        // tenant de la relación puede venir filtrado por TenantScope.
+        $tenant = \App\Models\Tenant::withoutGlobalScopes()->find($reparacion->tenant_id);
         $urlMiniWeb = $tenant?->slug_publico ? url('/t/' . $tenant->slug_publico) : null;
+        $qrUrl = $tenant
+            ? $tenant->urlSeguimientoOrden($reparacion->numero_orden)
+            : route('reparaciones.public-status', $reparacion->numero_orden);
 
         return view('reparaciones.ticket', [
             'reparacion' => $reparacion, 'cupon' => $cupon, 'urlMiniWeb' => $urlMiniWeb,
+            'qrUrl' => $qrUrl,
             'coloresMarca' => $tenant?->colores() ?? [],
         ]);
     }
@@ -409,12 +415,16 @@ class ReparacionController extends Controller
     {
         $reparacion->load(['cliente', 'tecnico']);
 
-        // Obtener URL de la mini página web
-        $tenant = $reparacion->tenant;
+        // Mini-web + QR directo a ESTA orden (con slug), sin global scopes.
+        $tenant = \App\Models\Tenant::withoutGlobalScopes()->find($reparacion->tenant_id);
         $urlMiniWeb = $tenant?->slug_publico ? url('/t/' . $tenant->slug_publico) : null;
+        $qrUrl = $tenant
+            ? $tenant->urlSeguimientoOrden($reparacion->numero_orden)
+            : route('reparaciones.public-status', $reparacion->numero_orden);
 
         return view('reparaciones.ticket-carta', [
             'reparacion' => $reparacion, 'urlMiniWeb' => $urlMiniWeb,
+            'qrUrl' => $qrUrl,
             'coloresMarca' => $tenant?->colores() ?? [],
         ]);
     }

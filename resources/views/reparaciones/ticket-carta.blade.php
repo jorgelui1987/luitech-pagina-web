@@ -17,7 +17,9 @@
     $tipoDispositivoLabel = $tipoDispositivo[$reparacion->tipo_dispositivo] ?? ($reparacion->tipo_dispositivo ?? '—');
     $nombreImpuesto = ($empresa?->pais ?? '') === 'CL' ? 'IVA' : 'IGV';
     $impuestoPct = $reparacion->porcentajeImpuesto();
-    $qrUrl = $reparacion->tenant ? $reparacion->tenant->urlSeguimientoOrden($reparacion->numero_orden) : route('reparaciones.public-status', $reparacion->numero_orden);
+    // $qrUrl viene del controlador (aislado por slug). Fallback legacy por si
+    // la vista se renderiza sin esa variable.
+    $qrUrl = $qrUrl ?? ($reparacion->tenant ? $reparacion->tenant->urlSeguimientoOrden($reparacion->numero_orden) : route('reparaciones.public-status', $reparacion->numero_orden));
 
     // Una sola firma: priorizar la de entrega
     $firmaMostrar = $reparacion->firma_entrega ?: $reparacion->firma_recepcion;

@@ -155,10 +155,10 @@ hr{border:none;border-top:1px solid #000;margin:2px 0}
 @endif
 
 <div class="ftr">
-@php $qrUrl = $reparacion->tenant ? $reparacion->tenant->urlSeguimientoOrden($reparacion->numero_orden) : route('reparaciones.public-status', $reparacion->numero_orden); @endphp
+@php $qrUrl = $qrUrl ?? ($reparacion->tenant ? $reparacion->tenant->urlSeguimientoOrden($reparacion->numero_orden) : route('reparaciones.public-status', $reparacion->numero_orden)); @endphp
 <div style="margin:2px auto;text-align:center;">
     <img src="https://api.qrserver.com/v1/create-qr-code/?size=60x60&data={{ urlencode($qrUrl) }}" alt="QR" style="width:60px;height:60px">
-    <div style="font-size:9px;font-weight:700;">Escanea para ver estado</div>
+    <div style="font-size:9px;font-weight:700;">Escanea para ver estado {{ $reparacion->numero_orden }}</div>
 </div>
 @if($urlMiniWeb)
 <div class="url-miniweb">🌐 {{ $urlMiniWeb }}</div>
