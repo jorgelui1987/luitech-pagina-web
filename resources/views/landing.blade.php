@@ -125,55 +125,43 @@
         <div class="lp-pricing">
             <div class="lp-plan">
                 <span class="lp-plan-name">Gratis</span>
-                <div class="lp-plan-price">{{ $precio('gratis', '$0') }} <small>/mes</small></div>
-                <p class="lp-plan-desc">Para empezar</p>
+                <div class="lp-plan-price">{{ $precio('gratis', '$0') }} <small>/mes · para siempre</small></div>
+                <p class="lp-plan-desc">Para probar y empezar a vender hoy.</p>
                 <ul>
                     <li><i class="fa-solid fa-check"></i> Hasta 3 usuarios</li>
                     <li><i class="fa-solid fa-check"></i> Hasta 50 productos</li>
-                    <li><i class="fa-solid fa-check"></i> Ventas basicas</li>
-                    <li><i class="fa-solid fa-check"></i> Reparaciones basicas</li>
+                    <li><i class="fa-solid fa-check"></i> Ventas + reparaciones basicas</li>
                     <li><i class="fa-solid fa-check"></i> Mini-web /t/tu-tienda</li>
                 </ul>
                 <a href="{{ route('registro.tenant') }}" class="lp-btn lp-btn-ghost lp-btn-block">Comenzar gratis</a>
             </div>
-            <div class="lp-plan">
-                <span class="lp-plan-name">Basico</span>
-                <div class="lp-plan-price">{{ $precio('basico', '$9.990') }} <small>/mes</small></div>
-                <p class="lp-plan-desc">Para negocios pequenos</p>
-                <ul>
-                    <li><i class="fa-solid fa-check"></i> Hasta 5 usuarios</li>
-                    <li><i class="fa-solid fa-check"></i> Hasta 200 productos</li>
-                    <li><i class="fa-solid fa-check"></i> Ventas completas</li>
-                    <li><i class="fa-solid fa-check"></i> WhatsApp + Excel</li>
-                </ul>
-                <a href="{{ route('registro.tenant') }}" class="lp-btn lp-btn-primary lp-btn-block">Lo quiero</a>
-            </div>
-            <div class="lp-plan lp-plan-pop">
-                <span class="lp-card-corner">Mas popular</span>
+            <div class="lp-plan lp-plan-pop is-popular">
+                <span class="lp-plan-badge">Mas popular</span>
                 <span class="lp-plan-name">Profesional</span>
                 <div class="lp-plan-price">{{ $precio('profesional', '$19.990') }} <small>/mes</small></div>
-                <p class="lp-plan-desc">Para negocios en crecimiento</p>
+                <p class="lp-plan-desc">Para tiendas en crecimiento.</p>
                 <ul>
                     <li><i class="fa-solid fa-check"></i> Hasta 15 usuarios</li>
                     <li><i class="fa-solid fa-check"></i> Hasta 1.000 productos</li>
-                    <li><i class="fa-solid fa-check"></i> Reportes avanzados</li>
+                    <li><i class="fa-solid fa-check"></i> Todo: ventas, RPT, TV sala, WhatsApp</li>
+                    <li><i class="fa-solid fa-check"></i> Reportes avanzados + Excel</li>
                     <li><i class="fa-solid fa-check"></i> Soporte prioritario</li>
                 </ul>
-                <a href="{{ route('registro.tenant') }}" class="lp-btn lp-btn-primary lp-btn-block">Lo quiero</a>
+                <a href="{{ route('registro.tenant') }}" class="lp-btn lp-btn-primary lp-btn-block">Probar 14 dias gratis</a>
             </div>
             <div class="lp-plan">
                 <span class="lp-plan-name">Empresarial</span>
                 <div class="lp-plan-price">{{ $precio('empresarial', '$39.990') }} <small>/mes</small></div>
-                <p class="lp-plan-desc">Para grandes tiendas</p>
+                <p class="lp-plan-desc">Para cadenas y alto volumen.</p>
                 <ul>
-                    <li><i class="fa-solid fa-check"></i> Usuarios ilimitados</li>
+                    <li><i class="fa-solid fa-check"></i> Usuarios y productos ilimitados</li>
                     <li><i class="fa-solid fa-check"></i> Sucursales multiples</li>
-                    <li><i class="fa-solid fa-check"></i> Soporte 24/7</li>
-                    <li><i class="fa-solid fa-check"></i> Capacitacion incluida</li>
+                    <li><i class="fa-solid fa-check"></i> Soporte 24/7 + capacitacion</li>
                 </ul>
-                <a href="{{ route('registro.tenant') }}" class="lp-btn lp-btn-ghost lp-btn-block">Contactar</a>
+                <a href="{{ route('registro.tenant') }}" class="lp-btn lp-btn-ghost lp-btn-block">Hablar con ventas</a>
             </div>
         </div>
+        <p class="lp-hint lp-plans-note">Tambien tenemos el plan Basico ({{ $precio('basico', '$9.990') }}/mes · hasta 5 usuarios y 200 productos) — lo puedes elegir al registrarte. <a href="{{ route('planes') }}" style="color:var(--cyan);font-weight:700;">Ver comparativa completa</a></p>
     </div>
 </section>
 

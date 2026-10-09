@@ -321,10 +321,13 @@ input[type="date"].lp-input{color-scheme:dark}
 @media (max-width:640px){.lp-form-grid{grid-template-columns:1fr}.lp-map{height:280px}}
 
 /* ── Planes y precios ── */
-.lp-pricing{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;align-items:stretch}
-.lp-plan{position:relative;background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:26px 22px;display:flex;flex-direction:column;transition:all .2s}
+.lp-pricing{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;align-items:stretch;max-width:1020px;margin:0 auto}
+.lp-pricing-4{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;align-items:stretch}
+.lp-plan{position:relative;background:var(--card);border:1px solid var(--border);border-radius:var(--r-lg);padding:28px 24px;display:flex;flex-direction:column;transition:all .2s}
 .lp-plan:hover{border-color:#2b4166;box-shadow:0 0 24px rgba(6,182,212,.12);transform:translateY(-4px)}
-.lp-plan.is-popular{border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan),0 12px 32px rgba(6,182,212,.18)}
+.lp-plan.is-popular,.lp-plan-pop{border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan),0 12px 32px rgba(6,182,212,.18)}
+.lp-plan-name{display:block;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--cyan);margin-bottom:8px}
+.lp-plan-pop .lp-plan-name,.is-popular .lp-plan-name{color:var(--cyan)}
 .lp-plan-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--cyan);color:#04121b;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;padding:5px 14px;border-radius:999px;white-space:nowrap}
 .lp-plan h4{margin:0;font-size:16px;font-weight:800;display:flex;align-items:center;gap:9px;color:#fff}
 .lp-plan .lp-plan-desc{color:var(--muted);font-size:12.5px;margin:7px 0 14px;line-height:1.5}
@@ -336,7 +339,8 @@ input[type="date"].lp-input{color-scheme:dark}
 .lp-plan ul li.no{color:var(--faint)}
 .lp-plan ul li.no i{color:var(--faint)}
 @media (max-width:980px){.lp-pricing{grid-template-columns:1fr 1fr}}
-@media (max-width:640px){.lp-pricing{grid-template-columns:1fr}}
+@media (max-width:640px){.lp-pricing,.lp-pricing-4{grid-template-columns:1fr}}
+.lp-plans-note{max-width:1020px;margin:18px auto 0;text-align:center}
 
 /* ── Acordeón de planes (plegado por defecto) ── */
 #planes{overflow:hidden;transition:max-height .7s ease,opacity .5s ease,padding .5s ease;scroll-margin-top:90px}
