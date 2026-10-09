@@ -18,12 +18,16 @@ class LandingController extends Controller
             return redirect()->route('dashboard');
         }
 
-        return view('landing', ['empresa' => self::branding()]);
+        $planes = \App\Models\PlanPrecio::getPlanesActivos();
+
+        return view('landing', ['empresa' => self::branding(), 'planes' => $planes]);
     }
 
     public function planes()
     {
-        return view('landing', ['empresa' => self::branding(), 'abrirPlanes' => true]);
+        $planes = \App\Models\PlanPrecio::getPlanesActivos();
+
+        return view('landing', ['empresa' => self::branding(), 'planes' => $planes, 'abrirPlanes' => true]);
     }
 
     public static function branding(): object
