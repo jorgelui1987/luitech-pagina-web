@@ -163,6 +163,20 @@
             </div>
             <div class="lp-plan">
                 <span class="lp-plan-name">Empresarial</span>
+                <div class="lp-plan-price">{{ $precio('empresarial', '$39.990') }} <small>/mes</small></div>
+                <p class="lp-plan-desc">Para grandes tiendas</p>
+                <ul>
+                    <li><i class="fa-solid fa-check"></i> Usuarios ilimitados</li>
+                    <li><i class="fa-solid fa-check"></i> Sucursales multiples</li>
+                    <li><i class="fa-solid fa-check"></i> Soporte 24/7</li>
+                    <li><i class="fa-solid fa-check"></i> Capacitacion incluida</li>
+                </ul>
+                <a href="{{ route('registro.tenant') }}" class="lp-btn lp-btn-ghost lp-btn-block">Contactar</a>
+            </div>
+        </div>
+    </div>
+</section>
+
 <section id="faq-saas" class="lp-section lp-section-alt">
     <div class="lp-container">
         <div class="lp-section-head">
@@ -241,16 +255,6 @@
         });
     });
 @endpush
-
-                <div class="lp-plan-price">{{ $precio('empresarial', '$39.990') }} <small>/mes</small></div>
-                <p class="lp-plan-desc">Para grandes tiendas</p>
-                <ul>
-                    <li><i class="fa-solid fa-check"></i> Usuarios ilimitados</li>
-                    <li><i class="fa-solid fa-check"></i> Sucursales multiples</li>
-                    <li><i class="fa-solid fa-check"></i> Soporte 24/7</li>
-                    <li><i class="fa-solid fa-check"></i> Capacitacion incluida</li>
-                </ul>
-                <a href="{{ route('registro.tenant') }}" class="lp-btn lp-btn-ghost lp-btn-block">Contactar</a>
             </div>
         </div>
     </div>
