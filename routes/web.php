@@ -71,6 +71,8 @@ Route::get('/r/{slug}/{numero_orden}', [\App\Http\Controllers\PublicReparacionCo
     ->where('slug', '[A-Za-z0-9][A-Za-z0-9\-_]{1,60}');
 Route::get('/r/{numero_orden}', [\App\Http\Controllers\PublicReparacionController::class, 'status'])
     ->name('reparaciones.public-status');
+Route::get('/buscar-orden', [\App\Http\Controllers\PublicReparacionController::class, 'status'])
+    ->name('reparaciones.public-status.buscar');
 Route::get('/estado/{slug?}', [\App\Http\Controllers\PublicReparacionController::class, 'portal'])
     ->name('reparaciones.public-status.search');
 

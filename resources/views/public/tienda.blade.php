@@ -502,7 +502,7 @@
                     <div class="card-body-modern">
                         <p class="text-muted" style="font-size:14px;">Ingresa tu número de orden para ver el estado de tu equipo.</p>
                         <div class="tracking-form">
-                            <form action="{{ route('reparaciones.public-status') }}" method="GET" class="d-flex gap-2">
+                            <form action="{{ route('reparaciones.public-status.buscar') }}" method="GET" class="d-flex gap-2">
                                 <input type="hidden" name="slugTienda" value="{{ $tenant->slug_publico }}">
                                 <input type="text" name="numero_orden" class="form-control"
                                        placeholder="N° de orden (ej: RPT-000002-2K38)"
