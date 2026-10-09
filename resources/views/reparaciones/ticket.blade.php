@@ -147,10 +147,6 @@ hr{border:none;border-top:1px solid #000;margin:2px 0}
     @if($cupon->fecha_expiracion)
     <div style="font-size:9px;font-weight:700;margin-top:1px;">Vence: {{ $cupon->fecha_expiracion->format('d/m/Y') }}</div>
     @endif
-    @if($urlMiniWeb)
-    <div class="link">🔗 Ingresa a este link y reclama tu descuento:</div>
-    <div class="url-miniweb">{{ $urlMiniWeb }}</div>
-    @endif
 </div>
 @endif
 
@@ -160,9 +156,6 @@ hr{border:none;border-top:1px solid #000;margin:2px 0}
     <img src="https://api.qrserver.com/v1/create-qr-code/?size=60x60&data={{ urlencode($qrUrl) }}" alt="QR" style="width:60px;height:60px">
     <div style="font-size:9px;font-weight:700;">Escanea para ver estado {{ $reparacion->numero_orden }}</div>
 </div>
-@if($urlMiniWeb)
-<div class="url-miniweb">🌐 {{ $urlMiniWeb }}</div>
-@endif
 <div class="gr">¡Gracias por su preferencia!</div>
 <div style="font-size:9px;">{{ $reparacion->created_at->format('d/m/Y H:i') }} | {{ $reparacion->numero_orden }}</div>
 </div>

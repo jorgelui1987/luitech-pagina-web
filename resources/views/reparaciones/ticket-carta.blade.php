@@ -202,16 +202,11 @@ td.val{font-weight:600}
         </div>
     </div>
 
-    <!-- ═══ PIE ═══ -->
+    <!-- ═══ PIE: solo QR directo a la orden + contacto ═══ -->
     <div class="pie">
-        @if($urlMiniWeb)
-        <div>🌐 Visita nuestra tienda online:<br><span class="miniweb">{{ $urlMiniWeb }}</span></div>
-        @else
-        <div></div>
-        @endif
         <div style="text-align:center">
             <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data={{ urlencode($qrUrl) }}" alt="QR" class="qr">
-            <div style="font-size:6.5px;font-weight:700;">Escanea para ver estado</div>
+            <div style="font-size:6.5px;font-weight:700;">Escanea para ver estado {{ $reparacion->numero_orden }}</div>
         </div>
         <div style="text-align:center">
             @if($empresa?->telefono)📞 {{ $empresa->telefono }}@endif
