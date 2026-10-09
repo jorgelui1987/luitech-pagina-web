@@ -36,18 +36,13 @@
         </div>
     </header>
 
-    <!-- Consulta privada: cada cliente ve SOLO su turno con su código completo -->
-    <div class="tv-privacy">
+    <!-- Aviso visual: el detalle se ve en el celular, no en la TV -->
+    <div class="tv-privacy tv-privacy-visual">
         <div class="tv-privacy-text">
-            <h2><i class="fa-solid fa-user-shield"></i> ¿Eres cliente? Consulta SOLO tu equipo aquí</h2>
-            <p>Por privacidad, la lista muestra turnos enmascarados (···-A2B4). Ingresa tu código completo de la boleta para ver el detalle de <strong>tu orden únicamente</strong>.</p>
-        </div>
-        <div class="tv-privacy-form">
-            <input id="tv-mi-codigo" autocomplete="off" spellcheck="false" placeholder="Ej: RPT-001024-A2B4">
-            <button id="tv-mi-btn" type="button"><i class="fa-solid fa-magnifying-glass"></i> Ver mi turno</button>
+            <h2><i class="fa-solid fa-eye"></i> Pantalla solo informativa</h2>
+            <p>Ubica tu turno enmascarado (···-A2B4) y revisa el detalle en tu celular con el QR de tu boleta.</p>
         </div>
     </div>
-    <p id="tv-mi-resultado" class="tv-privacy-result" hidden></p>
 
     <!-- Columnas de turnos -->
     <div class="tv-grid">
@@ -109,7 +104,6 @@
 <script>
     // REGLA SAAS: la pantalla SIEMPRE tiene slug (la ruta sin slug da 404).
     const DATA_URL = @js(route('public.pantalla.data', ['slug' => $slugPantalla]));
-    const MI_TURNO_URL = @js(route('public.pantalla.mi-turno', ['slug' => $slugPantalla]));
     const CONSEJOS = @json($consejos);
 
     let prevReady = null;   // códigos "listos" vistos (1ª carga = referencia, sin chime)
@@ -199,54 +193,6 @@
         }
         prevReady = nowReady;
     }
-    // Consulta privada "Ver mi turno": cada cliente digita SU código completo
-    // y ve SOLO su orden (ruta /r/{codigo}, exige sufijo anti-adivinanza).
-    // El resultado se borra solo a los 60 s para que el siguiente cliente
-    // no vea datos ajenos.
-    let timerPrivado = null;
-    function normalizarCodigoTV(valor) {
-        const c = String(valor || '').toUpperCase().trim().replace(/\s+/g, '');
-        const sinRPT = c.replace(/^RPT-?/, '').replace(/[^A-Z0-9-]/g, '');
-        return /^(\d{1,6})(-[A-Z0-9]{4})?$/.test(sinRPT) ? sinRPT : '';
-    }
-    function pintarPrivado(texto, esOk) {
-        const box = document.getElementById('tv-mi-resultado');
-        if (!box) return;
-        box.hidden = false;
-        box.dataset.ok = esOk ? '1' : '0';
-        box.textContent = texto;
-    }
-    async function consultarMiTurno() {
-        const input = document.getElementById('tv-mi-codigo');
-        if (!input) return;
-        const valor = normalizarCodigoTV(input.value);
-        if (!valor) {
-            pintarPrivado('Ingresa tu código completo de la boleta (ej: RPT-001024-A2B4).', false);
-            input.focus();
-            return;
-        }
-        pintarPrivado('Buscando tu turno…', true);
-        try {
-            const res = await fetch(MI_TURNO_URL + '?codigo=' + encodeURIComponent(valor), { cache: 'no-store' });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok || !data.ok) {
-                pintarPrivado((data && data.error) || 'No se encontró ese código. Revisa tu boleta.', false);
-                return;
-            }
-            const o = data.orden || {};
-            pintarPrivado('Tu turno ' + (o.codigo || valor) + ' (' + (o.equipo || 'tu equipo') + '): ' + (o.estado || 'en seguimiento') +
-                ' — avance ' + (o.avance || 0) + '%. Este mensaje se borra solo en 60 s.', true);
-            input.value = '';
-            if (timerPrivado) clearTimeout(timerPrivado);
-            timerPrivado = setTimeout(() => {
-                const box = document.getElementById('tv-mi-resultado');
-                if (box) { box.hidden = true; box.textContent = ''; }
-            }, 60000);
-        } catch (e) {
-            pintarPrivado('Sin conexión con el taller. Intenta de nuevo.', false);
-        }
-    }
-
     async function refresh() {
         try {
             const res = await fetch(DATA_URL, { cache: 'no-store' });
@@ -290,12 +236,6 @@
         soundBtn.innerHTML = soundOn ? '<i class="fa-solid fa-volume-high"></i> Sonido ON' : '<i class="fa-solid fa-volume-xmark"></i> Sonido';
         if (soundOn) chime();
     });
-
-    // Consulta privada "Ver mi turno" (solo su orden, se auto-borra)
-    const btnMi = document.getElementById('tv-mi-btn');
-    const inpMi = document.getElementById('tv-mi-codigo');
-    if (btnMi) btnMi.addEventListener('click', consultarMiTurno);
-    if (inpMi) inpMi.addEventListener('keydown', ev => { if (ev.key === 'Enter') consultarMiTurno(); });
 
     // Pantalla completa
     document.getElementById('tv-fs').addEventListener('click', () => {
