@@ -29,7 +29,7 @@
             @if(!empty($error))
                 <p class="lp-error">{{ $error }}</p>
             @endif
-            <form method="GET" action="{{ isset($slugTienda) && $slugTienda ? route('reparaciones.public-status.search', ['slug' => $slugTienda]) : route('reparaciones.public-status.search') }}">
+            <form method="GET" action="{{ route('reparaciones.public-status') }}">
                 @if(isset($slugTienda) && $slugTienda)
                     <input type="hidden" name="slugTienda" value="{{ $slugTienda }}">
                 @endif
