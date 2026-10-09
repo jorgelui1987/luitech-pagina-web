@@ -58,13 +58,13 @@
                 <h4>Producto</h4>
                 <p><a href="#funciones">Funciones</a></p>
                 <p><a href="#demo">Demo en vivo</a></p>
-                <p><a href="{{ route('landing.planes') }}">Planes y precios</a></p>
+                <p><a href="{{ route('planes') }}">Planes y precios</a></p>
                 <p><a href="{{ route('registro.tenant') }}">Crear cuenta gratis</a></p>
             </div>
             <div>
                 <h4>Acceso</h4>
                 <p><a href="{{ route('login') }}">Ingresar a mi tienda</a></p>
-                <p><a href="{{ route('superadmin.login') }}">Soy administrador</a></p>
+                <p><a href="/superadmin/login">Soy administrador</a></p>
                 <p><a href="mailto:{{ $empresa->email ?? 'contacto@luitech.cl' }}"><i class="fa-solid fa-envelope" style="color:var(--cyan);margin-right:6px;"></i>{{ $empresa->email ?? 'contacto@luitech.cl' }}</a></p>
             </div>
         </div>
