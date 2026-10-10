@@ -346,6 +346,55 @@
         <div class="row g-4">
             <!-- ── Columna principal ── -->
             <div class="col-lg-8">
+                <!-- Servicios -->
+                <div class="card-modern mb-4 animate-fade">
+                    <div class="card-header-modern">
+                        <div class="icon-circle" style="background:#dbeafe;color:var(--primary);">
+                            <svg viewBox="0 0 24 24"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1 .1-1.4z"/></svg>
+                        </div>
+                        <h5 class="fw-bold mb-0">Nuestros servicios</h5>
+                    </div>
+                    <div class="card-body-modern">
+                        <div class="row g-3 text-center">
+                            <div class="col-6 col-md-3"><div class="p-3 rounded-3 h-100" style="background:var(--light);border:1px solid var(--border);"><div style="font-size:26px;">📱</div><div class="fw-bold" style="font-size:13px;">Cambio de pantalla</div><div class="text-muted" style="font-size:12px;">El mismo día</div></div></div>
+                            <div class="col-6 col-md-3"><div class="p-3 rounded-3 h-100" style="background:var(--light);border:1px solid var(--border);"><div style="font-size:26px;">🔋</div><div class="fw-bold" style="font-size:13px;">Batería</div><div class="text-muted" style="font-size:12px;">Con garantía</div></div></div>
+                            <div class="col-6 col-md-3"><div class="p-3 rounded-3 h-100" style="background:var(--light);border:1px solid var(--border);"><div style="font-size:26px;">💦</div><div class="fw-bold" style="font-size:13px;">Placa / Agua</div><div class="text-muted" style="font-size:12px;">Diagnóstico gratis</div></div></div>
+                            <div class="col-6 col-md-3"><div class="p-3 rounded-3 h-100" style="background:var(--light);border:1px solid var(--border);"><div style="font-size:26px;">🔓</div><div class="fw-bold" style="font-size:13px;">Liberación</div><div class="text-muted" style="font-size:12px;">Todas las operadoras</div></div></div>
+                        </div>
+                        @if(!empty($whatsappUrl ?? null))
+                        <a href="{{ $whatsappUrl }}" target="_blank" class="btn btn-success w-100 mt-3 fw-bold" style="border-radius:10px;">Cotizar mi reparación por WhatsApp</a>
+                        @endif
+                    </div>
+                </div>
+                <!-- Catalogo real -->
+                @if(!empty($productos) && $productos->count() > 0)
+                <div class="card-modern mb-4 animate-fade">
+                    <div class="card-header-modern">
+                        <div class="icon-circle" style="background:#fef9c3;color:#d97706;">
+                            <svg viewBox="0 0 24 24"><path d="M20 4H4v2h16V4zm1 10v-2l-1-5H4l-1 5v2h1v6h10v-6h4v2h1zm-9 4H6v-4h6v4zm0-6H6v-2h6v2zm8 6h-4v-4h4v4zm0-6h-4v-2h4v2z"/></svg>
+                        </div>
+                        <h5 class="fw-bold mb-0">Catálogo</h5>
+                    </div>
+                    <div class="card-body-modern">
+                        <div class="row g-3">
+                            @foreach($productos as $prod)
+                            <div class="col-6 col-md-3">
+                                <div class="rounded-3 h-100 d-flex flex-column" style="border:1px solid var(--border);overflow:hidden;">
+                                    <div class="p-3 flex-grow-1">
+                                        <div class="fw-bold" style="font-size:13px;">{{ $prod->nombre }}</div>
+                                        <div class="fw-bold mt-1" style="color:var(--primary);font-size:17px;">{{ $config->simbolo_moneda ?? 'S/' }} {{ number_format($prod->precio_venta, 2) }}</div>
+                                        <div class="text-success" style="font-size:12px;">En stock ({{ $prod->stock }})</div>
+                                    </div>
+                                    @if(!empty($whatsappUrl ?? null))
+                                    <a href="https://wa.me/{{ preg_replace('/\D/', '', (string)($config->whatsapp ?? $config->telefono ?? '')) }}?text={{ urlencode('Hola, me interesa: ' . $prod->nombre . ' ¿Sigue disponible?') }}" target="_blank" class="btn btn-sm btn-success m-2 mt-0 fw-bold">Pedir por WhatsApp</a>
+                                    @endif
+                                </div>
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+                @endif
                 <!-- Información -->
                 <div class="card-modern mb-4 animate-fade">
                     <div class="card-header-modern">

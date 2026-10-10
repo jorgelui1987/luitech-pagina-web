@@ -6,6 +6,7 @@ use App\Models\Tenant;
 use App\Models\Configuracion;
 use App\Models\Cupon;
 use App\Models\Resena;
+use App\Models\Producto;
 use App\Models\Reparacion;
 use App\Models\RecordatorioRetiro;
 use App\Models\Cliente;
@@ -75,10 +76,31 @@ class ComboPublicidadController extends Controller
             }
         }
 
+        // ── Catálogo público: productos activos con stock (máx 8) ──
+        $productos = collect();
+        try {
+            $productos = Producto::withoutGlobalScopes()
+                ->where('tenant_id', $tenant->id)
+                ->where('activo', true)
+                ->where('stock', '>', 0)
+                ->orderByDesc('created_at')
+                ->limit(8)
+                ->get();
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('No se pudo cargar catalogo: ' . $e->getMessage());
+        }
+
+        // ── Link WhatsApp de la tienda (para pedir / contactar) ──
+        $wspNumero = preg_replace('/\D/', '', (string) ($config->whatsapp ?? $config->telefono ?? ''));
+        $whatsappUrl = $wspNumero
+            ? 'https://wa.me/' . $wspNumero . '?text=' . urlencode('Hola ' . ($config->nombre_tienda ?? $tenant->empresa) . ', vi su página web y quiero información.')
+            : null;
+
         return view('public.tienda', [
             'tenant' => $tenant, 'config' => $config, 'resenas' => $resenas,
             'promedio' => $promedio, 'cupones' => $cupones, 'logoSrc' => $logoSrc,
             'coloresMarca' => $tenant->colores(),
+            'productos' => $productos, 'whatsappUrl' => $whatsappUrl,
         ]);
     }
 
